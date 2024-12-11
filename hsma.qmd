@@ -2,12 +2,23 @@
 title: "HSMA model"
 ---
 
-This is from:
+This is code that was shared under an MIT Licence, with credit to: Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (<https://github.com/hsma-programme/hsma6_des_book>).
 
-* <https://hsma-programme.github.io/hsma6_des_book/model_warm_up.html>.
-* <https://hsma-programme.github.io/hsma6_des_book/priority_based_queueing.html>
+Below is basic model including:
 
-That code was shared under an MIT Licence, with credit to: Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (<https://github.com/hsma-programme/hsma6_des_book>).
+* Warm-up periods
+* Priority-based queueing
+* Resource unavailability
+* Seeds
+* Reneging
+* Balking
+
+It does not include:
+
+* Multiple activities
+* Branching paths
+* Jockeying
+* Variable arrival times
 
 ```{python}
 import numpy as np
@@ -18,15 +29,23 @@ import simpy
 
 class g:
     '''Global parameters.'''
+    # Inter-arrival times
     patient_inter = 5
+
+    # Activity times
     mean_n_consult_time = 6
+
+    # Resource numbers
     number_of_nurses = 1
 
     # UNAVAILABLE: Nurse unavailable (e.g. 15m every 2h)
     unav_time_nurse = 15
     unav_freq_nurse = 120
 
-    # Simulation
+    # BALKING: Maximum length of queue for nurse
+    max_q_nurse = 3
+
+    # Simulation meta parameters
     sim_duration = 2880
     warm_up_period = 1440  # WARMUP - for no warm-up, set to 0
     number_of_runs = 3
@@ -50,11 +69,15 @@ class Patient:
         # This random samples - but would likely have probabilities for
         # particular patients.
         self.priority = random.randint(1,5)
+        # RENEGING:
+        self.patience_nurse = random.randint(5, 50)
 
 class Model:
     '''Simulation model for a clinic.'''
     def __init__(self, run_number):
+        # Create SimPy environment
         self.env = simpy.Environment()
+
         self.patient_counter = 0
 
         # PRIORITY: Nurse is PriorityResource rather than Resource
@@ -69,8 +92,11 @@ class Model:
         self.results_df['Priority'] = [1]
         self.results_df.set_index('Patient ID', inplace=True)
 
-        # Attribute to store mean queue times
+        # Attributes to store metrics
         self.mean_q_time_nurse = 0
+        self.num_reneged_nurse = 0  # RENEGING
+        self.num_balked_nurse = 0  # BALKING
+        self.q_for_nurse_consult = []  # BALKING
 
         # Initialise distributions
         self.patient_inter_arrival_dist = Exponential(
@@ -104,26 +130,46 @@ class Model:
 
     def attend_clinic(self, patient):
         '''Simulates patient journey through the clinic.'''
-        start_q_nurse = self.env.now
-        # PRIORITY: Pass priority to nurse
-        with self.nurse.request(priority=patient.priority) as req:
-            yield req
-            end_q_nurse = self.env.now
-            patient.q_time_nurse = end_q_nurse - start_q_nurse
+        # BALKING: Check whether there is room for patient to wait - if not,
+        # they are "balked" and never join the queue
+        if len(self.q_for_nurse_consult) < g.max_q_nurse:
+            start_q_nurse = self.env.now
+            # BALKING: Add patient to list of those queueing
+            self.q_for_nurse_consult.append(patient)
+            # PRIORITY: Pass priority to nurse
+            with self.nurse.request(priority=patient.priority) as req:
+                # RENEGING: Only request nurse if resource becomes available before
+                # the patient's patience ran out
+                result_of_queue = (yield req |
+                                self.env.timeout(patient.patience_nurse))
+                # If request nurse...
+                if req in result_of_queue:
 
-            # WARM-UP: Only save results if the warm up period has passed
-            if self.env.now > g.warm_up_period:
-                self.results_df.at[patient.id, 'Q Time Nurse'] = (
-                    patient.q_time_nurse
-                )
-                # PRIORITY: Record patient priority
-                self.results_df.at[patient.id, "Priority"] = (
-                    patient.priority
-                )
+                    # BALKING: Remove patient from queue list
+                    self.q_for_nurse_consult.remove(patient)
 
-            sampled_nurse_act_time = self.nurse_consult_time_dist.sample()
+                    # Record time spent waiting
+                    end_q_nurse = self.env.now
+                    patient.q_time_nurse = end_q_nurse - start_q_nurse
 
-            yield self.env.timeout(sampled_nurse_act_time)
+                    # WARM-UP: Only save results if the warm up period has passed
+                    if self.env.now > g.warm_up_period:
+                        self.results_df.at[patient.id, 'Q Time Nurse'] = (
+                            patient.q_time_nurse
+                        )
+                        # PRIORITY: Record patient priority
+                        self.results_df.at[patient.id, 'Priority'] = (
+                            patient.priority
+                        )
+                    # Sample and pass time spent with nurse
+                    sampled_nurse_act_time = self.nurse_consult_time_dist.sample()
+                    yield self.env.timeout(sampled_nurse_act_time)
+                # RENEGING: Add patient to reneging count
+                else:
+                    self.num_reneged_nurse += 1
+        # BALKING: Add patient to balking count
+        else:
+            self.num_balked_nurse += 1
 
     def calculate_run_results(self):
         '''Calculates mean queuing time for the run.'''
@@ -154,37 +200,69 @@ class Trial:
         self.df_trial_results = pd.DataFrame()
         self.df_trial_results['Run Number'] = [0]
         self.df_trial_results['Mean Q Time Nurse'] = [0.0]
+        self.df_trial_results['Reneged Q Nurse'] = [0]  # RENEGING
+        self.df_trial_results['Balked Q Nurse'] = [0]  # BALKING
         self.df_trial_results.set_index('Run Number', inplace=True)
 
     def calculate_means_over_trial(self):
         self.mean_q_time_nurse_trial = (
             self.df_trial_results['Mean Q Time Nurse'].mean()
         )
+        # RENEGING:
+        self.mean_reneged_q_nurse = (
+            self.df_trial_results['Reneged Q Nurse'].mean()
+        )
+        # BALKING:
+        self.mean_balked_q_nurse = (
+            self.df_trial_results['Balked Q Nurse'].mean()
+        )
 
     def run_trial(self):
         '''Executes a trial with multiple runs.'''
         results_dfs = []
+        # For specified number of replications
         for run in range(g.number_of_runs):
+            # Run model
             my_model = Model(run)
             patient_level_results = my_model.run()
+    
             # print(self.df_trial_results)
-            self.df_trial_results.loc[run] = [my_model.mean_q_time_nurse]
+
+            # Record trial-level results
+            self.df_trial_results.loc[run] = [
+                my_model.mean_q_time_nurse,
+                my_model.num_reneged_nurse,  # RENEGING
+                my_model.num_balked_nurse]  # BALKING
+
+            # Tidy patient level-results and append to list
             patient_level_results = patient_level_results.round(2)
             patient_level_results['run'] = run
             results_dfs.append(patient_level_results)
+
+        # Convert patient-level results to dataframe
         all_results_patient_level = pd.concat(results_dfs)
+
+        # Calculate mean times
         self.calculate_means_over_trial()
-        return self.df_trial_results, all_results_patient_level, self.mean_q_time_nurse_trial
+
+        # Return trial-level results, patient-level results and mean queue time for nurse
+        return (self.df_trial_results,
+                all_results_patient_level,
+                self.mean_q_time_nurse_trial)
 
     def print_trial_results(self):
         print('Trial Results')
         # Patient-level data
         # print (self.df_trial_results)
         print(f'Mean Q Nurse : {self.mean_q_time_nurse_trial:.1f} minutes')
+        print (f'Mean Reneged Q Nurse : {self.mean_reneged_q_nurse} patients')  # RENEGING
+        print (f'Mean Balked Q Nurse : {self.mean_balked_q_nurse} patients')  # BALKING
 
 # Create an instance of the Trial class and run the trial
 my_trial = Trial()
 df_trial_results_warmup, all_results_patient_level_warmup, means_over_trial_warmup = my_trial.run_trial()
+
+my_trial.print_trial_results()
 
 # Run version without warm-up
 g.warm_up_period = 0
@@ -213,6 +291,7 @@ fig = px.histogram(
 fig.show()
 
 # Plot queue time by priority
-fig = px.box(all_results_patient_level.reset_index(), x="Priority", y="Q Time Nurse", points="all")
+fig = px.box(all_results_patient_level.reset_index(),
+             x='Priority', y='Q Time Nurse', points='all')
 fig.show()
 ```
