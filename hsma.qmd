@@ -1,0 +1,156 @@
+---
+title: "HSMA model"
+---
+
+This is from <https://hsma-programme.github.io/hsma6_des_book/model_warm_up.html>.
+
+That code was shared under an MIT Licence, with credit to: Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (<https://github.com/hsma-programme/hsma6_des_book>).
+
+```{python}
+import simpy
+import random
+import pandas as pd
+import plotly.express as px
+
+class g:
+    '''Global parameters.'''
+    patient_inter = 5
+    mean_n_consult_time = 6
+    number_of_nurses = 1
+    sim_duration = 2880
+    warm_up_period = 1440  # WARMUP
+    number_of_runs = 20
+
+class Patient:
+    '''Represents a patient.'''
+    def __init__(self, p_id):
+        self.id = p_id
+        self.q_time_nurse = 0
+
+class Model:
+    '''Simulation model for a clinic.'''
+    def __init__(self, run_number):
+        self.env = simpy.Environment()
+        self.patient_counter = 0
+        self.nurse = simpy.Resource(self.env, capacity=g.number_of_nurses)
+        self.run_number = run_number
+
+        # Create dataframe to store patient-level results
+        self.results_df = pd.DataFrame()
+        self.results_df['Patient ID'] = [1]
+        self.results_df['Q Time Nurse'] = [0.0]
+        self.results_df.set_index('Patient ID', inplace=True)
+
+        self.mean_q_time_nurse = 0
+
+    def generator_patient_arrivals(self):
+        '''Generates patient arrivals.''' 
+        while True:
+            self.patient_counter += 1
+            p = Patient(self.patient_counter)
+            self.env.process(self.attend_clinic(p))
+            sampled_inter = random.expovariate(1.0 / g.patient_inter)
+            yield self.env.timeout(sampled_inter)
+
+    def attend_clinic(self, patient):
+        '''Simulates patient journey through the clinic.'''
+        start_q_nurse = self.env.now
+
+        with self.nurse.request() as req:
+            yield req
+            end_q_nurse = self.env.now
+            patient.q_time_nurse = end_q_nurse - start_q_nurse
+
+            # WARM-UP: Only save results if the warm up period has passed
+            if self.env.now > g.warm_up_period:
+                self.results_df.at[patient.id, 'Q Time Nurse'] = (
+                    patient.q_time_nurse
+                )
+
+            sampled_nurse_act_time = random.expovariate(1.0 /
+                                                        g.mean_n_consult_time)
+
+            yield self.env.timeout(sampled_nurse_act_time)
+
+    def calculate_run_results(self):
+        '''Calculates mean queuing time for the run.'''
+        # WARM-UP: Remove dummy patient created when set up dataframe
+        self.results_df.drop([1], inplace=True)
+        self.mean_q_time_nurse = self.results_df['Q Time Nurse'].mean()
+
+    def run(self):
+        '''Executes the simulation run.'''
+        self.env.process(self.generator_patient_arrivals())
+
+        # WARM-UP: Run for specified duration + warm-up period
+        self.env.run(until=(g.sim_duration + g.warm_up_period))
+
+        # Tidy patient-level results and calculate averages
+        self.calculate_run_results()
+
+        # Return patient level results
+        return (self.results_df)
+
+class Trial:
+    '''Manages multiple simulation runs.'''
+    def __init__(self):
+        self.df_trial_results = pd.DataFrame()
+        self.df_trial_results['Run Number'] = [0]
+        self.df_trial_results['Mean Q Time Nurse'] = [0.0]
+        self.df_trial_results.set_index('Run Number', inplace=True)
+
+    def calculate_means_over_trial(self):
+        self.mean_q_time_nurse_trial = (
+            self.df_trial_results['Mean Q Time Nurse'].mean()
+        )
+
+    def run_trial(self):
+        '''Executes a trial with multiple runs.'''
+        results_dfs = []
+        for run in range(g.number_of_runs):
+            my_model = Model(run)
+            patient_level_results = my_model.run()
+            # print(self.df_trial_results)
+            self.df_trial_results.loc[run] = [my_model.mean_q_time_nurse]
+            patient_level_results = patient_level_results.round(2)
+            patient_level_results['run'] = run
+            results_dfs.append(patient_level_results)
+        all_results_patient_level = pd.concat(results_dfs)
+        self.calculate_means_over_trial()
+        return self.df_trial_results, all_results_patient_level, self.mean_q_time_nurse_trial
+
+    def print_trial_results(self):
+        print('Trial Results')
+        # Patient-level data
+        # print (self.df_trial_results)
+        print(f'Mean Q Nurse : {self.mean_q_time_nurse_trial:.1f} minutes')
+
+# Create an instance of the Trial class and run the trial
+my_trial = Trial()
+df_trial_results_warmup, all_results_patient_level_warmup, means_over_trial_warmup = my_trial.run_trial()
+
+# Run version without warm-up
+g.warm_up_period = 0
+my_trial = Trial()
+df_trial_results, all_results_patient_level, means_over_trial = my_trial.run_trial()
+
+# Results without warm-up
+all_results_patient_level.head()
+df_trial_results.round(2).head()
+
+# Results with warm-up
+all_results_patient_level_warmup.head()
+df_trial_results_warmup.round(2).head()
+
+df_trial_results = df_trial_results.reset_index()
+df_trial_results['Warm Up'] = 'No Warm Up'
+df_trial_results_warmup = df_trial_results_warmup.reset_index()
+df_trial_results_warmup['Warm Up'] = 'With Warm Up'
+fig = px.histogram(
+    pd.concat([df_trial_results, df_trial_results_warmup]).round(2).reset_index(),
+    x="Warm Up",
+    color="Run Number", y="Mean Q Time Nurse",
+    barmode='group',
+    title='Average Queue Times per Run - With and Without Warmups')
+fig.show()
+```
