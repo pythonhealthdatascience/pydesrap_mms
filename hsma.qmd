@@ -2,23 +2,7 @@
 title: "HSMA model"
 ---
 
-This is code that was shared under an MIT Licence, with credit to: Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (<https://github.com/hsma-programme/hsma6_des_book>).
-
-Below is basic model including:
-
-* Warm-up periods
-* Priority-based queueing
-* Resource unavailability
-* Seeds
-* Reneging
-* Balking
-
-It does not include:
-
-* Multiple activities
-* Branching paths
-* Jockeying
-* Variable arrival times
+This is adapted from code that was shared under an MIT Licence, with credit to: Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (<https://github.com/hsma-programme/hsma6_des_book>).
 
 ```{python}
 import numpy as np
@@ -40,7 +24,7 @@ class g:
 
     # Simulation meta parameters
     sim_duration = 2880
-    warm_up_period = 1440  # WARMUP - for no warm-up, set to 0
+    warm_up_period = 1440
     number_of_runs = 10
 
 class Exponential:
@@ -58,6 +42,7 @@ class Patient:
     def __init__(self, p_id):
         self.id = p_id
         self.q_time_nurse = 0
+        self.actual_time_with_nurse = 0
 
 class Model:
     '''Simulation model for a clinic.'''
@@ -66,6 +51,7 @@ class Model:
         self.env = simpy.Environment()
 
         self.patient_counter = 0
+        self.patient_objects = []
 
         self.nurse = simpy.Resource(self.env, capacity=g.number_of_nurses)
         self.run_number = run_number
@@ -78,6 +64,7 @@ class Model:
 
         # Attributes to store metrics
         self.mean_q_time_nurse = 0
+        self.nurse_utilisation = 0.0
 
         # Initialise distributions
         self.patient_inter_arrival_dist = Exponential(
@@ -89,8 +76,14 @@ class Model:
         '''Generates patient arrivals.''' 
         while True:
             self.patient_counter += 1
+            # Create new patient
             p = Patient(self.patient_counter)
+            # Save to patient_objects to use for auditing, if after warm-up
+            if self.env.now > g.warm_up_period:
+                self.patient_objects.append(p)
+            # Start process of attending clinic
             self.env.process(self.attend_clinic(p))
+            # Sample and pass time to next arrival
             sampled_inter = self.patient_inter_arrival_dist.sample()
             yield self.env.timeout(sampled_inter)
 
@@ -105,21 +98,48 @@ class Model:
             end_q_nurse = self.env.now
             patient.q_time_nurse = end_q_nurse - start_q_nurse
 
+            # Sample time spent with nurse
+            sampled_nurse_act_time = self.nurse_consult_time_dist.sample()
+
             # Only save results if the warm up period has passed
             if self.env.now > g.warm_up_period:
                 self.results_df.at[patient.id, 'Q Time Nurse'] = (
                     patient.q_time_nurse
                 )
+                self.results_df.at[patient.id, "Time with Nurse"] = (
+                    sampled_nurse_act_time)
 
-            # Sample and pass time spent with nurse
-            sampled_nurse_act_time = self.nurse_consult_time_dist.sample()
+                # In order to calculate nurse utilisation, also save this as a
+                # patient attribute - but if consultation would overrun
+                # simulation run time, then just use time to end of simulation
+                remaining_time = (g.warm_up_period + g.sim_duration) - self.env.now
+                patient.actual_time_with_nurse = min(
+                    sampled_nurse_act_time, remaining_time)
+
+            # Pass time spent with nurse
             yield self.env.timeout(sampled_nurse_act_time)
+
+    def audit_utilisation(self, activity_attribute, resource_attribute):
+        '''Calculate resource utilisation'''
+        # Get duration of specified activity
+        # (e.g. time each patient spent with nurse)
+        activity_durations = [getattr(i, activity_attribute)
+                              for i in self.patient_objects]
+        # Get total capacity of specified resource
+        # (number of resources * simulation time - which doesn't include warm up)
+        total_capacity = getattr(g, resource_attribute) * g.sim_duration
+        # Calculate and return utilisation
+        return sum(activity_durations) / total_capacity
 
     def calculate_run_results(self):
         '''Calculates mean queuing time for the run.'''
-        # WARM-UP: Remove dummy patient created when set up dataframe  #TODO: Check if can set up in different way so not issue?
+        # WARM-UP: Remove dummy patient created when set up dataframe
+        # TODO: Check if can set up in different way so not issue?
         self.results_df.drop([1], inplace=True)
         self.mean_q_time_nurse = self.results_df['Q Time Nurse'].mean()
+        self.nurse_utilisation = self.audit_utilisation(
+            activity_attribute='actual_time_with_nurse',
+            resource_attribute='number_of_nurses')
 
     def run(self):
         '''Executes the simulation run.'''
@@ -141,6 +161,7 @@ class Trial:
         self.df_trial_results = pd.DataFrame()
         self.df_trial_results['Run Number'] = [0]
         self.df_trial_results['Mean Q Time Nurse'] = [0.0]
+        self.df_trial_results['Average Nurse Utilisation'] = [0.0]
         self.df_trial_results.set_index('Run Number', inplace=True)
 
     def calculate_means_over_trial(self):
@@ -162,7 +183,8 @@ class Trial:
             # print(self.df_trial_results)
 
             # Record trial-level results
-            self.df_trial_results.loc[run] = [my_model.mean_q_time_nurse]
+            self.df_trial_results.loc[run, "Mean Q Time Nurse"] = [my_model.mean_q_time_nurse]
+            self.df_trial_results.loc[run, "Average Nurse Utilisation"] = [my_model.nurse_utilisation]
 
             # Tidy patient level-results and append to list
             patient_level_results = patient_level_results.round(2)
@@ -192,29 +214,6 @@ df_trial_results_warmup, all_results_patient_level_warmup, means_over_trial_warm
 
 my_trial.print_trial_results()
 
-# Run version without warm-up
-g.warm_up_period = 0
-my_trial = Trial()
-df_trial_results, all_results_patient_level, means_over_trial = my_trial.run_trial()
-
-# Results without warm-up
-display(all_results_patient_level.head())
-display(df_trial_results.round(2).head())
-
-# Results with warm-up
 display(all_results_patient_level_warmup.head())
 display(df_trial_results_warmup.round(2).head())
-
-# Plot warm-up v.s. no warm-up
-df_trial_results = df_trial_results.reset_index()
-df_trial_results['Warm Up'] = 'No Warm Up'
-df_trial_results_warmup = df_trial_results_warmup.reset_index()
-df_trial_results_warmup['Warm Up'] = 'With Warm Up'
-fig = px.histogram(
-    pd.concat([df_trial_results, df_trial_results_warmup]).round(2).reset_index(),
-    x='Warm Up',
-    color='Run Number', y='Mean Q Time Nurse',
-    barmode='group',
-    title='Average Queue Times per Run - With and Without Warmups')
-fig.show()
 ```
