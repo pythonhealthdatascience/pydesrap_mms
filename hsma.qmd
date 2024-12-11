@@ -17,15 +17,17 @@ class g:
     patient_inter = 5
 
     # Activity times
-    mean_n_consult_time = 6
+    mean_n_consult_time = 35
 
     # Resource numbers
-    number_of_nurses = 1
+    number_of_nurses = 9
 
     # Simulation meta parameters
-    sim_duration = 2880
-    warm_up_period = 1440
-    number_of_runs = 10
+    sim_duration = 600
+    warm_up_period = 200
+    number_of_runs = 5
+    audit_interval = 5
+
 
 class Exponential:
     '''Exponential distribution.'''
@@ -65,6 +67,7 @@ class Model:
         # Attributes to store metrics
         self.mean_q_time_nurse = 0
         self.nurse_utilisation = 0.0
+        self.utilisation_audit = []
 
         # Initialise distributions
         self.patient_inter_arrival_dist = Exponential(
@@ -106,7 +109,7 @@ class Model:
                 self.results_df.at[patient.id, 'Q Time Nurse'] = (
                     patient.q_time_nurse
                 )
-                self.results_df.at[patient.id, "Time with Nurse"] = (
+                self.results_df.at[patient.id, 'Time with Nurse'] = (
                     sampled_nurse_act_time)
 
                 # In order to calculate nurse utilisation, also save this as a
@@ -131,6 +134,46 @@ class Model:
         # Calculate and return utilisation
         return sum(activity_durations) / total_capacity
 
+    def interval_audit_utilisation(self, resources, interval=1):
+        '''
+        Record resource utilisation at regular intervals.
+        Need to pass to env.process.
+
+        Parameters:
+        -----------
+            resource (SimPy resource or list of dicts): 
+                - A SimPy resource object to monitor, OR 
+                - A list of dictionaries in the format:
+                [{'resource_name': 'name', 'resource_object': resource}]
+            interval (int, optional): 
+                Time between audits (default: 1).
+        '''
+        # TODO: Simplify this - am sure it should be possible to reduce duplication here?
+        # Using SimPy resource attributes, can get number currently in use (count),
+        # total resources in simulation (capacity), and number of entities
+        # currently queueing for a resource (queue)
+        while True:
+            # If pass in a list of resources...
+            if isinstance(resources, list):
+                for i in range(len(resources)):
+                    self.utilisation_audit.append({
+                        'resource_name': resources[i]['resource_name'],
+                        'simulation_time': self.env.now,
+                        'number_utilised': len(resources[i]['resource_object'].count),
+                        'number_available': resources[i]['resource_object'].capacity,
+                        'queue_length': len(resources[i]['resource_object'].queue)
+                    })
+            # If pass in a single resource...
+            else:
+                self.utilisation_audit.append({
+                    'simulation_time': self.env.now,
+                    'number_utilised': resources.count, 
+                    'number_available': resources.capacity,
+                    'queue_length': len(resources.queue)
+                })
+            # Trigger next audit after desired interval has passed
+            yield self.env.timeout(interval)
+
     def calculate_run_results(self):
         '''Calculates mean queuing time for the run.'''
         # WARM-UP: Remove dummy patient created when set up dataframe
@@ -145,6 +188,10 @@ class Model:
         '''Executes the simulation run.'''
         # Start patient generator
         self.env.process(self.generator_patient_arrivals())
+
+        # Start interval auditor for nurse utilisation
+        self.env.process(self.interval_audit_utilisation(
+            resources=self.nurse, interval=g.audit_interval))
 
         # Run for specified duration + warm-up period
         self.env.run(until=(g.sim_duration + g.warm_up_period))
@@ -163,6 +210,7 @@ class Trial:
         self.df_trial_results['Mean Q Time Nurse'] = [0.0]
         self.df_trial_results['Average Nurse Utilisation'] = [0.0]
         self.df_trial_results.set_index('Run Number', inplace=True)
+        self.interval_audit_list = []
 
     def calculate_means_over_trial(self):
         self.mean_q_time_nurse_trial = (
@@ -183,8 +231,16 @@ class Trial:
             # print(self.df_trial_results)
 
             # Record trial-level results
-            self.df_trial_results.loc[run, "Mean Q Time Nurse"] = [my_model.mean_q_time_nurse]
-            self.df_trial_results.loc[run, "Average Nurse Utilisation"] = [my_model.nurse_utilisation]
+            self.df_trial_results.loc[run, 'Mean Q Time Nurse'] = [my_model.mean_q_time_nurse]
+            self.df_trial_results.loc[run, 'Average Nurse Utilisation'] = [my_model.nurse_utilisation]
+
+            # Record interval audit results
+            interval_audit_df = pd.DataFrame(my_model.utilisation_audit)
+            interval_audit_df['run'] = run
+            interval_audit_df['perc_utilisation'] = (
+              interval_audit_df['number_utilised'] / interval_audit_df['number_available']
+            )
+            self.interval_audit_list.append(interval_audit_df)
 
             # Tidy patient level-results and append to list
             patient_level_results = patient_level_results.round(2)
@@ -208,12 +264,28 @@ class Trial:
         # print (self.df_trial_results)
         print(f'Mean Q Nurse : {self.mean_q_time_nurse_trial:.1f} minutes')
 
+    def get_interval_audits(self):
+        '''Join interval audits into a single dataframe'''
+        return pd.concat(self.interval_audit_list)
+
+
 # Create an instance of the Trial class and run the trial
 my_trial = Trial()
 df_trial_results_warmup, all_results_patient_level_warmup, means_over_trial_warmup = my_trial.run_trial()
+interval_audits = my_trial.get_interval_audits()
 
 my_trial.print_trial_results()
 
 display(all_results_patient_level_warmup.head())
 display(df_trial_results_warmup.round(2).head())
+display(interval_audits.head())
+
+# Plot interval audit utilisation
+fig = px.line(interval_audits, x="simulation_time", y="perc_utilisation", color="run")
+fig.show()
+
+# Plot median utilisation
+interval_audits_median = interval_audits.groupby("simulation_time").median().reset_index()
+fig = px.line(interval_audits_median, x="simulation_time", y="perc_utilisation")
+fig.show()
 ```
