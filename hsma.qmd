@@ -2,7 +2,10 @@
 title: "HSMA model"
 ---
 
-This is from <https://hsma-programme.github.io/hsma6_des_book/model_warm_up.html>.
+This is from:
+
+* <https://hsma-programme.github.io/hsma6_des_book/model_warm_up.html>.
+* <https://hsma-programme.github.io/hsma6_des_book/priority_based_queueing.html>
 
 That code was shared under an MIT Licence, with credit to: Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (<https://github.com/hsma-programme/hsma6_des_book>).
 
@@ -18,7 +21,7 @@ class g:
     mean_n_consult_time = 6
     number_of_nurses = 1
     sim_duration = 2880
-    warm_up_period = 1440  # WARMUP
+    warm_up_period = 1440  # WARMUP - for no warm-up, set to 0
     number_of_runs = 20
 
 class Patient:
@@ -26,19 +29,27 @@ class Patient:
     def __init__(self, p_id):
         self.id = p_id
         self.q_time_nurse = 0
+        # PRIORITY: Lower value = higher priority.
+        # This random samples - but would likely have probabilities for
+        # particular patients.
+        self.priority = random.randint(1,5)
 
 class Model:
     '''Simulation model for a clinic.'''
     def __init__(self, run_number):
         self.env = simpy.Environment()
         self.patient_counter = 0
-        self.nurse = simpy.Resource(self.env, capacity=g.number_of_nurses)
+
+        # PRIORITY: Nurse is PriorityResource rather than Resource
+        self.nurse = simpy.PriorityResource(self.env, capacity=g.number_of_nurses)
         self.run_number = run_number
 
         # Create dataframe to store patient-level results
+        # PRIORITY: Include priority column
         self.results_df = pd.DataFrame()
         self.results_df['Patient ID'] = [1]
         self.results_df['Q Time Nurse'] = [0.0]
+        self.results_df['Priority'] = [1]
         self.results_df.set_index('Patient ID', inplace=True)
 
         self.mean_q_time_nurse = 0
@@ -55,8 +66,8 @@ class Model:
     def attend_clinic(self, patient):
         '''Simulates patient journey through the clinic.'''
         start_q_nurse = self.env.now
-
-        with self.nurse.request() as req:
+        # PRIORITY: Pass priority to nurse
+        with self.nurse.request(priority=patient.priority) as req:
             yield req
             end_q_nurse = self.env.now
             patient.q_time_nurse = end_q_nurse - start_q_nurse
@@ -65,6 +76,10 @@ class Model:
             if self.env.now > g.warm_up_period:
                 self.results_df.at[patient.id, 'Q Time Nurse'] = (
                     patient.q_time_nurse
+                )
+                # PRIORITY: Record patient priority
+                self.results_df.at[patient.id, "Priority"] = (
+                    patient.priority
                 )
 
             sampled_nurse_act_time = random.expovariate(1.0 /
@@ -135,22 +150,27 @@ my_trial = Trial()
 df_trial_results, all_results_patient_level, means_over_trial = my_trial.run_trial()
 
 # Results without warm-up
-all_results_patient_level.head()
-df_trial_results.round(2).head()
+display(all_results_patient_level.head())
+display(df_trial_results.round(2).head())
 
 # Results with warm-up
-all_results_patient_level_warmup.head()
-df_trial_results_warmup.round(2).head()
+display(all_results_patient_level_warmup.head())
+display(df_trial_results_warmup.round(2).head())
 
+# Plot warm-up v.s. no warm-up
 df_trial_results = df_trial_results.reset_index()
 df_trial_results['Warm Up'] = 'No Warm Up'
 df_trial_results_warmup = df_trial_results_warmup.reset_index()
 df_trial_results_warmup['Warm Up'] = 'With Warm Up'
 fig = px.histogram(
     pd.concat([df_trial_results, df_trial_results_warmup]).round(2).reset_index(),
-    x="Warm Up",
-    color="Run Number", y="Mean Q Time Nurse",
+    x='Warm Up',
+    color='Run Number', y='Mean Q Time Nurse',
     barmode='group',
     title='Average Queue Times per Run - With and Without Warmups')
+fig.show()
+
+# Plot queue time by priority
+fig = px.box(all_results_patient_level.reset_index(), x="Priority", y="Q Time Nurse", points="all")
 fig.show()
 ```
