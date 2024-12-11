@@ -10,19 +10,36 @@ This is from:
 That code was shared under an MIT Licence, with credit to: Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (<https://github.com/hsma-programme/hsma6_des_book>).
 
 ```{python}
-import simpy
-import random
+import numpy as np
 import pandas as pd
 import plotly.express as px
+import random
+import simpy
 
 class g:
     '''Global parameters.'''
     patient_inter = 5
     mean_n_consult_time = 6
     number_of_nurses = 1
+
+    # UNAVAILABLE: Nurse unavailable (e.g. 15m every 2h)
+    unav_time_nurse = 15
+    unav_freq_nurse = 120
+
+    # Simulation
     sim_duration = 2880
     warm_up_period = 1440  # WARMUP - for no warm-up, set to 0
-    number_of_runs = 20
+    number_of_runs = 3
+
+class Exponential:
+    '''Exponential distribution.'''
+    def __init__(self, mean, random_seed = None):
+        self.mean = mean
+        self.rand = np.random.default_rng(random_seed)
+
+    def sample(self, size = None):
+        '''Generate sample.'''
+        return self.rand.exponential(self.mean, size=size)
 
 class Patient:
     '''Represents a patient.'''
@@ -52,7 +69,14 @@ class Model:
         self.results_df['Priority'] = [1]
         self.results_df.set_index('Patient ID', inplace=True)
 
+        # Attribute to store mean queue times
         self.mean_q_time_nurse = 0
+
+        # Initialise distributions
+        self.patient_inter_arrival_dist = Exponential(
+            mean = g.patient_inter, random_seed = self.run_number*2)
+        self.nurse_consult_time_dist = Exponential(
+            mean = g.mean_n_consult_time, random_seed = self.run_number*4)
 
     def generator_patient_arrivals(self):
         '''Generates patient arrivals.''' 
@@ -60,8 +84,23 @@ class Model:
             self.patient_counter += 1
             p = Patient(self.patient_counter)
             self.env.process(self.attend_clinic(p))
-            sampled_inter = random.expovariate(1.0 / g.patient_inter)
+            sampled_inter = self.patient_inter_arrival_dist.sample()
             yield self.env.timeout(sampled_inter)
+
+    # UNAVAILABLE:
+    def obstruct_nurse(self):
+        '''
+        Obstructs nurse at specified intervals for specified amounts of time.
+        '''
+        while True:
+            # Available
+            yield self.env.timeout(g.unav_freq_nurse)
+            # Using priority -1, takes nurse resource once finished with
+            # current patient
+            with self.nurse.request(priority=-1) as req:
+                yield req
+                # Unavailable
+                yield self.env.timeout(g.unav_time_nurse)
 
     def attend_clinic(self, patient):
         '''Simulates patient journey through the clinic.'''
@@ -82,8 +121,7 @@ class Model:
                     patient.priority
                 )
 
-            sampled_nurse_act_time = random.expovariate(1.0 /
-                                                        g.mean_n_consult_time)
+            sampled_nurse_act_time = self.nurse_consult_time_dist.sample()
 
             yield self.env.timeout(sampled_nurse_act_time)
 
@@ -95,7 +133,11 @@ class Model:
 
     def run(self):
         '''Executes the simulation run.'''
+        # Start patient generator
         self.env.process(self.generator_patient_arrivals())
+
+        # UNAVAILABLE: Start obstructor generator
+        self.env.process(self.obstruct_nurse())
 
         # WARM-UP: Run for specified duration + warm-up period
         self.env.run(until=(g.sim_duration + g.warm_up_period))
