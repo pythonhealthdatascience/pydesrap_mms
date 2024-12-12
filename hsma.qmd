@@ -65,11 +65,8 @@ class Model:
         self.nurse = simpy.Resource(self.env, capacity=g.number_of_nurses)
         self.run_number = run_number
 
-        # Create dataframe to store patient-level results
-        self.results_df = pd.DataFrame()
-        self.results_df['Patient ID'] = [1]
-        self.results_df['Q Time Nurse'] = [0.0]
-        self.results_df.set_index('Patient ID', inplace=True)
+        # Create list to store patient-level results
+        self.results_list = []
 
         # Attributes to store metrics
         self.mean_q_time_nurse = 0
@@ -113,11 +110,12 @@ class Model:
 
             # Only save results if the warm up period has passed
             if self.env.now > g.warm_up_period:
-                self.results_df.at[patient.id, 'Q Time Nurse'] = (
-                    patient.q_time_nurse
-                )
-                self.results_df.at[patient.id, 'Time with Nurse'] = (
-                    sampled_nurse_act_time)
+                patient_result = {
+                    'Patient ID': patient.id,
+                    'Q Time Nurse': patient.q_time_nurse,
+                    'Time with Nurse': sampled_nurse_act_time
+                }
+                self.results_list.append(patient_result)
 
                 # In order to calculate nurse utilisation, also save this as a
                 # patient attribute - but if consultation would overrun
@@ -156,38 +154,33 @@ class Model:
                 Time between audits (default: 1).
         '''
         # TODO: Simplify this - am sure it should be possible to reduce duplication here?
-        # TODO: This isn't accounting for warm-up?
-        # Using SimPy resource attributes, can get number currently in use (count),
-        # total resources in simulation (capacity), and number of entities
-        # currently queueing for a resource (queue)
+        # TODO: Check if this prevents getting audit result at time 0
         while True:
-            # If pass in a list of resources...
-            if isinstance(resources, list):
-                for i in range(len(resources)):
+            # Only save results if the warm up period has passed
+            if self.env.now > g.warm_up_period:
+                # If pass in a list of resources...
+                if isinstance(resources, list):
+                    for i in range(len(resources)):
+                        self.utilisation_audit.append({
+                            'resource_name': resources[i]['resource_name'],
+                            'simulation_time': self.env.now,
+                            'number_utilised': resources[i]['resource_object'].count,
+                            'number_available': resources[i]['resource_object'].capacity,
+                            'queue_length': len(resources[i]['resource_object'].queue)
+                        })
+                # If pass in a single resource...
+                else:
                     self.utilisation_audit.append({
-                        'resource_name': resources[i]['resource_name'],
                         'simulation_time': self.env.now,
-                        'number_utilised': len(resources[i]['resource_object'].count),
-                        'number_available': resources[i]['resource_object'].capacity,
-                        'queue_length': len(resources[i]['resource_object'].queue)
+                        'number_utilised': resources.count, 
+                        'number_available': resources.capacity,
+                        'queue_length': len(resources.queue)
                     })
-            # If pass in a single resource...
-            else:
-                self.utilisation_audit.append({
-                    'simulation_time': self.env.now,
-                    'number_utilised': resources.count, 
-                    'number_available': resources.capacity,
-                    'queue_length': len(resources.queue)
-                })
             # Trigger next audit after desired interval has passed
             yield self.env.timeout(interval)
 
     def calculate_run_results(self):
-        '''Calculates mean queuing time for the run.'''
-        # WARM-UP: Remove dummy patient created when set up dataframe
-        # TODO: Check if can set up in different way so not issue?
-        self.results_df.drop([1], inplace=True)
-        self.mean_q_time_nurse = self.results_df['Q Time Nurse'].mean()
+        self.mean_q_time_nurse = np.mean([result['Q Time Nurse'] for result in self.results_list])
         self.nurse_utilisation = self.audit_utilisation(
             activity_attribute='actual_time_with_nurse',
             resource_attribute='number_of_nurses')
@@ -204,11 +197,7 @@ class Model:
         # Run for specified duration + warm-up period
         self.env.run(until=(g.sim_duration + g.warm_up_period))
 
-        # Tidy patient-level results and calculate averages
         self.calculate_run_results()
-
-        # Return patient level results
-        return (self.results_df)
 
 
 class Trial:
@@ -222,9 +211,12 @@ class Trial:
         '''Executes a single run of the model.'''
         random.seed(run)
 
-        # Run model and save patient-level results, adding run number
+        # Run model
         my_model = Model(run)
-        patient_results = my_model.run()
+        my_model.run()
+
+        # Get patient-level results, add run number
+        patient_results = pd.DataFrame(my_model.results_list)
         patient_results['run'] = run
 
         # Record trial-level results
