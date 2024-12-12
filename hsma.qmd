@@ -5,6 +5,7 @@ title: "HSMA model"
 This is adapted from code that was shared under an MIT Licence, with credit to: Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (<https://github.com/hsma-programme/hsma6_des_book>).
 
 ```{python}
+import itertools
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -27,6 +28,7 @@ class g:
     warm_up_period = 200
     number_of_runs = 5
     audit_interval = 5
+    scenario_name = 0
 
 
 class Exponential:
@@ -149,6 +151,7 @@ class Model:
                 Time between audits (default: 1).
         '''
         # TODO: Simplify this - am sure it should be possible to reduce duplication here?
+        # TODO: This isn't accounting for warm-up?
         # Using SimPy resource attributes, can get number currently in use (count),
         # total resources in simulation (capacity), and number of entities
         # currently queueing for a resource (queue)
@@ -207,6 +210,7 @@ class Trial:
     def __init__(self):
         self.df_trial_results = pd.DataFrame()
         self.df_trial_results['Run Number'] = [0]
+        self.df_trial_results['scenario'] = [0]
         self.df_trial_results['Mean Q Time Nurse'] = [0.0]
         self.df_trial_results['Average Nurse Utilisation'] = [0.0]
         self.df_trial_results.set_index('Run Number', inplace=True)
@@ -231,6 +235,7 @@ class Trial:
             # print(self.df_trial_results)
 
             # Record trial-level results
+            self.df_trial_results.loc[run, 'scenario'] = [g.scenario_name]
             self.df_trial_results.loc[run, 'Mean Q Time Nurse'] = [my_model.mean_q_time_nurse]
             self.df_trial_results.loc[run, 'Average Nurse Utilisation'] = [my_model.nurse_utilisation]
 
@@ -253,10 +258,8 @@ class Trial:
         # Calculate mean times
         self.calculate_means_over_trial()
 
-        # Return trial-level results, patient-level results and mean queue time for nurse
-        return (self.df_trial_results,
-                all_results_patient_level,
-                self.mean_q_time_nurse_trial)
+        # Return trial-level results
+        return self.df_trial_results
 
     def print_trial_results(self):
         print('Trial Results')
@@ -271,12 +274,11 @@ class Trial:
 
 # Create an instance of the Trial class and run the trial
 my_trial = Trial()
-df_trial_results_warmup, all_results_patient_level_warmup, means_over_trial_warmup = my_trial.run_trial()
+df_trial_results_warmup = my_trial.run_trial()
 interval_audits = my_trial.get_interval_audits()
 
 my_trial.print_trial_results()
 
-display(all_results_patient_level_warmup.head())
 display(df_trial_results_warmup.round(2).head())
 display(interval_audits.head())
 
@@ -288,4 +290,37 @@ fig.show()
 interval_audits_median = interval_audits.groupby("simulation_time").median().reset_index()
 fig = px.line(interval_audits_median, x="simulation_time", y="perc_utilisation")
 fig.show()
+
+# Define a set of scenarios
+scenarios = {
+    'patient_inter': [5, 10, 15],
+    'mean_n_consult_time': [15, 20, 35],
+    'number_of_nurses': [3, 6, 9]
+}
+# Find every possible permutation of the scenarios
+all_scenarios_tuples = [
+    x for x in itertools.product(*scenarios.values())]
+# Convert back into dictionaries
+all_scenarios_dicts = [
+    dict(zip(scenarios.keys(), p)) for p in all_scenarios_tuples]
+# Preview some of the scenarios
+print(f'There are {len(all_scenarios_dicts)} scenarios. For example:')
+display(all_scenarios_dicts[0:6])
+# Run the scenarios...
+results = []
+for index, scenario_to_run in enumerate(all_scenarios_dicts):
+    # Overwrite defaults from the passed dictionary
+    g.scenario_name = index
+    for key in scenario_to_run:
+        setattr(g, key, scenario_to_run[key])
+    # Call the run trial method of our Trial object
+    my_trial = Trial()
+    results.append(my_trial.run_trial())
+# View mean results by scenario
+display(pd.concat(results).groupby('scenario').mean().head(20))
+
+# TODO: Issue: warm-up patients use resources but their activity is excluded
+# from metrics. Post-warm-up patients queue behind these, making it look
+# like resources are under-utilised during the measurement period if there are
+# long queues (e.g. due to really short inter-arrival times)
 ```
