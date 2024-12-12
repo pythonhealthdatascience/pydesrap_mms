@@ -2,15 +2,18 @@
 title: "HSMA model"
 ---
 
-This is adapted from code that was shared under an MIT Licence, with credit to: Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (<https://github.com/hsma-programme/hsma6_des_book>).
+This code is adapted from: Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (<https://github.com/hsma-programme/hsma6_des_book>).
 
 ```{python}
 import itertools
+from joblib import Parallel, delayed
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import random
 import simpy
+import time
+
 
 class g:
     '''Global parameters.'''
@@ -41,12 +44,14 @@ class Exponential:
         '''Generate sample.'''
         return self.rand.exponential(self.mean, size=size)
 
+
 class Patient:
     '''Represents a patient.'''
     def __init__(self, p_id):
         self.id = p_id
         self.q_time_nurse = 0
         self.actual_time_with_nurse = 0
+
 
 class Model:
     '''Simulation model for a clinic.'''
@@ -205,98 +210,120 @@ class Model:
         # Return patient level results
         return (self.results_df)
 
+
 class Trial:
     '''Manages multiple simulation runs.'''
     def __init__(self):
-        self.df_trial_results = pd.DataFrame()
-        self.df_trial_results['Run Number'] = [0]
-        self.df_trial_results['scenario'] = [0]
-        self.df_trial_results['Mean Q Time Nurse'] = [0.0]
-        self.df_trial_results['Average Nurse Utilisation'] = [0.0]
-        self.df_trial_results.set_index('Run Number', inplace=True)
-        self.interval_audit_list = []
+        self.patient_results_df = pd.DataFrame()
+        self.trial_results_df = pd.DataFrame()
+        self.interval_audit_df = pd.DataFrame()
 
-    def calculate_means_over_trial(self):
-        self.mean_q_time_nurse_trial = (
-            self.df_trial_results['Mean Q Time Nurse'].mean()
+    def run_single(self, run):
+        '''Executes a single run of the model.'''
+        random.seed(run)
+
+        # Run model and save patient-level results, adding run number
+        my_model = Model(run)
+        patient_results = my_model.run()
+        patient_results['run'] = run
+
+        # Record trial-level results
+        trial_results = {
+            'Run Number': run,
+            'scenario': g.scenario_name,
+            'Arrivals': len(patient_results),
+            'Mean Q Time Nurse': my_model.mean_q_time_nurse,
+            'Average Nurse Utilisation': my_model.nurse_utilisation
+        }
+
+        # Collect interval audit results
+        interval_audit_df = pd.DataFrame(my_model.utilisation_audit)
+        interval_audit_df['run'] = run
+        interval_audit_df['perc_utilisation'] = (
+            interval_audit_df['number_utilised'] / interval_audit_df['number_available']
         )
+        return {
+            'patient': patient_results,
+            'trial': trial_results,
+            'interval_audit': interval_audit_df
+        }
 
-    def run_trial(self):
-        '''Executes a trial with multiple runs.'''
-        results_dfs = []
+    def run_trial(self, cores=1):
+        '''
+        Execute trial with multiple runs
+        Default 1 will run sequentially
+        -1 means it will use every available core
+        Otherwise can specify desired number
+        '''
+        # Sequential execution
+        if cores == 1:
+            all_results = [self.run_single(run) for run in range(g.number_of_runs)]
+        # Parallel execution
+        else:
+            all_results = Parallel(n_jobs=cores)(
+                delayed(self.run_single)(run) for run in range(g.number_of_runs))
 
-        # For specified number of replications
-        for run in range(g.number_of_runs):
-    
-            # Run model
-            my_model = Model(run)
-            patient_level_results = my_model.run()
-    
-            # print(self.df_trial_results)
+        # Seperate results from each run into appropriate lists
+        patient_results_list = [result['patient'] for result in all_results]
+        trial_results_list = [result['trial'] for result in all_results]
+        interval_audit_list = [result['interval_audit'] for result in all_results]
 
-            # Record trial-level results
-            self.df_trial_results.loc[run, 'scenario'] = [g.scenario_name]
-            self.df_trial_results.loc[run, 'Mean Q Time Nurse'] = [my_model.mean_q_time_nurse]
-            self.df_trial_results.loc[run, 'Average Nurse Utilisation'] = [my_model.nurse_utilisation]
-
-            # Record interval audit results
-            interval_audit_df = pd.DataFrame(my_model.utilisation_audit)
-            interval_audit_df['run'] = run
-            interval_audit_df['perc_utilisation'] = (
-              interval_audit_df['number_utilised'] / interval_audit_df['number_available']
-            )
-            self.interval_audit_list.append(interval_audit_df)
-
-            # Tidy patient level-results and append to list
-            patient_level_results = patient_level_results.round(2)
-            patient_level_results['run'] = run
-            results_dfs.append(patient_level_results)
-
-        # Convert patient-level results to dataframe
-        all_results_patient_level = pd.concat(results_dfs)
-
-        # Calculate mean times
-        self.calculate_means_over_trial()
-
-        # Return trial-level results
-        return self.df_trial_results
-
-    def print_trial_results(self):
-        print('Trial Results')
-        # Patient-level data
-        # print (self.df_trial_results)
-        print(f'Mean Q Nurse : {self.mean_q_time_nurse_trial:.1f} minutes')
-
-    def get_interval_audits(self):
-        '''Join interval audits into a single dataframe'''
-        return pd.concat(self.interval_audit_list)
+        # Convert lists into dataframes
+        self.patient_results_df = pd.concat(patient_results_list, ignore_index=True)
+        self.trial_results_df = pd.DataFrame(trial_results_list)
+        self.interval_audit_df = pd.concat(interval_audit_list, ignore_index=True)
 
 
-# Create an instance of the Trial class and run the trial
 my_trial = Trial()
-df_trial_results_warmup = my_trial.run_trial()
-interval_audits = my_trial.get_interval_audits()
+my_trial.run_trial()
 
-my_trial.print_trial_results()
-
-display(df_trial_results_warmup.round(2).head())
-display(interval_audits.head())
+# Preview results
+display(my_trial.patient_results_df)
+display(my_trial.trial_results_df)
+display(my_trial.interval_audit_df)
 
 # Plot interval audit utilisation
-fig = px.line(interval_audits, x="simulation_time", y="perc_utilisation", color="run")
+fig = px.line(my_trial.interval_audit_df, x="simulation_time", y="perc_utilisation", color="run")
 fig.show()
 
 # Plot median utilisation
-interval_audits_median = interval_audits.groupby("simulation_time").median().reset_index()
+interval_audits_median = my_trial.interval_audit_df.groupby("simulation_time").median().reset_index()
 fig = px.line(interval_audits_median, x="simulation_time", y="perc_utilisation")
 fig.show()
+```
+
+```{python}
+# Run with 1 to 14 cores
+speed = []
+g.number_of_runs = 100
+for i in range(1, 15, 1):
+    start_time = time.time()
+    my_trial = Trial()
+    my_trial.run_trial(cores=i)
+    run_time = round((time.time() - start_time), 3)
+    speed.append({'Cores':i, 'Run Time (seconds)': run_time})
+
+# Display and plot time by number of cores
+timing_results = pd.DataFrame(speed)
+print(timing_results)
+fig = px.line(timing_results, x='Cores', y='Run Time (seconds)')
+fig.show()
+```
+
+```{python}
+# TODO: Issue with this set-up is that you could unknowingly change g somewhere
+# So here, for example, having to set g.number_of_runs back to a lower number
+# Is there an alternative way of doing this that avoids that issue?
+# For example, having those as inputs to Model() instead?
 
 # Define a set of scenarios
+g.number_of_runs = 5
 scenarios = {
     'patient_inter': [5, 10, 15],
     'mean_n_consult_time': [15, 20, 35],
     'number_of_nurses': [3, 6, 9]
 }
+
 # Find every possible permutation of the scenarios
 all_scenarios_tuples = [
     x for x in itertools.product(*scenarios.values())]
@@ -306,6 +333,7 @@ all_scenarios_dicts = [
 # Preview some of the scenarios
 print(f'There are {len(all_scenarios_dicts)} scenarios. For example:')
 display(all_scenarios_dicts[0:6])
+
 # Run the scenarios...
 results = []
 for index, scenario_to_run in enumerate(all_scenarios_dicts):
@@ -313,11 +341,12 @@ for index, scenario_to_run in enumerate(all_scenarios_dicts):
     g.scenario_name = index
     for key in scenario_to_run:
         setattr(g, key, scenario_to_run[key])
-    # Call the run trial method of our Trial object
+    # Call the run trial method of our Trial object, and keep trial-level results
     my_trial = Trial()
-    results.append(my_trial.run_trial())
+    my_trial.run_trial()
+    results.append(my_trial.trial_results_df)
 # View mean results by scenario
-display(pd.concat(results).groupby('scenario').mean().head(20))
+display(pd.concat(results).drop('Run Number', axis=1).groupby('scenario').mean().head(20))
 
 # TODO: Issue: warm-up patients use resources but their activity is excluded
 # from metrics. Post-warm-up patients queue behind these, making it look
