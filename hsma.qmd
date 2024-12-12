@@ -50,32 +50,28 @@ class Patient:
     def __init__(self, p_id):
         self.id = p_id
         self.q_time_nurse = 0
-        self.actual_time_with_nurse = 0
 
 
 class Model:
     '''Simulation model for a clinic.'''
-    def __init__(self, run_number):
+    def __init__(self, run_number=0):
         # Create SimPy environment
         self.env = simpy.Environment()
 
         self.patient_counter = 0
-        self.patient_objects = []
-
         self.nurse = simpy.Resource(self.env, capacity=g.number_of_nurses)
+        self.run_number = run_number
+        self.nurse_time_used = 0
 
-        # Create list to store patient-level results
+        # Create list to store patient-level and interval audit results
         self.results_list = []
-
-        # Attributes to store metrics
-        self.mean_q_time_nurse = 0
-        self.nurse_utilisation = 0.0
         self.utilisation_audit = []
 
         # Generate seeds based on run_number as entropy (the "starter" seed)
         # The seeds produced will create independent streams
         ss = np.random.SeedSequence(entropy=self.run_number)
         seeds = ss.spawn(2)
+
         # Initialise distributions using those seeds
         self.patient_inter_arrival_dist = Exponential(
             mean = g.patient_inter, random_seed = seeds[0])
@@ -88,9 +84,6 @@ class Model:
             self.patient_counter += 1
             # Create new patient
             p = Patient(self.patient_counter)
-            # Save to patient_objects to use for auditing, if after warm-up
-            if self.env.now >= g.warm_up_period:
-                self.patient_objects.append(p)
             # Start process of attending clinic
             self.env.process(self.attend_clinic(p))
             # Sample and pass time to next arrival
@@ -113,34 +106,21 @@ class Model:
 
             # Only save results if the warm up period has passed
             if self.env.now >= g.warm_up_period:
-                patient_result = {
+                # Save patient results to results_list
+                self.results_list.append({
                     'patient_id': patient.id,
                     'q_time_nurse': patient.q_time_nurse,
                     'time_with_nurse': sampled_nurse_act_time
-                }
-                self.results_list.append(patient_result)
-
-                # In order to calculate nurse utilisation, also save this as a
-                # patient attribute - but if consultation would overrun
-                # simulation run time, then just use time to end of simulation
-                remaining_time = (g.warm_up_period + g.sim_duration) - self.env.now
-                patient.actual_time_with_nurse = min(
+                })
+                # Update total nurse time used - but if consultation would
+                # overrun simulation, just use time to simulation end
+                remaining_time = (
+                    g.warm_up_period + g.sim_duration) - self.env.now
+                self.nurse_time_used += min(
                     sampled_nurse_act_time, remaining_time)
 
             # Pass time spent with nurse
             yield self.env.timeout(sampled_nurse_act_time)
-
-    def audit_utilisation(self, activity_attribute, resource_attribute):
-        '''Calculate resource utilisation'''
-        # Get duration of specified activity
-        # (e.g. time each patient spent with nurse)
-        activity_durations = [getattr(i, activity_attribute)
-                              for i in self.patient_objects]
-        # Get total capacity of specified resource
-        # (number of resources * simulation time - which doesn't include warm up)
-        total_capacity = getattr(g, resource_attribute) * g.sim_duration
-        # Calculate and return utilisation
-        return sum(activity_durations) / total_capacity
 
     def interval_audit_utilisation(self, resources, interval=1):
         '''
@@ -170,12 +150,6 @@ class Model:
             # Trigger next audit after desired interval has passed
             yield self.env.timeout(interval)
 
-    def calculate_run_results(self):
-        self.mean_q_time_nurse = np.mean([result['q_time_nurse'] for result in self.results_list])
-        self.nurse_utilisation = self.audit_utilisation(
-            activity_attribute='actual_time_with_nurse',
-            resource_attribute='number_of_nurses')
-
     def run(self):
         '''Executes the simulation run.'''
         # Start patient generator
@@ -188,8 +162,6 @@ class Model:
 
         # Run for specified duration + warm-up period
         self.env.run(until=(g.sim_duration + g.warm_up_period))
-
-        self.calculate_run_results()
 
 
 class Trial:
@@ -214,8 +186,10 @@ class Trial:
             'run_number': run,
             'scenario': g.scenario_name,
             'arrivals': len(patient_results),
-            'mean_q_time_nurse': my_model.mean_q_time_nurse,
-            'average_nurse_utilisation': my_model.nurse_utilisation
+            'mean_q_time_nurse': patient_results['q_time_nurse'].mean(),
+            'average_nurse_utilisation': (
+                my_model.nurse_time_used /
+                (g.number_of_nurses * g.sim_duration))
         }
 
         # Collect interval audit results
