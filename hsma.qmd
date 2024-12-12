@@ -5,17 +5,19 @@ title: "HSMA model"
 This code is adapted from: Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (<https://github.com/hsma-programme/hsma6_des_book>).
 
 ```{python}
+import time
+from dataclasses import dataclass
 import itertools
+from IPython.display import display
 from joblib import Parallel, delayed
 import numpy as np
 import pandas as pd
 import plotly.express as px
-import random
 import simpy
-import time
 
 
-class g:
+@dataclass
+class Param:
     '''Global parameters.'''
     # Inter-arrival times
     patient_inter = 5
@@ -34,22 +36,23 @@ class g:
     scenario_name = 0
 
 
-class Exponential:
-    '''Exponential distribution.'''
-    def __init__(self, mean, random_seed = None):
-        self.mean = mean
-        self.rand = np.random.default_rng(random_seed)
-
-    def sample(self, size = None):
-        '''Generate sample.'''
-        return self.rand.exponential(self.mean, size=size)
-
-
+@dataclass
 class Patient:
     '''Represents a patient.'''
     def __init__(self, p_id):
         self.id = p_id
         self.q_time_nurse = 0
+
+
+class Exponential:
+    '''Exponential distribution.'''
+    def __init__(self, mean, random_seed=None):
+        self.mean = mean
+        self.rand = np.random.default_rng(random_seed)
+
+    def sample(self, size=None):
+        '''Generate sample.'''
+        return self.rand.exponential(self.mean, size=size)
 
 
 class Model:
@@ -59,7 +62,7 @@ class Model:
         self.env = simpy.Environment()
 
         self.patient_counter = 0
-        self.nurse = simpy.Resource(self.env, capacity=g.number_of_nurses)
+        self.nurse = simpy.Resource(self.env, capacity=Param.number_of_nurses)
         self.run_number = run_number
         self.nurse_time_used = 0
 
@@ -74,12 +77,12 @@ class Model:
 
         # Initialise distributions using those seeds
         self.patient_inter_arrival_dist = Exponential(
-            mean = g.patient_inter, random_seed = seeds[0])
+            mean=Param.patient_inter, random_seed=seeds[0])
         self.nurse_consult_time_dist = Exponential(
-            mean = g.mean_n_consult_time, random_seed = seeds[1])
+            mean=Param.mean_n_consult_time, random_seed=seeds[1])
 
     def generator_patient_arrivals(self):
-        '''Generates patient arrivals.''' 
+        '''Generates patient arrivals.'''
         while True:
             self.patient_counter += 1
             # Create new patient
@@ -105,7 +108,7 @@ class Model:
             sampled_nurse_act_time = self.nurse_consult_time_dist.sample()
 
             # Only save results if the warm up period has passed
-            if self.env.now >= g.warm_up_period:
+            if self.env.now >= Param.warm_up_period:
                 # Save patient results to results_list
                 self.results_list.append({
                     'patient_id': patient.id,
@@ -115,7 +118,7 @@ class Model:
                 # Update total nurse time used - but if consultation would
                 # overrun simulation, just use time to simulation end
                 remaining_time = (
-                    g.warm_up_period + g.sim_duration) - self.env.now
+                    Param.warm_up_period + Param.sim_duration) - self.env.now
                 self.nurse_time_used += min(
                     sampled_nurse_act_time, remaining_time)
 
@@ -129,15 +132,15 @@ class Model:
 
         Parameters:
         -----------
-            resource (list of dicts): 
+            resource (list of dicts):
                 A list of dictionaries in the format:
                 [{'name': 'name', 'object': resource}]
-            interval (int, optional): 
+            interval (int, optional):
                 Time between audits (default: 1).
         '''
         while True:
             # Only save results if the warm up period has passed
-            if self.env.now >= g.warm_up_period:
+            if self.env.now >= Param.warm_up_period:
                 # Collect data for each resource
                 for resource in resources:
                     self.utilisation_audit.append({
@@ -158,10 +161,10 @@ class Model:
         # Start interval auditor for nurse utilisation
         self.env.process(self.interval_audit_utilisation(
             resources=[{'name': 'nurse', 'object': self.nurse}],
-                       interval=g.audit_interval))
+            interval=Param.audit_interval))
 
         # Run for specified duration + warm-up period
-        self.env.run(until=(g.sim_duration + g.warm_up_period))
+        self.env.run(until=Param.sim_duration + Param.warm_up_period)
 
 
 class Trial:
@@ -184,19 +187,20 @@ class Trial:
         # Record trial-level results
         trial_results = {
             'run_number': run,
-            'scenario': g.scenario_name,
+            'scenario': Param.scenario_name,
             'arrivals': len(patient_results),
             'mean_q_time_nurse': patient_results['q_time_nurse'].mean(),
             'average_nurse_utilisation': (
                 my_model.nurse_time_used /
-                (g.number_of_nurses * g.sim_duration))
+                (Param.number_of_nurses * Param.sim_duration))
         }
 
         # Collect interval audit results
         interval_audit_df = pd.DataFrame(my_model.utilisation_audit)
         interval_audit_df['run'] = run
         interval_audit_df['perc_utilisation'] = (
-            interval_audit_df['number_utilised'] / interval_audit_df['number_available']
+            interval_audit_df['number_utilised'] /
+            interval_audit_df['number_available']
         )
         return {
             'patient': patient_results,
@@ -213,67 +217,79 @@ class Trial:
         '''
         # Sequential execution
         if cores == 1:
-            all_results = [self.run_single(run) for run in range(g.number_of_runs)]
+            all_results = [self.run_single(run)
+                           for run in range(Param.number_of_runs)]
         # Parallel execution
         else:
             all_results = Parallel(n_jobs=cores)(
-                delayed(self.run_single)(run) for run in range(g.number_of_runs))
+                delayed(self.run_single)(run)
+                for run in range(Param.number_of_runs))
 
         # Seperate results from each run into appropriate lists
-        patient_results_list = [result['patient'] for result in all_results]
-        trial_results_list = [result['trial'] for result in all_results]
-        interval_audit_list = [result['interval_audit'] for result in all_results]
+        patient_results_list = [
+            result['patient'] for result in all_results]
+        trial_results_list = [
+            result['trial'] for result in all_results]
+        interval_audit_list = [
+            result['interval_audit'] for result in all_results]
 
         # Convert lists into dataframes
-        self.patient_results_df = pd.concat(patient_results_list, ignore_index=True)
+        self.patient_results_df = pd.concat(patient_results_list,
+                                            ignore_index=True)
         self.trial_results_df = pd.DataFrame(trial_results_list)
-        self.interval_audit_df = pd.concat(interval_audit_list, ignore_index=True)
+        self.interval_audit_df = pd.concat(interval_audit_list,
+                                           ignore_index=True)
 
 
-my_trial = Trial()
-my_trial.run_trial()
+# Run a single trial
+single_trial = Trial()
+single_trial.run_trial()
 
 # Preview results
-display(my_trial.patient_results_df)
-display(my_trial.trial_results_df)
-display(my_trial.interval_audit_df)
+display(single_trial.patient_results_df)
+display(single_trial.trial_results_df)
+display(single_trial.interval_audit_df)
 
 # Plot interval audit utilisation
-fig = px.line(my_trial.interval_audit_df, x='simulation_time', y='perc_utilisation', color='run')
+fig = px.line(single_trial.interval_audit_df,
+              x='simulation_time', y='perc_utilisation', color='run')
 fig.show()
 
-# Plot median utilisation
-interval_audits_median = my_trial.interval_audit_df.drop('resource_name', axis=1).groupby('simulation_time').median().reset_index()
-fig = px.line(interval_audits_median, x='simulation_time', y='perc_utilisation')
+# Calculate and plot median utilisation
+interval_audits_median = (single_trial
+                          .interval_audit_df
+                          .drop('resource_name', axis=1)
+                          .groupby('simulation_time')
+                          .median()
+                          .reset_index())
+fig = px.line(interval_audits_median,
+              x='simulation_time',
+              y='perc_utilisation')
 fig.show()
-```
 
-```{python}
 # Run with 1 to 14 cores
 speed = []
-g.number_of_runs = 100
+Param.number_of_runs = 100
 for i in range(1, 15, 1):
     start_time = time.time()
     my_trial = Trial()
     my_trial.run_trial(cores=i)
     run_time = round((time.time() - start_time), 3)
-    speed.append({'Cores':i, 'Run Time (seconds)': run_time})
+    speed.append({'Cores': i, 'Run Time (seconds)': run_time})
 
 # Display and plot time by number of cores
 timing_results = pd.DataFrame(speed)
 print(timing_results)
 fig = px.line(timing_results, x='Cores', y='Run Time (seconds)')
 fig.show()
-```
 
-```{python}
 # TODO: Issue with this set-up is that you could unknowingly change g somewhere
 # So here, for example, having to set g.number_of_runs back to a lower number
 # Is there an alternative way of doing this that avoids that issue?
 # For example, having those as inputs to Model() instead?
 
 # Define a set of scenarios
-g.number_of_runs = 5
+Param.number_of_runs = 5
 scenarios = {
     'patient_inter': [5, 10, 15],
     'mean_n_consult_time': [15, 20, 35],
@@ -281,8 +297,7 @@ scenarios = {
 }
 
 # Find every possible permutation of the scenarios
-all_scenarios_tuples = [
-    x for x in itertools.product(*scenarios.values())]
+all_scenarios_tuples = list(itertools.product(*scenarios.values()))
 # Convert back into dictionaries
 all_scenarios_dicts = [
     dict(zip(scenarios.keys(), p)) for p in all_scenarios_tuples]
@@ -294,15 +309,19 @@ display(all_scenarios_dicts[0:6])
 results = []
 for index, scenario_to_run in enumerate(all_scenarios_dicts):
     # Overwrite defaults from the passed dictionary
-    g.scenario_name = index
+    Param.scenario_name = index
     for key in scenario_to_run:
-        setattr(g, key, scenario_to_run[key])
-    # Call the run trial method of our Trial object, and keep trial-level results
+        setattr(Param, key, scenario_to_run[key])
+    # Run trial and keep trial-level results
     my_trial = Trial()
     my_trial.run_trial()
     results.append(my_trial.trial_results_df)
 # View mean results by scenario
-display(pd.concat(results).drop('run', axis=1).groupby('scenario').mean().head(20))
+display(pd.concat(results)
+        .drop('run_number', axis=1)
+        .groupby('scenario')
+        .mean()
+        .head(20))
 
 # TODO: Issue: warm-up patients use resources but their activity is excluded
 # from metrics. Post-warm-up patients queue behind these, making it look
