@@ -1,18 +1,12 @@
----
-title: "HSMA model"
----
+# ---
+# This code is adapted from Sammi Rosser and Dan Chalk (2024) HSMA - the little
+# book of DES (<https://github.com/hsma-programme/hsma6_des_book>).
+# ---
 
-This code is adapted from: Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (<https://github.com/hsma-programme/hsma6_des_book>).
-
-```{python}
-import time
 from dataclasses import dataclass
-import itertools
-from IPython.display import display
 from joblib import Parallel, delayed
 import numpy as np
 import pandas as pd
-import plotly.express as px
 import simpy
 
 
@@ -239,92 +233,3 @@ class Trial:
         self.trial_results_df = pd.DataFrame(trial_results_list)
         self.interval_audit_df = pd.concat(interval_audit_list,
                                            ignore_index=True)
-
-
-# Run a single trial
-single_trial = Trial()
-single_trial.run_trial()
-
-# Preview results
-display(single_trial.patient_results_df)
-display(single_trial.trial_results_df)
-display(single_trial.interval_audit_df)
-
-# Plot interval audit utilisation
-fig = px.line(single_trial.interval_audit_df,
-              x='simulation_time', y='perc_utilisation', color='run')
-fig.show()
-
-# Calculate and plot median utilisation
-interval_audits_median = (single_trial
-                          .interval_audit_df
-                          .drop('resource_name', axis=1)
-                          .groupby('simulation_time')
-                          .median()
-                          .reset_index())
-fig = px.line(interval_audits_median,
-              x='simulation_time',
-              y='perc_utilisation')
-fig.show()
-
-# Run with 1 to 14 cores
-speed = []
-Param.number_of_runs = 100
-for i in range(1, 15, 1):
-    start_time = time.time()
-    my_trial = Trial()
-    my_trial.run_trial(cores=i)
-    run_time = round((time.time() - start_time), 3)
-    speed.append({'Cores': i, 'Run Time (seconds)': run_time})
-
-# Display and plot time by number of cores
-timing_results = pd.DataFrame(speed)
-print(timing_results)
-fig = px.line(timing_results, x='Cores', y='Run Time (seconds)')
-fig.show()
-
-# TODO: Issue with this set-up is that you could unknowingly change g somewhere
-# So here, for example, having to set g.number_of_runs back to a lower number
-# Is there an alternative way of doing this that avoids that issue?
-# For example, having those as inputs to Model() instead?
-
-# Define a set of scenarios
-Param.number_of_runs = 5
-scenarios = {
-    'patient_inter': [5, 10, 15],
-    'mean_n_consult_time': [15, 20, 35],
-    'number_of_nurses': [3, 6, 9]
-}
-
-# Find every possible permutation of the scenarios
-all_scenarios_tuples = list(itertools.product(*scenarios.values()))
-# Convert back into dictionaries
-all_scenarios_dicts = [
-    dict(zip(scenarios.keys(), p)) for p in all_scenarios_tuples]
-# Preview some of the scenarios
-print(f'There are {len(all_scenarios_dicts)} scenarios. For example:')
-display(all_scenarios_dicts[0:6])
-
-# Run the scenarios...
-results = []
-for index, scenario_to_run in enumerate(all_scenarios_dicts):
-    # Overwrite defaults from the passed dictionary
-    Param.scenario_name = index
-    for key in scenario_to_run:
-        setattr(Param, key, scenario_to_run[key])
-    # Run trial and keep trial-level results
-    my_trial = Trial()
-    my_trial.run_trial()
-    results.append(my_trial.trial_results_df)
-# View mean results by scenario
-display(pd.concat(results)
-        .drop('run_number', axis=1)
-        .groupby('scenario')
-        .mean()
-        .head(20))
-
-# TODO: Issue: warm-up patients use resources but their activity is excluded
-# from metrics. Post-warm-up patients queue behind these, making it look
-# like resources are under-utilised during the measurement period if there are
-# long queues (e.g. due to really short inter-arrival times)
-```
