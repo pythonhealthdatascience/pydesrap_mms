@@ -11,8 +11,8 @@ import simpy
 
 
 @dataclass
-class Param:
-    '''Global parameters.'''
+class Defaults:
+    '''Default parameters.'''
     # Inter-arrival times
     patient_inter = 5
 
@@ -51,12 +51,16 @@ class Exponential:
 
 class Model:
     '''Simulation model for a clinic.'''
-    def __init__(self, run_number=0):
+    def __init__(self, param, run_number=0):
+        # Store the model parameters
+        self.param = param
+
         # Create SimPy environment
         self.env = simpy.Environment()
 
         self.patient_counter = 0
-        self.nurse = simpy.Resource(self.env, capacity=Param.number_of_nurses)
+        self.nurse = simpy.Resource(self.env,
+                                    capacity=self.param.number_of_nurses)
         self.run_number = run_number
         self.nurse_time_used = 0
 
@@ -71,9 +75,9 @@ class Model:
 
         # Initialise distributions using those seeds
         self.patient_inter_arrival_dist = Exponential(
-            mean=Param.patient_inter, random_seed=seeds[0])
+            mean=self.param.patient_inter, random_seed=seeds[0])
         self.nurse_consult_time_dist = Exponential(
-            mean=Param.mean_n_consult_time, random_seed=seeds[1])
+            mean=self.param.mean_n_consult_time, random_seed=seeds[1])
 
     def generator_patient_arrivals(self):
         '''Generates patient arrivals.'''
@@ -102,7 +106,7 @@ class Model:
             sampled_nurse_act_time = self.nurse_consult_time_dist.sample()
 
             # Only save results if the warm up period has passed
-            if self.env.now >= Param.warm_up_period:
+            if self.env.now >= self.param.warm_up_period:
                 # Save patient results to results_list
                 self.results_list.append({
                     'patient_id': patient.id,
@@ -111,8 +115,8 @@ class Model:
                 })
                 # Update total nurse time used - but if consultation would
                 # overrun simulation, just use time to simulation end
-                remaining_time = (
-                    Param.warm_up_period + Param.sim_duration) - self.env.now
+                remaining_time = (self.param.warm_up_period + 
+                                  self.param.sim_duration) - self.env.now
                 self.nurse_time_used += min(
                     sampled_nurse_act_time, remaining_time)
 
@@ -134,7 +138,7 @@ class Model:
         '''
         while True:
             # Only save results if the warm up period has passed
-            if self.env.now >= Param.warm_up_period:
+            if self.env.now >= self.param.warm_up_period:
                 # Collect data for each resource
                 for resource in resources:
                     self.utilisation_audit.append({
@@ -155,15 +159,21 @@ class Model:
         # Start interval auditor for nurse utilisation
         self.env.process(self.interval_audit_utilisation(
             resources=[{'name': 'nurse', 'object': self.nurse}],
-            interval=Param.audit_interval))
+            interval=self.param.audit_interval))
 
         # Run for specified duration + warm-up period
-        self.env.run(until=Param.sim_duration + Param.warm_up_period)
+        self.env.run(until=self.param.sim_duration + self.param.warm_up_period)
 
 
 class Trial:
     '''Manages multiple simulation runs.'''
-    def __init__(self):
+    def __init__(self, param=Defaults()):
+        '''
+        If no param class provided, will create new instance of Defaults()
+        '''
+        # Store model parameters
+        self.param = param
+        # Initialise empty dataframes to store results
         self.patient_results_df = pd.DataFrame()
         self.trial_results_df = pd.DataFrame()
         self.interval_audit_df = pd.DataFrame()
@@ -181,12 +191,12 @@ class Trial:
         # Record trial-level results
         trial_results = {
             'run_number': run,
-            'scenario': Param.scenario_name,
+            'scenario': self.param.scenario_name,
             'arrivals': len(patient_results),
             'mean_q_time_nurse': patient_results['q_time_nurse'].mean(),
             'average_nurse_utilisation': (
                 my_model.nurse_time_used /
-                (Param.number_of_nurses * Param.sim_duration))
+                (self.param.number_of_nurses * self.param.sim_duration))
         }
 
         # Collect interval audit results
@@ -212,12 +222,12 @@ class Trial:
         # Sequential execution
         if cores == 1:
             all_results = [self.run_single(run)
-                           for run in range(Param.number_of_runs)]
+                           for run in range(self.param.number_of_runs)]
         # Parallel execution
         else:
             all_results = Parallel(n_jobs=cores)(
                 delayed(self.run_single)(run)
-                for run in range(Param.number_of_runs))
+                for run in range(self.param.number_of_runs))
 
         # Seperate results from each run into appropriate lists
         patient_results_list = [
