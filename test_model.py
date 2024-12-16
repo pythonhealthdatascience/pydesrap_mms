@@ -1,4 +1,16 @@
-from model import Defaults, Model, Trial
+"""Tests for the Discrete-Event Simulation (DES) Model.
+
+License:
+    This project is licensed under the MIT License. See the LICENSE file for
+    more details.
+
+Typical usage example:
+
+    pytest
+"""
+
+from model import Defaults, Exponential, Model, Trial
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -77,7 +89,54 @@ def test_negative_results():
         assert result['time_with_nurse'] >= 0, error_msg
 
 
-def test_warmup():
+def test_high_demand():
+    """
+    Test utilisation remains between 0 and 1 under an extreme case, and that
+    unseen patients are still in the dataset.
+    """
+    # Run model with high number of arrivals and only one nurse
+    param = Defaults()
+    param.number_of_nurses = 1
+    param.patient_inter = 0.1
+    trial = Trial(param)
+    results = trial.run_single(run=0)
+
+    # Check that the utilisation as calculated from total_nurse_time_used
+    # does not exceed 1 or drop below 0
+    util = results['trial']['average_nurse_utilisation']
+    assert util <= 1, (
+        'The trial `average_nurse_utilisation` should not exceed 1, but ' +
+        f'found utilisation of {util}.'
+    )
+    assert util >= 0, (
+        'The trial `average_nurse_utilisation` should not drop below 0, but ' +
+        f'found utilisation of {util}.'
+    )
+
+    # Check that the utilisation recorded by the interval audit does not
+    # exceed 1 or drop below 0
+    util_high = [x <= 1 for x in results['interval_audit']['perc_utilisation']]
+    util_low = [x >= 0 for x in results['interval_audit']['perc_utilisation']]
+    assert all(util_high), (
+        'The interval audit must not record any utilisation that exceeds 1.'
+    )
+    assert all(util_low), (
+        'The interval audit must not record any utilisation that is below 0.'
+    )
+
+    # Check that the final patient in the patient-level results is not seen
+    # by a nurse.
+    last_patient = results['patient'].iloc[-1]
+    assert np.isnan(last_patient['q_time_nurse']), (
+        'Expect last patient in high demand scenario to have queue time NaN.'
+    )
+    assert np.isnan(last_patient['time_with_nurse']), (
+        'Expect last patient in high demand scenario to have NaN for time' +
+        'with nurse.'
+    )
+
+
+def test_warmup_only():
     """
     Ensures no results are recorded during the warm-up phase.
 
@@ -107,14 +166,64 @@ def test_warmup():
     assert len(model.utilisation_audit) == 0, error_msg
 
 
+def test_warmup_impact():
+    """
+    Check that running with warm-up leads to different results than without.
+    """
+    def helper_warmup(warm_up_period):
+        """
+        Helper function to run model with high arrivals and specified warm-up.
+
+        Arguments:
+            warm_up_period (float):
+                Duration of the warm-up period - running simulation but not yet
+                collecting results.
+        """
+        param = Defaults()
+        param.patient_inter = 1
+        param.warm_up_period = warm_up_period
+        param.data_collection_period = 1500
+        trial = Trial(param)
+        return trial.run_single(run=0)
+
+    # Run model with and without warm-up period
+    results_warmup = helper_warmup(warm_up_period=500)
+    results_none = helper_warmup(warm_up_period=0)
+
+    # Extract result of first patient
+    first_warmup = results_warmup['patient'].iloc[0]
+    first_none = results_none['patient'].iloc[0]
+
+    # Check that model with warm-up has arrival time later than warm-up length
+    # and queue time greater than 0
+    assert first_warmup['arrival_time'] > 500, (
+        'Expect first patient to arrive after time 500 when model is run ' +
+        f'with warm-up, but got {first_warmup["arrival_time"]}.'
+    )
+    assert first_warmup['q_time_nurse'] > 0, (
+        'Expect first patient to need to queue in model with warm-up and ' +
+        f'high arrival rate, but got {first_warmup['q_time_nurse']}.'
+    )
+
+    # Check that model without warm-up has arrival and queue time of 0
+    assert first_none['arrival_time'] == 0, (
+        'Expect first patient to arrive at time 0 when model is run ' +
+        f'without warm-up, but got {first_none['arrival_time']}.'
+    )
+    assert first_none['q_time_nurse'] == 0, (
+        'Expect first patient to have no wait time in model without warm-up ' +
+        f'but got {first_none['q_time_nurse']}.'
+    )
+
+
 @pytest.mark.parametrize('param_name, initial_value, adjusted_value', [
     ('number_of_nurses', 1, 9),
     ('patient_inter', 2, 15),
     ('mean_n_consult_time', 30, 3),
 ])
-def test_waiting_time_decrease(param_name, initial_value, adjusted_value):
+def test_waiting_time_utilisation(param_name, initial_value, adjusted_value):
     """
-    Test that adjusting parameters decreases the waiting time as expected.
+    Test that adjusting parameters decreases the waiting time and utilisation.
 
     Arguments:
         param_name (string):
@@ -122,10 +231,10 @@ def test_waiting_time_decrease(param_name, initial_value, adjusted_value):
         initial_value (float|int):
             Value with which we expect longer waiting times.
         adjusted_value (float|int):
-            Value with which we expect shorter waiting times.
+            Value with which we expect shorter waiting time.
     """
     # Define helper function for the test
-    def run_model_with_param(param_name, value):
+    def helper_param(param_name, value):
         """
         Helper function to set a specific parameter value, run the model,
         and return the waiting time.
@@ -154,17 +263,56 @@ def test_waiting_time_decrease(param_name, initial_value, adjusted_value):
 
         # Run the trial and return the mean queue time for nurses
         trial = Trial(param)
-        return trial.run_single(run=0)['trial']['mean_q_time_nurse']
+        return trial.run_single(run=0)['trial']
 
     # Run model with initial and adjusted values
-    initial_wait = run_model_with_param(param_name, initial_value)
-    adjusted_wait = run_model_with_param(param_name, adjusted_value)
+    initial_results = helper_param(param_name, initial_value)
+    adjusted_results = helper_param(param_name, adjusted_value)
 
     # Check that waiting times from adjusted model are lower
+    initial_wait = initial_results['mean_q_time_nurse']
+    adjusted_wait = adjusted_results['mean_q_time_nurse']
     assert initial_wait > adjusted_wait, (
-        f'Reducing "{param_name}" from {initial_value} to {adjusted_value} ' +
+        f'Changing "{param_name}" from {initial_value} to {adjusted_value} ' +
         'did not decrease waiting time as expected: observed waiting times ' +
         f'of {initial_wait} and {adjusted_wait}, respectively.'
+    )
+
+    # Check that utilisation from adjusted model is lower
+    initial_util = initial_results['average_nurse_utilisation']
+    adjusted_util = adjusted_results['average_nurse_utilisation']
+    assert initial_util > adjusted_util, (
+        f'Changing "{param_name}" from {initial_value} to {adjusted_value} ' +
+        'did not increase utilisation as expected: observed utilisation ' +
+        f'of {initial_util} and {adjusted_util}, respectively.'
+    )
+
+
+@pytest.mark.parametrize('param_name, initial_value, adjusted_value', [
+    ('patient_inter', 2, 15),
+    ('data_collection_period', 2000, 500)
+])
+def test_arrivals(param_name, initial_value, adjusted_value):
+    """
+    Test that adjusting parameters reduces the number of arrivals as expected.
+    """
+    # Run model with initial value
+    param = Defaults()
+    setattr(param, param_name, initial_value)
+    trial = Trial(param)
+    initial_arrivals = trial.run_single(run=0)['trial']['arrivals']
+
+    # Run model with adjusted value
+    param = Defaults()
+    setattr(param, param_name, adjusted_value)
+    trial = Trial(param)
+    adjusted_arrivals = trial.run_single(run=0)['trial']['arrivals']
+
+    # Check that arrivals from adjusted model are less
+    assert initial_arrivals > adjusted_arrivals, (
+        f'Changing "{param_name}" from {initial_value} to {adjusted_value} ' +
+        'did not decrease the number of arrivals as expected: observed ' +
+        f'{initial_arrivals} and {adjusted_arrivals} arrivals, respectively.'
     )
 
 
@@ -180,3 +328,59 @@ def test_seed_stability():
 
     # Check that dataframes with patient-level results are equal
     pd.testing.assert_frame_equal(result1['patient'], result2['patient'])
+
+
+def test_interval_audit_time():
+    """
+    Check that length of interval audit is less than the length of the data
+    collection period.
+    """
+    # Run single trial with default parameters and get max time from audit
+    param = Defaults()
+    trial = Trial(param)
+    results = trial.run_single(run=0)
+    max_time = max(results['interval_audit']['simulation_time'])
+
+    # Check that max time in audit is less than the data collected period
+    assert max_time < param.data_collection_period, (
+        f'Max time in interval audit ({max_time}) is greater than length ' +
+        f'of the data collection period ({param.data_collection_period}).'
+    )
+
+
+def test_exponentional():
+    """
+    Test that the Exponentional class behaves as expected.
+    """
+    # Initialise distribution
+    d = Exponential(mean=10, random_seed=42)
+
+    # Check that sample is a float
+    assert type(d.sample()) == float, (
+        f'Expected sample() to return a float - instead: {type(d.sample())}'
+    )
+
+    # Check that correct number of values are returned
+    count = len(d.sample(size=10))
+    assert count == 10, (
+        f'Expected 10 samples - instead got {count} samples.'
+    )
+
+    bigsample = d.sample(size=100000)
+    assert all(x > 0 for x in bigsample), (
+        'Sample contains non-positive values.'
+    )
+
+    # Using the big sample, check that mean is close to expected (allowing
+    # some tolerance)
+    assert np.isclose(np.mean(bigsample), 10, atol=0.1), (
+        'Mean of samples differs beyond tolerance - sample mean ' +
+        f'{np.mean(bigsample)}, expected mean 10.'
+    )
+
+    # Check that different seeds return different samples
+    sample1 = Exponential(mean=10, random_seed=2).sample(size=5)
+    sample2 = Exponential(mean=10, random_seed=3).sample(size=5)
+    assert not np.array_equal(sample1, sample2), (
+        'Samples with different random seeds should not be equal.'
+    )
