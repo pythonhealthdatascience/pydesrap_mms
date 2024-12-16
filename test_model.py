@@ -2,7 +2,7 @@ from model import Model, Defaults
 import pytest
 
 
-def test_negative():
+def test_negative_results():
     """
     Check that values are non-negative.
     """
@@ -58,13 +58,39 @@ def test_warmup():
     assert len(model.utilisation_audit) == 0, error_msg
 
 
-def test_audit_zero():
+@pytest.mark.parametrize('param_name, value, rule', [
+    ('patient_inter', 0, 'positive'),
+    ('mean_n_consult_time', 0, 'positive'),
+    ('number_of_runs', 0, 'positive'),
+    ('audit_interval', 0, 'positive'),
+    ('warm_up_period', -1, 'non_negative'),
+    ('data_collection_period', -1, 'non_negative')
+])
+def test_negative_inputs(param_name, value, rule):
     """
-    Check that the model fails when audit interval zero is used.
+    Check that the model fails when inputs that are zero or negative are used.
+
+    Arguments:
+        param_name (string):
+            Name of parameter to change from the Defaults() class.
+        value (float|int):
+            Invalid value for parameter.
+        rule (string):
+            Either 'positive' (if value must be > 0) or 'non-negative' (if
+            value must be >= 0).
     """
     param = Defaults()
-    param.audit_interval = 0
-    # Check that it fails with a value error matching the expected string
-    with pytest.raises(ValueError,
-                       match='Audit interval must be greater than 0'):
+
+    # Set parameter to an invalid value
+    setattr(param, param_name, value)
+
+    # Construct the expected error message
+    if rule == 'positive':
+        expected_message = f'Parameter "{param_name}" must be greater than 0.'
+    elif rule == 'non_negative':
+        expected_message = (f'Parameter "{param_name}" must be greater than ' +
+                            'or equal to 0.')
+
+    # Verify that initialising the model raises the correct error
+    with pytest.raises(ValueError, match=expected_message):
         Model(param)

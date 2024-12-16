@@ -212,6 +212,29 @@ class Model:
         self.nurse_consult_time_dist = Exponential(
             mean=self.param.mean_n_consult_time, random_seed=seeds[1])
 
+        # Define validation rules for attributes
+        # Doesn't include number_of_nurses as this is tested by simpy.Resource
+        validation_rules = {
+            'positive': ['patient_inter', 'mean_n_consult_time',
+                         'number_of_runs', 'audit_interval'],
+            'non_negative': ['warm_up_period', 'data_collection_period']
+        }
+        # Iterate over the validation rules
+        for rule, param_names in validation_rules.items():
+            for param_name in param_names:
+                # Get the value of the parameter by its name
+                param_value = getattr(self.param, param_name)
+                # Check if it meets the rules for that parameter
+                if rule == 'positive' and param_value <= 0:
+                    raise ValueError(
+                        f'Parameter "{param_name}" must be greater than 0.'
+                    )
+                elif rule == 'non_negative' and param_value < 0:
+                    raise ValueError(
+                        f'Parameter "{param_name}" must be greater than or ' +
+                        'equal to 0.'
+                    )
+
     def generate_patient_arrivals(self):
         """
         Generate patient arrivals.
