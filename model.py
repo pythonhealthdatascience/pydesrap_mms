@@ -12,7 +12,7 @@ Credit:
 
 Typical usage example:
 
-    trial = Trial()
+    trial = Trial(param=Defaults())
     trial.run_trial()
     print(trial.trial_results_df)
 """
@@ -32,7 +32,7 @@ class Defaults():
             Mean inter-arrival time between patients.
         mean_n_consult_time (float):
             Mean nurse consultation time.
-        number_of_nurses (int):
+        number_of_nurses (float):
             Number of available nurses.
         warm_up_period (int):
             Duration of the warm-up period - running simulation but not yet
@@ -180,7 +180,7 @@ class Model:
         nurse_consult_time_dist (Exponential):
             Distribution for sampling nurse consultation times.
     """
-    def __init__(self, param=Defaults(), run_number=0):
+    def __init__(self, param, run_number=0):
         """
         Initalise a new model.
 
@@ -351,14 +351,13 @@ class Trial:
         interval_audit_df (pandas.DataFrame):
             Dataframe to store interval audit results.
     """
-    def __init__(self, param=Defaults()):
+    def __init__(self, param):
         '''
         Initialise a new instance of the trial class.
 
         Arguments:
             param (Defaults):
-                Simulation parameters. Defaults to new instance of the
-                Defaults() class.
+                Simulation parameters.
         '''
         # Store model parameters
         self.param = param
@@ -381,7 +380,7 @@ class Trial:
                 results, and interval audit results.
         """
         # Run model
-        my_model = Model(run_number=run)
+        my_model = Model(param=self.param, run_number=run)
         my_model.run()
 
         # Convert patient-level results to a dataframe and add column with run
