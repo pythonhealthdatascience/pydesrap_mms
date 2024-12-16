@@ -5,10 +5,15 @@ period, replications, seed control.
 
 Credit:
     > This code is adapted from Sammi Rosser and Dan Chalk (2024) HSMA - the
-    little book of DES (https://github.com/hsma-programme/hsma6_des_book).
-    > The distribution classes are adapted from Monks (2021) sim-tools:
+    little book of DES (https://github.com/hsma-programme/hsma6_des_book)
+    (MIT Licence).
+    > The distribution class is copied from Monks (2021) sim-tools:
     fundamental tools to support the simulation process in python
-    (https://github.com/TomMonks/sim-tools).
+    (https://github.com/TomMonks/sim-tools) (MIT Licence).
+
+License:
+    This project is licensed under the MIT License. See the LICENSE file for
+    more details.
 
 Typical usage example:
 
@@ -94,21 +99,25 @@ class Patient:
     Represents a patient.
 
     Attributes:
-        p_id (int):
+        patient_id (int):
             Patient's unique identifier.
-        q_time_nurse (int):
+        q_time_nurse (float):
             Time the patient spent waiting for a nurse.
+        time_with_nurse (float):
+            Time spent in consultation with a nurse.
     """
-    def __init__(self, p_id):
+    def __init__(self, patient_id):
         """
         Initialises a new patient.
 
         Arguments:
-            p_id (int):
+            patient_id (int):
                 Patient's unique identifier.
         """
-        self.id = p_id
-        self.q_time_nurse = 0
+        self.patient_id = patient_id
+        # TODO: Could we change from 0 to np.nan?
+        self.q_time_nurse = np.nan
+        self.time_with_nurse = np.nan
 
 
 class Exponential:
@@ -161,20 +170,21 @@ class Model:
     Attributes:
         param (Defaults):
             Simulation parameters.
-        env (simpy.Environment):
-            The SimPy environment for the simulation.
-        patient_counter (int):
-            Counter to create patient IDs.
-        nurse (simpy.Resource):
-            SimPy resource representing nurses.
         run_number (int):
             Run number for random seed generation.
+        env (simpy.Environment):
+            The SimPy environment for the simulation.
+        nurse (simpy.Resource):
+            SimPy resource representing nurses.
+        patients (list):
+            List containing the generated patients and their attributes - and
+            hence, saving the patient-level results.
         nurse_time_used (float):
             Total time the nurse resources have been used.
-        results_list (list):
-            List to store patient-level results.
         utilisation_audit (list):
             List to store utilisation as recorded at regular intervals.
+        results_list (list):
+            List to store patient-level results.
         patient_inter_arrival_dist (Exponential):
             Distribution for sampling patient inter-arrival times.
         nurse_consult_time_dist (Exponential):
@@ -191,15 +201,20 @@ class Model:
             run_number (int, optional):
                 Run number for random seed generation. Defaults to 0.
         """
+        # Set parameters and run number
         self.param = param
+        self.run_number = run_number
+
+        # Create simpy environment and resource
         self.env = simpy.Environment()
-        self.patient_counter = 0
         self.nurse = simpy.Resource(self.env,
                                     capacity=self.param.number_of_nurses)
-        self.run_number = run_number
+
+        # Initialise attributes to store results
+        self.patients = []
         self.nurse_time_used = 0
-        self.results_list = []
         self.utilisation_audit = []
+        self.results_list = []
 
         # Generate seeds based on run_number as entropy (the "starter" seed)
         # The seeds produced will create independent streams
@@ -240,9 +255,14 @@ class Model:
         Generate patient arrivals.
         """
         while True:
-            # Create new patient, with ID based on incremented patient_counter
-            self.patient_counter += 1
-            p = Patient(self.patient_counter)
+            # Create new patient, with ID based on length of patient list + 1
+            p = Patient(len(self.patients) + 1)
+
+            # If the warm-up period has passed, add the patient to the list.
+            # The list stores a reference to the patient object, so any updates
+            # to the patient attributes will be reflected in the list as well
+            if self.env.now >= self.param.warm_up_period:
+                self.patients.append(p)
 
             # Start process of attending clinic
             self.env.process(self.attend_clinic(p))
@@ -269,26 +289,22 @@ class Model:
             patient.q_time_nurse = end_q_nurse - start_q_nurse
 
             # Sample time spent with nurse
-            sampled_nurse_act_time = self.nurse_consult_time_dist.sample()
+            patient.time_with_nurse = (
+                self.nurse_consult_time_dist.sample())
 
-            # Only save results if the warm-up period has passed
+            # If warm-up period has passed, update the total nurse time used.
+            # This is used to calculate utilisation. To prevent inaccurate
+            # estimates, if the consultation would overrun the simulation,
+            # use time to end of the simulation.
             if self.env.now >= self.param.warm_up_period:
-                # Save patient results to results_list
-                self.results_list.append({
-                    'patient_id': patient.id,
-                    'q_time_nurse': patient.q_time_nurse,
-                    'time_with_nurse': sampled_nurse_act_time
-                })
-                # Update total nurse time used - but if consultation would
-                # overrun simulation, just use time to simulation end
                 remaining_time = (
                     self.param.warm_up_period +
                     self.param.data_collection_period) - self.env.now
                 self.nurse_time_used += min(
-                    sampled_nurse_act_time, remaining_time)
+                    patient.time_with_nurse, remaining_time)
 
             # Pass time spent with nurse
-            yield self.env.timeout(sampled_nurse_act_time)
+            yield self.env.timeout(patient.time_with_nurse)
 
     def interval_audit_utilisation(self, resources, interval=1):
         """
@@ -336,6 +352,10 @@ class Model:
         self.env.run(until=self.param.data_collection_period +
                      self.param.warm_up_period)
 
+        # Convert list of patient objects into a list that just contains the
+        # attributes of each of those patients as dictionaries
+        self.results_list = [x.__dict__ for x in self.patients]
+
 
 class Trial:
     """
@@ -380,11 +400,11 @@ class Trial:
                 results, and interval audit results.
         """
         # Run model
-        my_model = Model(param=self.param, run_number=run)
-        my_model.run()
+        model = Model(param=self.param, run_number=run)
+        model.run()
 
         # Convert patient-level results to a dataframe and add column with run
-        patient_results = pd.DataFrame(my_model.results_list)
+        patient_results = pd.DataFrame(model.results_list)
         patient_results['run'] = run
 
         # Create dictionary recording the trial-level results
@@ -393,13 +413,13 @@ class Trial:
             'scenario': self.param.scenario_name,
             'arrivals': len(patient_results),
             'mean_q_time_nurse': patient_results['q_time_nurse'].mean(),
-            'average_nurse_utilisation': (my_model.nurse_time_used /
+            'average_nurse_utilisation': (model.nurse_time_used /
                                           (self.param.number_of_nurses *
                                            self.param.data_collection_period))
         }
         # Convert interval audit results to a dataframe and add columns with
         # the run, and the percentage of resources utilised at a given time
-        interval_audit_df = pd.DataFrame(my_model.utilisation_audit)
+        interval_audit_df = pd.DataFrame(model.utilisation_audit)
         interval_audit_df['run'] = run
         interval_audit_df['perc_utilisation'] = (
             interval_audit_df['number_utilised'] /
