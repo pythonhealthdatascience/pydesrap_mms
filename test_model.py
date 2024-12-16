@@ -1,5 +1,54 @@
-from model import Model, Defaults
+from model import Defaults, Model, Trial
+import pandas as pd
 import pytest
+
+
+def test_new_attribute():
+    """
+    Confirm that it is not possible to add new attributes to Defaults.
+    """
+    param = Defaults()
+    with pytest.raises(AttributeError,
+                       match='only possible to modify existing attributes'):
+        param.new_entry = 3
+
+
+@pytest.mark.parametrize('param_name, value, rule', [
+    ('patient_inter', 0, 'positive'),
+    ('mean_n_consult_time', 0, 'positive'),
+    ('number_of_runs', 0, 'positive'),
+    ('audit_interval', 0, 'positive'),
+    ('warm_up_period', -1, 'non_negative'),
+    ('data_collection_period', -1, 'non_negative')
+])
+def test_negative_inputs(param_name, value, rule):
+    """
+    Check that the model fails when inputs that are zero or negative are used.
+
+    Arguments:
+        param_name (string):
+            Name of parameter to change from the Defaults() class.
+        value (float|int):
+            Invalid value for parameter.
+        rule (string):
+            Either 'positive' (if value must be > 0) or 'non-negative' (if
+            value must be >= 0).
+    """
+    param = Defaults()
+
+    # Set parameter to an invalid value
+    setattr(param, param_name, value)
+
+    # Construct the expected error message
+    if rule == 'positive':
+        expected_message = f'Parameter "{param_name}" must be greater than 0.'
+    elif rule == 'non_negative':
+        expected_message = (f'Parameter "{param_name}" must be greater than ' +
+                            'or equal to 0.')
+
+    # Verify that initialising the model raises the correct error
+    with pytest.raises(ValueError, match=expected_message):
+        Model(param)
 
 
 def test_negative_results():
@@ -7,7 +56,7 @@ def test_negative_results():
     Check that values are non-negative.
     """
     # Run model with standard parameters
-    model = Model()
+    model = Model(param=Defaults())
     model.run()
 
     # Check that at least one patient was processed
@@ -58,39 +107,76 @@ def test_warmup():
     assert len(model.utilisation_audit) == 0, error_msg
 
 
-@pytest.mark.parametrize('param_name, value, rule', [
-    ('patient_inter', 0, 'positive'),
-    ('mean_n_consult_time', 0, 'positive'),
-    ('number_of_runs', 0, 'positive'),
-    ('audit_interval', 0, 'positive'),
-    ('warm_up_period', -1, 'non_negative'),
-    ('data_collection_period', -1, 'non_negative')
+@pytest.mark.parametrize('param_name, initial_value, adjusted_value', [
+    ('number_of_nurses', 1, 9),
+    ('patient_inter', 2, 15),
+    ('mean_n_consult_time', 30, 3),
 ])
-def test_negative_inputs(param_name, value, rule):
+def test_waiting_time_decrease(param_name, initial_value, adjusted_value):
     """
-    Check that the model fails when inputs that are zero or negative are used.
+    Test that adjusting parameters decreases the waiting time as expected.
 
     Arguments:
         param_name (string):
             Name of parameter to change from the Defaults() class.
-        value (float|int):
-            Invalid value for parameter.
-        rule (string):
-            Either 'positive' (if value must be > 0) or 'non-negative' (if
-            value must be >= 0).
+        initial_value (float|int):
+            Value with which we expect longer waiting times.
+        adjusted_value (float|int):
+            Value with which we expect shorter waiting times.
     """
-    param = Defaults()
+    # Define helper function for the test
+    def run_model_with_param(param_name, value):
+        """
+        Helper function to set a specific parameter value, run the model,
+        and return the waiting time.
 
-    # Set parameter to an invalid value
-    setattr(param, param_name, value)
+        Arguments:
+            param_name (string):
+                Name of the parameter to modify.
+            value (float|int):
+                Value to assign to the parameter.
 
-    # Construct the expected error message
-    if rule == 'positive':
-        expected_message = f'Parameter "{param_name}" must be greater than 0.'
-    elif rule == 'non_negative':
-        expected_message = (f'Parameter "{param_name}" must be greater than ' +
-                            'or equal to 0.')
+        Returns:
+            float:
+                Mean queue time for nurses.
+        """
+        # Create a default parameter, but set some specific values
+        # (which will ensure sufficient arrivals/capacity/etc. that we will
+        # see variation in wait time, and not just no wait time with all
+        # different parameters tried).
+        param = Defaults()
+        param.number_of_nurses = 4
+        param.patient_inter = 3
+        param.mean_n_consult_time = 15
 
-    # Verify that initialising the model raises the correct error
-    with pytest.raises(ValueError, match=expected_message):
-        Model(param)
+        # Modify chosen parameter for the test
+        setattr(param, param_name, value)
+
+        # Run the trial and return the mean queue time for nurses
+        trial = Trial(param)
+        return trial.run_single(run=0)['trial']['mean_q_time_nurse']
+
+    # Run model with initial and adjusted values
+    initial_wait = run_model_with_param(param_name, initial_value)
+    adjusted_wait = run_model_with_param(param_name, adjusted_value)
+
+    # Check that waiting times from adjusted model are lower
+    assert initial_wait > adjusted_wait, (
+        f'Reducing "{param_name}" from {initial_value} to {adjusted_value} ' +
+        'did not decrease waiting time as expected: observed waiting times ' +
+        f'of {initial_wait} and {adjusted_wait}, respectively.'
+    )
+
+
+def test_seed_stability():
+    """
+    Check that two runs using the same random seed return the same results.
+    """
+    # Run trial twice, with same run number (and therefore same seed) each time
+    trial1 = Trial(param=Defaults())
+    result1 = trial1.run_single(run=33)
+    trial2 = Trial(param=Defaults())
+    result2 = trial2.run_single(run=33)
+
+    # Check that dataframes with patient-level results are equal
+    pd.testing.assert_frame_equal(result1['patient'], result2['patient'])
