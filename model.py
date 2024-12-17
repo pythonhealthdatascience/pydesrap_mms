@@ -28,6 +28,81 @@ import pandas as pd
 import scipy.stats as st
 import simpy
 
+# TODO: Consider whether to add time unit to model docstrings etc.
+# TODO: Add option of using initial conditions instead of warm-up.
+# TODO: Add option of using variable arrival rate instead of static (?)
+
+
+class Defaults():
+    """
+    Default parameters for simulation.
+
+    Attributes:
+        patient_inter (float):
+            Mean inter-arrival time between patients.
+        mean_n_consult_time (float):
+            Mean nurse consultation time.
+        number_of_nurses (float):
+            Number of available nurses.
+        warm_up_period (int):
+            Duration of the warm-up period - running simulation but not yet
+            collecting results.
+        data_collection_period (int):
+            Duration of data collection period (also known as the measurement
+            interval) - which begins after any warm-up period
+        number_of_runs (int):
+            The number of runs (also known as replications), defining how many
+            times to re-run the simulation (with different random numbers).
+        audit_interval (int):
+            How frequently to audit resource utilisation.
+        scenario_name (int|float|string):
+            Label for the scenario.
+        cores (int):
+            Number of CPU cores to use for parallel execution. Set to
+            desired number, or to -1 to use all available cores. For
+            sequential execution, set to 1 (default).
+    """
+    def __init__(self):
+        """
+        Initalise instance of parameters class.
+        """
+        # Disable restriction on attribute modification during initialisation
+        object.__setattr__(self, '_initialising', True)
+
+        self.patient_inter = 4
+        self.mean_n_consult_time = 10
+        self.number_of_nurses = 5
+        self.warm_up_period = 1440*13  # 13 days
+        self.data_collection_period = 1440*30  # 30 days
+        self.number_of_runs = 31
+        self.audit_interval = 120  # every 2 hours
+        self.scenario_name = 0
+        self.cores = -1
+
+        # Re-enable attribute checks after initialisation
+        object.__setattr__(self, '_initialising', False)
+
+    def __setattr__(self, name, value):
+        """
+        Prevent addition of new attributes.
+
+        Only allow modification of existing attributes, and not the addition
+        of new attributes. This helps avoid an error where a parameter appears
+        to have been changed, but remains the same as the attribute name
+        used was incorrect.
+        """
+        # Skip the check if the object is still initialising
+        if hasattr(self, '_initialising') and self._initialising:
+            super().__setattr__(name, value)
+        else:
+            # Check if attribute of that name is already present
+            if name in self.__dict__:
+                super().__setattr__(name, value)
+            else:
+                raise AttributeError(
+                    f'Cannot add new attribute "{name}" - only possible to ' +
+                    f'modify existing attributes: {self.__dict__.keys()}')
+
 
 def summary_stats(data):
     """
@@ -58,72 +133,6 @@ def summary_stats(data):
             scale=st.sem(data))
 
     return mean, std_dev, ci_lower, ci_upper
-
-
-class Defaults():
-    """
-    Default parameters for simulation.
-
-    Attributes:
-        patient_inter (float):
-            Mean inter-arrival time between patients.
-        mean_n_consult_time (float):
-            Mean nurse consultation time.
-        number_of_nurses (float):
-            Number of available nurses.
-        warm_up_period (int):
-            Duration of the warm-up period - running simulation but not yet
-            collecting results.
-        data_collection_period (int):
-            Duration of data collection period (also known as the measurement
-            interval) - which begins after any warm-up period
-        number_of_runs (int):
-            The number of runs (also known as replications), defining how many
-            times to re-run the simulation (with different random numbers).
-        audit_interval (int):
-            How frequently to audit resource utilisation.
-        scenario_name (int|float|string):
-            Label for the scenario.
-    """
-    def __init__(self):
-        """
-        Initalise instance of parameters class.
-        """
-        # Disable restriction on attribute modification during initialisation
-        object.__setattr__(self, '_initialising', True)
-
-        self.patient_inter = 4
-        self.mean_n_consult_time = 10
-        self.number_of_nurses = 5
-        self.warm_up_period = 1440*13  # 13 days
-        self.data_collection_period = 1440*30  # 30 days
-        self.number_of_runs = 10
-        self.audit_interval = 120  # every 2 hours
-        self.scenario_name = 0
-
-        # Re-enable attribute checks after initialisation
-        object.__setattr__(self, '_initialising', False)
-
-    def __setattr__(self, name, value):
-        """
-        Prevent addition of new attributes.
-
-        Only allow modification of existing attributes, and not the addition
-        of new attributes. This helps avoid an error where a parameter appears
-        to have been changed, but remains the same as the attribute name
-        used was incorrect.
-        """
-        # Skip the check if the object is still initialising
-        if hasattr(self, '_initialising') and self._initialising:
-            super().__setattr__(name, value)
-        else:
-            # Check if attribute of that name is already present
-            if name in self.__dict__:
-                super().__setattr__(name, value)
-            else:
-                raise AttributeError(
-                    f'Cannot add new attribute "{name}" - only possible to ' +
-                    f'modify existing attributes: {self.__dict__.keys()}')
 
 
 class Patient:
@@ -477,26 +486,20 @@ class Trial:
             'interval_audit': interval_audit_df
         }
 
-    def run_trial(self, cores=1):
+    def run_trial(self):
         """
         Execute a single model configuration for multiple runs/replications.
 
         This is known as a trial, experiment, batch or scenario. These can be
         run sequentially or in parallel.
-
-        Arguments:
-            cores (int, optional):
-                Number of CPU cores to use for parallel execution. Set to
-                desired number, or to -1 to use all available cores. For
-                sequential execution, set to 1 (default).
         """
         # Sequential execution
-        if cores == 1:
+        if self.param.cores == 1:
             all_results = [self.run_single(run)
                            for run in range(self.param.number_of_runs)]
         # Parallel execution
         else:
-            all_results = Parallel(n_jobs=cores)(
+            all_results = Parallel(n_jobs=self.param.cores)(
                 delayed(self.run_single)(run)
                 for run in range(self.param.number_of_runs))
 
