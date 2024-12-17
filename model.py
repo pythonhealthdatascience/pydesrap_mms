@@ -25,6 +25,7 @@ Typical usage example:
 from joblib import Parallel, delayed
 import numpy as np
 import pandas as pd
+import scipy.stats as st
 import simpy
 
 
@@ -341,6 +342,8 @@ class Model:
                     'simulation_time': self.env.now,
                     'utilisation': self.nurse.count / self.nurse.capacity,
                     'queue_length': len(self.nurse.queue),
+                    # TODO: Make this optional to record, as only need it for
+                    # warm-up estimation
                     'running_mean_wait_time': self.running_mean_nurse_wait
                 })
 
@@ -428,9 +431,9 @@ class Trial:
             'arrivals': len(patient_results),
             'mean_q_time_nurse': patient_results['q_time_nurse'].mean(),
             'mean_time_with_nurse': patient_results['time_with_nurse'].mean(),
-            'average_nurse_utilisation': (model.nurse_time_used /
-                                          (self.param.number_of_nurses *
-                                           self.param.data_collection_period))
+            'mean_nurse_utilisation': (model.nurse_time_used /
+                                       (self.param.number_of_nurses *
+                                        self.param.data_collection_period))
         }
 
         # Convert interval audit results to a dataframe and add run column
@@ -481,5 +484,26 @@ class Trial:
         self.interval_audit_df = pd.concat(interval_audit_list,
                                            ignore_index=True)
 
-        # Calculate average results and uncertainty
-        # TODO: self.overall_results_df
+        # Calculate average results and uncertainty from across all trials
+        uncertainty_metrics = {}
+        trial_col = self.trial_results_df.columns
+
+        # Loop through the trial-level performance measure columns
+        # Calculate mean, standard deviation and 95% confidence interval
+        for col in trial_col[~trial_col.isin(['run_number', 'scenario'])]:
+            data = self.trial_results_df[col]
+            mean = data.mean()
+            std_dev = data.std()
+            # TODO: This will give warning (and rightly so) if there was
+            # only one run - but having the message pop up everytime is not
+            # ideal as it looks then like something is wrong
+            ci_lower, ci_upper = st.t.interval(
+                confidence=0.95, df=len(data)-1, loc=mean, scale=st.sem(data))
+            uncertainty_metrics[col] = {
+                'mean': mean,
+                'std_dev': std_dev,
+                'lower_95_ci': ci_lower,
+                'upper_95_ci': ci_upper
+            }
+        # Convert to dataframe
+        self.overall_results_df = pd.DataFrame(uncertainty_metrics)
