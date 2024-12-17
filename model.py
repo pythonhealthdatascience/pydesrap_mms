@@ -6,10 +6,10 @@ period, replications, seed control.
 Credit:
     > This code is adapted from Sammi Rosser and Dan Chalk (2024) HSMA - the
     little book of DES (https://github.com/hsma-programme/hsma6_des_book)
-    (MIT Licence).
-    > The distribution class is copied from Monks (2021) sim-tools:
+    (MIT License).
+    > The distribution class is copied from Tom Monks (2021) sim-tools:
     fundamental tools to support the simulation process in python
-    (https://github.com/TomMonks/sim-tools) (MIT Licence).
+    (https://github.com/TomMonks/sim-tools) (MIT License).
 
 License:
     This project is licensed under the MIT License. See the LICENSE file for
@@ -60,13 +60,13 @@ class Defaults():
         # Disable restriction on attribute modification during initialisation
         object.__setattr__(self, '_initialising', True)
 
-        self.patient_inter = 5
-        self.mean_n_consult_time = 35
-        self.number_of_nurses = 9
-        self.warm_up_period = 0
-        self.data_collection_period = 600
-        self.number_of_runs = 5
-        self.audit_interval = 5
+        self.patient_inter = 4
+        self.mean_n_consult_time = 10
+        self.number_of_nurses = 5
+        self.warm_up_period = 1440*7  # 7 days
+        self.data_collection_period = 1440*14  # 14 days
+        self.number_of_runs = 10
+        self.audit_interval = 120  # every 2 hours
         self.scenario_name = 0
 
         # Re-enable attribute checks after initialisation
@@ -101,6 +101,8 @@ class Patient:
     Attributes:
         patient_id (int):
             Patient's unique identifier.
+        arrival_time (float):
+            Arrival time for the patient.
         q_time_nurse (float):
             Time the patient spent waiting for a nurse.
         time_with_nurse (float):
@@ -115,7 +117,7 @@ class Patient:
                 Patient's unique identifier.
         """
         self.patient_id = patient_id
-        # TODO: Could we change from 0 to np.nan?
+        self.arrival_time = np.nan
         self.q_time_nurse = np.nan
         self.time_with_nurse = np.nan
 
@@ -177,14 +179,14 @@ class Model:
         nurse (simpy.Resource):
             SimPy resource representing nurses.
         patients (list):
-            List containing the generated patients and their attributes - and
-            hence, saving the patient-level results.
+            List containing the generated patient objects.
         nurse_time_used (float):
             Total time the nurse resources have been used.
         utilisation_audit (list):
             List to store utilisation as recorded at regular intervals.
         results_list (list):
-            List to store patient-level results.
+            List of dictionaries with the results for each patient (as defined
+            by their patient object attributes).
         patient_inter_arrival_dist (Exponential):
             Distribution for sampling patient inter-arrival times.
         nurse_consult_time_dist (Exponential):
@@ -257,6 +259,7 @@ class Model:
         while True:
             # Create new patient, with ID based on length of patient list + 1
             p = Patient(len(self.patients) + 1)
+            p.arrival_time = self.env.now
 
             # If the warm-up period has passed, add the patient to the list.
             # The list stores a reference to the patient object, so any updates
@@ -285,17 +288,15 @@ class Model:
             yield req
 
             # Record time spent waiting
-            end_q_nurse = self.env.now
-            patient.q_time_nurse = end_q_nurse - start_q_nurse
+            patient.q_time_nurse = self.env.now - start_q_nurse
 
             # Sample time spent with nurse
-            patient.time_with_nurse = (
-                self.nurse_consult_time_dist.sample())
+            patient.time_with_nurse = self.nurse_consult_time_dist.sample()
 
             # If warm-up period has passed, update the total nurse time used.
-            # This is used to calculate utilisation. To prevent inaccurate
-            # estimates, if the consultation would overrun the simulation,
-            # use time to end of the simulation.
+            # This is used to calculate utilisation. To avoid overestimation,
+            # if the consultation would overrun the simulation, just record
+            # time to end of the simulation.
             if self.env.now >= self.param.warm_up_period:
                 remaining_time = (
                     self.param.warm_up_period +
@@ -370,6 +371,8 @@ class Trial:
             Dataframe to store trial-level results.
         interval_audit_df (pandas.DataFrame):
             Dataframe to store interval audit results.
+        overall_results_df (pandas.DataFrame):
+            Dataframe to store average results from runs of the trial.
     """
     def __init__(self, param):
         '''
@@ -385,6 +388,7 @@ class Trial:
         self.patient_results_df = pd.DataFrame()
         self.trial_results_df = pd.DataFrame()
         self.interval_audit_df = pd.DataFrame()
+        self.overall_results_df = pd.DataFrame()
 
     def run_single(self, run):
         """
@@ -413,10 +417,12 @@ class Trial:
             'scenario': self.param.scenario_name,
             'arrivals': len(patient_results),
             'mean_q_time_nurse': patient_results['q_time_nurse'].mean(),
+            'mean_time_with_nurse': patient_results['time_with_nurse'].mean(),
             'average_nurse_utilisation': (model.nurse_time_used /
                                           (self.param.number_of_nurses *
                                            self.param.data_collection_period))
         }
+
         # Convert interval audit results to a dataframe and add columns with
         # the run, and the percentage of resources utilised at a given time
         interval_audit_df = pd.DataFrame(model.utilisation_audit)
@@ -425,6 +431,7 @@ class Trial:
             interval_audit_df['number_utilised'] /
             interval_audit_df['number_available']
         )
+
         return {
             'patient': patient_results,
             'trial': trial_results,
@@ -468,3 +475,6 @@ class Trial:
         self.trial_results_df = pd.DataFrame(trial_results_list)
         self.interval_audit_df = pd.concat(interval_audit_list,
                                            ignore_index=True)
+
+        # Calculate average results and uncertainty
+        #TODO: self.overall_results_df
