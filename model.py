@@ -29,6 +29,37 @@ import scipy.stats as st
 import simpy
 
 
+def summary_stats(data):
+    """
+    Calculate mean, standard deviation and 95% confidence interval (CI).
+
+    Arguments:
+        data (pd.Series):
+            Data to use in calculation
+    Returns:
+        tuple: (mean, standard deviation, CI lower, CI upper)
+    """
+    mean = data.mean()
+    count = len(data)
+
+    # Cannot calculate some metrics if there is only 1 sample in data
+    if count == 1:
+        std_dev = np.nan
+        ci_lower = np.nan
+        ci_upper = np.nan
+    else:
+        std_dev = data.std()
+        # Calculation of CI uses t-distribution, which is suitable for
+        # smaller sample sizes (n<30)
+        ci_lower, ci_upper = st.t.interval(
+            confidence=0.95,
+            df=count-1,
+            loc=mean,
+            scale=st.sem(data))
+
+    return mean, std_dev, ci_lower, ci_upper
+
+
 class Defaults():
     """
     Default parameters for simulation.
@@ -489,31 +520,11 @@ class Trial:
         trial_col = self.trial_results_df.columns
 
         # Loop through the trial-level performance measure columns
+        # Calculate mean, standard deviation and 95% confidence interval
         for col in trial_col[~trial_col.isin(['run_number', 'scenario'])]:
-            data = self.trial_results_df[col]
-
-            # Calculate mean, standard deviation and 95% confidence interval
-            mean = data.mean()
-            count = len(data)
-            if count == 1:
-                std_dev = np.nan
-                ci_lower = np.nan
-                ci_upper = np.nan
-            else:
-                std_dev = data.std()
-                # Calculation of CI uses t-distribution, which is suitable for
-                # smaller sample sizes (n<30)
-                ci_lower, ci_upper = st.t.interval(
-                    confidence=0.95,
-                    df=count-1,
-                    loc=mean,
-                    scale=st.sem(data))
-
-            uncertainty_metrics[col] = {
-                'mean': mean,
-                'std_dev': std_dev,
-                'lower_95_ci': ci_lower,
-                'upper_95_ci': ci_upper
-            }
+            uncertainty_metrics[col] = dict(zip(
+                ['mean', 'std_dev', 'lower_95_ci', 'upper_95_ci'],
+                summary_stats(self.trial_results_df[col])
+            ))
         # Convert to dataframe
         self.overall_results_df = pd.DataFrame(uncertainty_metrics)
