@@ -60,7 +60,7 @@ def test_negative_inputs(param_name, value, rule):
 
     # Verify that initialising the model raises the correct error
     with pytest.raises(ValueError, match=expected_message):
-        Model(param)
+        Model(param=param, run_number=0)
 
 
 def test_negative_results():
@@ -68,7 +68,7 @@ def test_negative_results():
     Check that values are non-negative.
     """
     # Run model with standard parameters
-    model = Model(param=Defaults())
+    model = Model(param=Defaults(), run_number=0)
     model.run()
 
     # Check that at least one patient was processed
@@ -115,8 +115,8 @@ def test_high_demand():
 
     # Check that the utilisation recorded by the interval audit does not
     # exceed 1 or drop below 0
-    util_high = [x <= 1 for x in results['interval_audit']['perc_utilisation']]
-    util_low = [x >= 0 for x in results['interval_audit']['perc_utilisation']]
+    util_high = [x <= 1 for x in results['interval_audit']['utilisation']]
+    util_low = [x >= 0 for x in results['interval_audit']['utilisation']]
     assert all(util_high), (
         'The interval audit must not record any utilisation that exceeds 1.'
     )
@@ -147,7 +147,7 @@ def test_warmup_only():
     param = Defaults()
     param.warm_up_period = 500
     param.data_collection_period = 0
-    model = Model(param)
+    model = Model(param, run_number=0)
     model.run()
 
     # Check that time spent with nurse is 0
@@ -160,10 +160,10 @@ def test_warmup_only():
                  f'{len(model.results_list)} entries.')
     assert len(model.results_list) == 0, error_msg
 
-    # Check that there are no records of utilisation
-    error_msg = ('Utilisation audit list should be empty, but found ' +
-                 f'{len(model.utilisation_audit)} entries.')
-    assert len(model.utilisation_audit) == 0, error_msg
+    # Check that there are no records in interval audit
+    error_msg = ('Interval audit list should be empty, but found ' +
+                 f'{len(model.audit_list)} entries.')
+    assert len(model.audit_list) == 0, error_msg
 
 
 def test_warmup_impact():
@@ -217,7 +217,7 @@ def test_warmup_impact():
 
 
 @pytest.mark.parametrize('param_name, initial_value, adjusted_value', [
-    ('number_of_nurses', 1, 9),
+    ('number_of_nurses', 3, 9),
     ('patient_inter', 2, 15),
     ('mean_n_consult_time', 30, 3),
 ])
@@ -332,8 +332,7 @@ def test_seed_stability():
 
 def test_interval_audit_time():
     """
-    Check that length of interval audit is less than the length of the data
-    collection period.
+    Check that length of interval audit is less than the length of simulation.
     """
     # Run single trial with default parameters and get max time from audit
     param = Defaults()
@@ -341,10 +340,11 @@ def test_interval_audit_time():
     results = trial.run_single(run=0)
     max_time = max(results['interval_audit']['simulation_time'])
 
-    # Check that max time in audit is less than the data collected period
-    assert max_time < param.data_collection_period, (
+    # Check that max time in audit is less than simulation length
+    full_simulation = param.warm_up_period + param.data_collection_period
+    assert max_time < full_simulation, (
         f'Max time in interval audit ({max_time}) is greater than length ' +
-        f'of the data collection period ({param.data_collection_period}).'
+        f'of the simulation ({full_simulation}).'
     )
 
 

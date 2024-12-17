@@ -63,8 +63,8 @@ class Defaults():
         self.patient_inter = 4
         self.mean_n_consult_time = 10
         self.number_of_nurses = 5
-        self.warm_up_period = 1440*7  # 7 days
-        self.data_collection_period = 1440*14  # 14 days
+        self.warm_up_period = 1440*13  # 13 days
+        self.data_collection_period = 1440*30  # 30 days
         self.number_of_runs = 10
         self.audit_interval = 120  # every 2 hours
         self.scenario_name = 0
@@ -130,13 +130,12 @@ class Exponential:
         mean (float):
             Mean of the exponential distribution.
         random_seed (int|None):
-            Random seed to reproduce samples. If set to none, then a unique
-            sample is created.
+            Random seed to reproduce samples.
         size (int|None):
             Number of samples to return. If set to none, then returns a single
             sample.
     """
-    def __init__(self, mean, random_seed=None):
+    def __init__(self, mean, random_seed):
         """
         Initialises a new distribution.
 
@@ -144,8 +143,7 @@ class Exponential:
             mean (float):
                 Mean of the exponential distribution.
             random_seed (int|None):
-                Random seed to reproduce samples. If set to none, then a unique
-                sample is created.
+                Random seed to reproduce samples.
         """
         self.mean = mean
         self.rand = np.random.default_rng(random_seed)
@@ -182,8 +180,14 @@ class Model:
             List containing the generated patient objects.
         nurse_time_used (float):
             Total time the nurse resources have been used.
-        utilisation_audit (list):
-            List to store utilisation as recorded at regular intervals.
+        nurse_consult_count (int):
+            Count of patients seen by nurse, using to calculate running mean
+            wait time.
+        running_mean_nurse_wait (float):
+            Running mean wait time for nurse during simulation, calculated
+            using Welford's Running Average.
+        audit_list (list):
+            List to store metrics recorded at regular intervals.
         results_list (list):
             List of dictionaries with the results for each patient (as defined
             by their patient object attributes).
@@ -192,7 +196,7 @@ class Model:
         nurse_consult_time_dist (Exponential):
             Distribution for sampling nurse consultation times.
     """
-    def __init__(self, param, run_number=0):
+    def __init__(self, param, run_number):
         """
         Initalise a new model.
 
@@ -215,7 +219,9 @@ class Model:
         # Initialise attributes to store results
         self.patients = []
         self.nurse_time_used = 0
-        self.utilisation_audit = []
+        self.nurse_consult_count = 0
+        self.running_mean_nurse_wait = 0
+        self.audit_list = []
         self.results_list = []
 
         # Generate seeds based on run_number as entropy (the "starter" seed)
@@ -290,6 +296,13 @@ class Model:
             # Record time spent waiting
             patient.q_time_nurse = self.env.now - start_q_nurse
 
+            # Update running mean of wait time for the nurse
+            self.nurse_consult_count += 1
+            self.running_mean_nurse_wait += (
+               (patient.q_time_nurse - self.running_mean_nurse_wait) /
+               self.nurse_consult_count
+            )
+
             # Sample time spent with nurse
             patient.time_with_nurse = self.nurse_consult_time_dist.sample()
 
@@ -307,32 +320,30 @@ class Model:
             # Pass time spent with nurse
             yield self.env.timeout(patient.time_with_nurse)
 
-    def interval_audit_utilisation(self, resources, interval=1):
+    def interval_audit(self, interval):
         """
-        Audit resource utilisation at regular intervals.
+        Audit waiting times and resource utilisation at regular intervals.
+
+        The running mean wait time is calculated using Welford's Running
+        Average, which is a method that avoids the need to store previous wait
+        times to compute the average. The running mean reflects the main wait
+        time for all patients seen by nurse up to that point in the simulation.
 
         Arguments:
-            resource (list of dict):
-                List with dictionaries for each resource, in the format:
-                [{'name': 'name', 'object': resource}]
             interval (int, optional):
-                Time between audits. Defaults to 1.
+                Time between audits.
         """
         while True:
             # Only save results if the warm-up period has passed
             if self.env.now >= self.param.warm_up_period:
-                # Collect data for each resource
-                for resource in resources:
-                    self.utilisation_audit.append({
-                        'resource_name': resource['name'],
-                        'simulation_time': self.env.now,
-                        # Count of resource currently in use
-                        'number_utilised': resource['object'].count,
-                        # Total number of resource in the simulation
-                        'number_available': resource['object'].capacity,
-                        # Length of queue for the resource
-                        'queue_length': len(resource['object'].queue)
-                    })
+                self.audit_list.append({
+                    'resource_name': 'nurse',
+                    'simulation_time': self.env.now,
+                    'utilisation': self.nurse.count / self.nurse.capacity,
+                    'queue_length': len(self.nurse.queue),
+                    'running_mean_wait_time': self.running_mean_nurse_wait
+                })
+
             # Trigger next audit after desired interval has passed
             yield self.env.timeout(interval)
 
@@ -343,10 +354,9 @@ class Model:
         # Start patient generator
         self.env.process(self.generate_patient_arrivals())
 
-        # Start interval auditor for nurse utilisation
-        self.env.process(self.interval_audit_utilisation(
-            resources=[{'name': 'nurse', 'object': self.nurse}],
-            interval=self.param.audit_interval))
+        # Start interval auditor
+        self.env.process(
+            self.interval_audit(interval=self.param.audit_interval))
 
         # Run for specified duration (which is the warm-up period + the
         # data collection period)
@@ -423,14 +433,9 @@ class Trial:
                                            self.param.data_collection_period))
         }
 
-        # Convert interval audit results to a dataframe and add columns with
-        # the run, and the percentage of resources utilised at a given time
-        interval_audit_df = pd.DataFrame(model.utilisation_audit)
+        # Convert interval audit results to a dataframe and add run column
+        interval_audit_df = pd.DataFrame(model.audit_list)
         interval_audit_df['run'] = run
-        interval_audit_df['perc_utilisation'] = (
-            interval_audit_df['number_utilised'] /
-            interval_audit_df['number_available']
-        )
 
         return {
             'patient': patient_results,
@@ -477,4 +482,4 @@ class Trial:
                                            ignore_index=True)
 
         # Calculate average results and uncertainty
-        #TODO: self.overall_results_df
+        # TODO: self.overall_results_df
