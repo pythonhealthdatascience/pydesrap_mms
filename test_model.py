@@ -103,13 +103,13 @@ def test_high_demand():
 
     # Check that the utilisation as calculated from total_nurse_time_used
     # does not exceed 1 or drop below 0
-    util = results['trial']['average_nurse_utilisation']
+    util = results['trial']['mean_nurse_utilisation']
     assert util <= 1, (
-        'The trial `average_nurse_utilisation` should not exceed 1, but ' +
+        'The trial `mean_nurse_utilisation` should not exceed 1, but ' +
         f'found utilisation of {util}.'
     )
     assert util >= 0, (
-        'The trial `average_nurse_utilisation` should not drop below 0, but ' +
+        'The trial `mean_nurse_utilisation` should not drop below 0, but ' +
         f'found utilisation of {util}.'
     )
 
@@ -216,6 +216,25 @@ def test_warmup_impact():
     )
 
 
+def test_arrivals():
+    """
+    Check that trial-level count of arrivals is consistent with the number of
+    patients recorded in the patient-level results.
+    """
+    trial = Trial(Defaults())
+    trial.run_trial()
+
+    # Get count of patients from patient-level and trial-level results
+    patient_n = trial.patient_results_df.groupby('run')['patient_id'].count()
+    trial_n = trial.trial_results_df['arrivals']
+
+    # Compare the counts from each run
+    assert all(patient_n == trial_n), (
+        'The number of arrivals in the trial-level results should be ' +
+        'consistent with the number of patients in the patient-level results.'
+    )
+
+
 @pytest.mark.parametrize('param_name, initial_value, adjusted_value', [
     ('number_of_nurses', 3, 9),
     ('patient_inter', 2, 15),
@@ -279,8 +298,8 @@ def test_waiting_time_utilisation(param_name, initial_value, adjusted_value):
     )
 
     # Check that utilisation from adjusted model is lower
-    initial_util = initial_results['average_nurse_utilisation']
-    adjusted_util = adjusted_results['average_nurse_utilisation']
+    initial_util = initial_results['mean_nurse_utilisation']
+    adjusted_util = adjusted_results['mean_nurse_utilisation']
     assert initial_util > adjusted_util, (
         f'Changing "{param_name}" from {initial_value} to {adjusted_value} ' +
         'did not increase utilisation as expected: observed utilisation ' +
@@ -292,7 +311,7 @@ def test_waiting_time_utilisation(param_name, initial_value, adjusted_value):
     ('patient_inter', 2, 15),
     ('data_collection_period', 2000, 500)
 ])
-def test_arrivals(param_name, initial_value, adjusted_value):
+def test_arrivals_decrease(param_name, initial_value, adjusted_value):
     """
     Test that adjusting parameters reduces the number of arrivals as expected.
     """
