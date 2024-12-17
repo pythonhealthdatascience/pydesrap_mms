@@ -489,16 +489,26 @@ class Trial:
         trial_col = self.trial_results_df.columns
 
         # Loop through the trial-level performance measure columns
-        # Calculate mean, standard deviation and 95% confidence interval
         for col in trial_col[~trial_col.isin(['run_number', 'scenario'])]:
             data = self.trial_results_df[col]
+
+            # Calculate mean, standard deviation and 95% confidence interval
             mean = data.mean()
-            std_dev = data.std()
-            # TODO: This will give warning (and rightly so) if there was
-            # only one run - but having the message pop up everytime is not
-            # ideal as it looks then like something is wrong
-            ci_lower, ci_upper = st.t.interval(
-                confidence=0.95, df=len(data)-1, loc=mean, scale=st.sem(data))
+            count = len(data)
+            if count == 1:
+                std_dev = np.nan
+                ci_lower = np.nan
+                ci_upper = np.nan
+            else:
+                std_dev = data.std()
+                # Calculation of CI uses t-distribution, which is suitable for
+                # smaller sample sizes (n<30)
+                ci_lower, ci_upper = st.t.interval(
+                    confidence=0.95,
+                    df=count-1,
+                    loc=mean,
+                    scale=st.sem(data))
+
             uncertainty_metrics[col] = {
                 'mean': mean,
                 'std_dev': std_dev,
