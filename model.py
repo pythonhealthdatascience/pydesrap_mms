@@ -295,7 +295,7 @@ class Model:
                     raise ValueError(
                         f'Parameter "{param_name}" must be greater than 0.'
                     )
-                elif rule == 'non_negative' and param_value < 0:
+                if rule == 'non_negative' and param_value < 0:
                     raise ValueError(
                         f'Parameter "{param_name}" must be greater than or ' +
                         'equal to 0.'
