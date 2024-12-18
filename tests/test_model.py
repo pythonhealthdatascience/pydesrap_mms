@@ -9,7 +9,7 @@ Typical usage example:
     pytest
 """
 
-from model import Defaults, Exponential, Model, Trial
+from scripts.simulation.model import Defaults, Exponential, Model, Trial
 import numpy as np
 import pandas as pd
 import pytest
