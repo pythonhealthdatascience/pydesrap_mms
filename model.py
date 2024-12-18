@@ -1,7 +1,9 @@
 """Simple Reproducible SimPy Discrete-Event Simulation (DES) Model.
 
-Uses object-oriented approach to create an M/M/c model with optional warm-up
-period, replications, seed control.
+Uses object-oriented approach to create an M/M/c model with a warm-up
+period, replications, seed control. For this example application, the time unit
+is described as minutes, but this could be changed - for example, to hours,
+days.
 
 Credit:
     > This code is adapted from Sammi Rosser and Dan Chalk (2024) HSMA - the
@@ -9,7 +11,11 @@ Credit:
     (MIT License).
     > The distribution class is copied from Tom Monks (2021) sim-tools:
     fundamental tools to support the simulation process in python
-    (https://github.com/TomMonks/sim-tools) (MIT License).
+    (https://github.com/TomMonks/sim-tools) (MIT License). For other
+    distributions (bernoulli, lognormal, normal, uniform, triangular, fixed,
+    combination, continuous empirical, erlang, weibull, gamma, beta, discrete,
+    truncated, raw empirical, pearsonV, pearsonVI, erlangK, poisson), check
+    out the sim-tools package.
 
 License:
     This project is licensed under the MIT License. See the LICENSE file for
@@ -28,10 +34,6 @@ import pandas as pd
 import scipy.stats as st
 import simpy
 
-# TODO: Consider whether to add time unit to model docstrings etc.
-# TODO: Add option of using initial conditions instead of warm-up.
-# TODO: Add option of using variable arrival rate instead of static (?)
-
 
 class Defaults():
     """
@@ -39,22 +41,22 @@ class Defaults():
 
     Attributes:
         patient_inter (float):
-            Mean inter-arrival time between patients.
+            Mean inter-arrival time between patients in minutes.
         mean_n_consult_time (float):
-            Mean nurse consultation time.
+            Mean nurse consultation time in minutes.
         number_of_nurses (float):
             Number of available nurses.
         warm_up_period (int):
-            Duration of the warm-up period - running simulation but not yet
-            collecting results.
+            Duration of the warm-up period in minutes - running simulation but
+            not yet collecting results.
         data_collection_period (int):
-            Duration of data collection period (also known as the measurement
-            interval) - which begins after any warm-up period
+            Duration of data collection period in minutes (also known as the
+            measurement interval) - which begins after any warm-up period
         number_of_runs (int):
             The number of runs (also known as replications), defining how many
             times to re-run the simulation (with different random numbers).
         audit_interval (int):
-            How frequently to audit resource utilisation.
+            How frequently to audit resource utilisation, in minutes.
         scenario_name (int|float|string):
             Label for the scenario.
         cores (int):
@@ -143,11 +145,11 @@ class Patient:
         patient_id (int):
             Patient's unique identifier.
         arrival_time (float):
-            Arrival time for the patient.
+            Arrival time for the patient in minutes.
         q_time_nurse (float):
-            Time the patient spent waiting for a nurse.
+            Time the patient spent waiting for a nurse in minutes.
         time_with_nurse (float):
-            Time spent in consultation with a nurse.
+            Time spent in consultation with a nurse in minutes.
     """
     def __init__(self, patient_id):
         """
@@ -220,13 +222,13 @@ class Model:
         patients (list):
             List containing the generated patient objects.
         nurse_time_used (float):
-            Total time the nurse resources have been used.
+            Total time the nurse resources have been used in minutes.
         nurse_consult_count (int):
             Count of patients seen by nurse, using to calculate running mean
             wait time.
         running_mean_nurse_wait (float):
-            Running mean wait time for nurse during simulation, calculated
-            using Welford's Running Average.
+            Running mean wait time for nurse during simulation in minutes,
+            calculated using Welford's Running Average.
         audit_list (list):
             List to store metrics recorded at regular intervals.
         results_list (list):
@@ -372,7 +374,7 @@ class Model:
 
         Arguments:
             interval (int, optional):
-                Time between audits.
+                Time between audits in minutes.
         """
         while True:
             # Only save results if the warm-up period has passed
@@ -382,8 +384,6 @@ class Model:
                     'simulation_time': self.env.now,
                     'utilisation': self.nurse.count / self.nurse.capacity,
                     'queue_length': len(self.nurse.queue),
-                    # TODO: Make this optional to record, as only need it for
-                    # warm-up estimation
                     'running_mean_wait_time': self.running_mean_nurse_wait
                 })
 
