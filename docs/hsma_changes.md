@@ -242,13 +242,19 @@ for rule, param_names in validation_rules.items():
 
 ### Tests
 
-The file `test_model.py` includes various tests which check the model is functioning as expected. For example, checking that:
+The files `test_unittest.py` and `test_backtest.py` include various tests which check the model is functioning as expected. For example, checking that:
 
 * It is not possible to add new attributes to the parameter class.
 * Invalid inputs to `Model()` return an `ValueError`.
 * Results from the model (e.g. wait time, utilisation) are not negative.
 * No results are recorded during any warm-up period.
 * Adjusting parameters decreases wait time as expected.
+
+### Summary statistics
+
+The `summary_stats()` function is used to find the overall results from across the trials - so the mean, standard deviation and 95% confidence interval for each performance metric.
+
+It can also be applied to other results dataframes if desired.
 
 ### Other minor changes
 
@@ -257,3 +263,4 @@ There are a few smaller changes to the model with minimal impact on function. Th
 * **Names** - for example, `Patient.id` was changed to `Patient.patient_id`, as the patient objects are used to create the patient-level results dataframe, and want "patient_id" as the column name.
 * **Comments and docstrings**
 * **Removed `patient_counter`** - as can just use the length of the `patients` list now.
+* **Interval audit** - records cumulative mean wait time, as well as utilisation.

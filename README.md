@@ -106,6 +106,16 @@ Review the example DES implementation in `scripts`. Modify and extend the code a
 
 A template `README` is provided at the end of this file.
 
+Replace entries in the current `CHANGELOG` with your own, alongside creating **GitHub releases**.
+
+Create your own `CITATION.cff` file using [cff-init](https://citation-file-format.github.io/cff-initializer-javascript/#/).
+
+To run tests, ensure environment is active and located in main directory (i.e. parent of `tests/`) and then run the following command. The tests may take around one minute to run. As they run, you will see '.' if the test passes and 'F' if it fails (e.g. `tests/test_model.py ..F..`). When it finishes, you will see the final result (e.g. `==== 1 failed, 4 passed in 51s ====`)
+
+```
+pytest
+```
+
 You can lint the `.py` files by running either of this commands from the terminal:
 
 ```
@@ -124,6 +134,8 @@ The first commands in the `.ipynb` files will lint the notebooks using `pycodest
 
 ## ❓ How does the model work?
 
+This section describes the purposes of each class in the simulation.
+
 **Model Run Process:**
 
 1. **Set Parameters:** Create a `Defaults` instance and modify it with desired model parameters.
@@ -138,7 +150,11 @@ The first commands in the `.ipynb` files will lint the notebooks using `pycodest
 * **Single Run:** Use `trial.run_single()` to execute a single model run.
 * **Multiple Runs:** Use `trial.run_trial()` to perform multiple replications of the model.
 
+<br>
+
 ![Model structure diagram](docs/assets/model_structure.png)
+
+*Illustration of model structure created using [draw.io](https://draw.io/).*
 
 <br>
 
@@ -149,10 +165,14 @@ repo/
 ├── docs/                 # Documentation
 ├── scripts/              # Code for DES model and analysis
 ├── tests/                # Unit tests
-├── .gitignore            #
+├── .gitignore            # Untracked files
+├── CHANGELOG.md          # Describes changes between releases
+├── CITATION.cff          # How to cite the repository
+├── CONTRIBUTING.md       # Contribution instructions
 ├── environment.yaml      # Conda environment
 ├── LICENSE               # Licence file
-└── README.md             #
+├── pyproject.toml        # Project metadata and build system configuration
+└── README.md             # This file! Describes the repository
 ```
 
 <br>
@@ -205,6 +225,8 @@ SOFTWARE.
 
 This project was developed as part of the project STARS: Sharing Tools and Artefacts for Reproducible Simulations. It is supported by the Medical Research Council [grant number [MR/Z503915/1](https://gtr.ukri.org/projects?ref=MR%2FZ503915%2F1)].
 
+<br>
+
 ## 📄 Template for your project
 
 Delete everything from this line and above, and use the following structure as the starting point for your project README:
@@ -238,6 +260,11 @@ Provide instructions for installing dependencies and setting up the environment.
 ## How to run
 
 Provide step-by-step instructions and examples.
+
+Clearly indicate which files will create each figure in the paper. Hypothetical example:
+
+* To generate **Figures 1 and 2**, execute `scripts/simulation/base_case.ipynb`
+* To generate **Table 1** and **Figures 3 to 5**, execute `scripts/simulation/scenario_analysis.ipynb`
 
 <br>
 
