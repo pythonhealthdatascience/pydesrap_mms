@@ -13,13 +13,11 @@ A `README` template is provided at the **end of this file**.
 
 <br>
 
-<!--TODO: Describe template model structure and operation using visuals (like how I needed it laid out when I first started learning about DES) -->
-
 ## 📌  Introduction
 
 This repository provides a template for building discrete-event simulation (DES) models in Python.
 
-😊 **Simple:** Easy-to-follow code structure using [SimPy](https://simpy.readthedocs.io/en/latest/). Implements a simple M/M/s model queueing model in which patients arrive, wait to see a nurse, have a consultation with the nurse and then leave. Follows a modular structure: uses object-oriented programming, with the simulation implemented through classes.
+😊 **Simple:** Easy-to-follow code structure using [SimPy](https://simpy.readthedocs.io/en/latest/). Implements a simple M/M/s queueing model in which patients arrive, wait to see a nurse, have a consultation with the nurse and then leave. Follows a modular structure: uses object-oriented programming, with the simulation implemented through classes.
 
 ♻️ **Reproducible:** This template is designed to function as a RAP. It adheres to reproducibility recommendations from:
 
@@ -42,9 +40,6 @@ This repository provides a template for building discrete-event simulation (DES)
 <br>
 
 ## 🧐 What are we modelling?
-
-<details markdown="1">
-<summary><b>Introduction to DES</b></summary>
 
 A **simulation** is a computer model that mimics a real-world system. It allows us to test different scenarios and see how the system behaves. One of the most common simulation types in healthcare is **DES**.
 
@@ -79,8 +74,6 @@ For further information on M/M/s models, see:
 * Ganesh, A. (2012). Simple queueing models. University of Bristol. https://people.maths.bris.ac.uk/~maajg/teaching/iqn/queues.pdf.
 * Green, L. (2011). Queueing theory and modeling. In *Handbook of Healthcare Delivery Systems*. Taylor & Francis. https://business.columbia.edu/faculty/research/queueing-theory-and-modeling.
 
-</details>
-
 <br>
 
 ## 🛠️ Using this template
@@ -105,7 +98,7 @@ conda env create --file environment.yaml
 conda activate
 ```
 
-**TODO:The file provided serves as snapshot of what used when making template... exact versions and so on... can update... if update want to make sure stuff works and so on... also some dependencies specifically for linting... or use of ipynb...**
+Note: The provided environment.yaml file is a snapshot of the environment used when creating the template, including specific package versions. You can update this file if necessary, but be sure to test that everything continues to work as expected after any updates. Also note that some dependencies are not required for modelling, but instead served other purposes, like running `.ipynb` files and linting.
 
 ### Step 3: Explore and modify
 
@@ -126,6 +119,26 @@ The first commands in the `.ipynb` files will lint the notebooks using `pycodest
 %load_ext pycodestyle_magic
 %pycodestyle_on
 ```
+
+<br>
+
+## ❓ How does the model work?
+
+**Model Run Process:**
+
+1. **Set Parameters:** Create a `Defaults` instance and modify it with desired model parameters.
+2. **Initialise Model:** Instantiate `Model` using the parameters. During setup, `Model` creates `Exponential` instances for each distribution.
+3. **Run Simulation:** Call `model.run()` to execute the simulation within the SimPy environment, running two processes:
+
+    * `generate_patient_arrivals()` to handle patient creation, then sending them on to `attend_clinic()`.
+    * `interval_audit()` to record utilisation and wait times at specified intervals during the simulation.
+
+**Trial Class Usage:**
+
+* **Single Run:** Use `trial.run_single()` to execute a single model run.
+* **Multiple Runs:** Use `trial.run_trial()` to perform multiple replications of the model.
+
+![Model structure diagram](docs/assets/model_structure.png)
 
 <br>
 
