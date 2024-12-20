@@ -8,27 +8,27 @@ days.
 Credit:
     > This code is adapted from Sammi Rosser and Dan Chalk (2024) HSMA - the
     little book of DES (https://github.com/hsma-programme/hsma6_des_book)
-    (MIT License).
+    (MIT Licence).
     > The distribution class is copied from Tom Monks (2021) sim-tools:
     fundamental tools to support the simulation process in python
-    (https://github.com/TomMonks/sim-tools) (MIT License). For other
+    (https://github.com/TomMonks/sim-tools) (MIT Licence). For other
     distributions (bernoulli, lognormal, normal, uniform, triangular, fixed,
     combination, continuous empirical, erlang, weibull, gamma, beta, discrete,
     truncated, raw empirical, pearsonV, pearsonVI, erlangK, poisson), check
     out the sim-tools package.
 
-License:
-    This project is licensed under the MIT License. See the LICENSE file for
+Licence:
+    This project is licensed under the MIT Licence. See the LICENSE file for
     more details.
 
 Typical usage example:
-
     trial = Trial(param=Defaults())
     trial.run_trial()
     print(trial.trial_results_df)
 """
 
 from joblib import Parallel, delayed
+from simulation.logging import Sim_Logger
 import numpy as np
 import pandas as pd
 import scipy.stats as st
@@ -63,6 +63,8 @@ class Defaults():
             Number of CPU cores to use for parallel execution. Set to
             desired number, or to -1 to use all available cores. For
             sequential execution, set to 1 (default).
+        logger (logging.Logger):
+            The logging instance used for logging messages.
     """
     def __init__(self):
         """
@@ -80,6 +82,7 @@ class Defaults():
         self.audit_interval = 120  # every 2 hours
         self.scenario_name = 0
         self.cores = -1
+        self.logger = Sim_Logger(log_to_console=False, log_to_file=False)
 
         # Re-enable attribute checks after initialisation
         object.__setattr__(self, '_initialising', False)
@@ -247,8 +250,8 @@ class Model:
             param (Defaults, optional):
                 Simulation parameters. Defaults to new instance of the
                 Defaults() class.
-            run_number (int, optional):
-                Run number for random seed generation. Defaults to 0.
+            run_number (int):
+                Run number for random seed generation.
         """
         # Set parameters and run number
         self.param = param
@@ -301,6 +304,10 @@ class Model:
                         'equal to 0.'
                     )
 
+        # Log model initialisation
+        self.param.logger.log(f'Initialised model: {vars(self)}')
+        self.param.logger.log(f'Parameters: {vars(self.param)}')
+
     def generate_patient_arrivals(self):
         """
         Generate patient arrivals.
@@ -309,6 +316,11 @@ class Model:
             # Create new patient, with ID based on length of patient list + 1
             p = Patient(len(self.patients) + 1)
             p.arrival_time = self.env.now
+
+            # Log arrival time
+            self.param.logger.log(
+                f'Patient {p.patient_id} arrives at: {p.arrival_time:.3f}'
+            )
 
             # If the warm-up period has passed, add the patient to the list.
             # The list stores a reference to the patient object, so any updates
@@ -348,6 +360,13 @@ class Model:
 
             # Sample time spent with nurse
             patient.time_with_nurse = self.nurse_consult_time_dist.sample()
+
+            # Log wait time and time spent with nurse
+            self.param.logger.log(
+                f'Patient {patient.patient_id} is seen by nurse after ' +
+                f'{patient.arrival_time:.3f} minutes. Consultation length: ' +
+                f'{patient.time_with_nurse:.3f} minutes.'
+            )
 
             # If warm-up period has passed, update the total nurse time used.
             # This is used to calculate utilisation. To avoid overestimation,
