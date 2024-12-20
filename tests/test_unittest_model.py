@@ -4,7 +4,7 @@ These check specific parts of the simulation and code, ensuring they work
 correctly and as expected.
 
 License:
-    This project is licensed under the MIT License. See the LICENSE file for
+    This project is licensed under the MIT Licence. See the LICENSE file for
     more details.
 
 Typical usage example:
@@ -12,6 +12,13 @@ Typical usage example:
     pytest
 """
 
+# Modify sys.path to include 'scripts' directory
+import os
+import sys
+sys.path.append(os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', 'scripts')))
+
+# Import other modules
 from scripts.simulation.model import Defaults, Exponential, Model, Trial
 import numpy as np
 import pandas as pd
