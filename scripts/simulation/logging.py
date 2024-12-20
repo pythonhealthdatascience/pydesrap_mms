@@ -12,8 +12,8 @@ License:
     more details.
 
 Typical usage example:
-    logger = logging.getLogger(__name__)
-    logger.info("Performing step X")
+    logger = Logger(log_to_console=True, log_to_file='../outputs/logs/log.log')
+    logger.log('Log message')
 """
 
 import logging
@@ -26,36 +26,33 @@ class Logger:
     Provides log of events as the simulation runs.
 
     Attributes:
-        log_enabled (boolean):
-            Enable or disable logging.
-        log_path (str):
-            Path to the log file.
         log_to_console (boolean):
             Whether to print log messages to the console.
+        log_to_file(str):
+            Path to save log to file. If None, then will not save to file.
         logger (logging.Logger):
             The logging instance used for logging messages.
     """
-    def __init__(self, log_enabled=False, log_path=None, log_to_console=False):
+    def __init__(self, log_to_console=False, log_to_file=None):
         """
         Initialise the Logger class.
 
         Arguments:
-            log_enabled (boolean):
-                Enable or disable logging - defaults to false.
-            log_path (str):
-                Path to the log file - defaults to none.
             log_to_console (boolean):
-                Whether to print log messages to the console as well - defaults
-                to false.
+                Whether to print log messages to the console.
+            log_to_file(str):
+                Path to save log to file. If None, then will not save to file.
         """
-        self.log_enabled = log_enabled
-        self.log_path = log_path
         self.log_to_console = log_to_console
+        self.log_to_file = log_to_file
         self.logger = None
 
-        if self.log_enabled:
-            self._validate_log_path()
+        # Set-up steps, depending on whether chosen logs to print, file or none
+        if self.log_to_console or self.log_to_file is not None:
+            self.logger = logging.getLogger(__name__)
             self._configure_logging()
+        if self.log_to_file is not None:
+            self._validate_log_path()
 
     def _validate_log_path(self):
         """
@@ -64,44 +61,45 @@ class Logger:
         Raises:
             ValueError: If log path is invalid.
         """
-        # Check if log path is provided
-        if not self.log_path:
-            raise ValueError('Logging is enabled, but no log_path ' +
-                             'is provided.')
-
         # Check if directory exists
-        directory = os.path.dirname(self.log_path)
+        directory = os.path.dirname(self.log_to_file)
         if not os.path.exists(directory):
             raise ValueError(f'The directory "{directory}" for the log ' +
                              'file does not exist.')
 
         # Check if the file ends with .log
-        if not self.log_path.endswith('.log'):
-            raise ValueError(f'The log file path "{self.log_path}" must ' +
+        if not self.log_to_file.endswith('.log'):
+            raise ValueError(f'The log file path "{self.log_to_file}" must ' +
                              'end with ".log".')
 
     def _configure_logging(self):
         """
         Configure the logger.
         """
-        # If wish to print to console, add StreamHandler to handlers
-        handlers = [logging.FileHandler(self.log_path)]
+        # Ensure any existing handlers are removed to avoid duplication
+        for handler in self.logger.handlers[:]:
+            self.logger.removeHandler(handler)
+
+        # Add handlers for saving messages to file and/or printing to console
+        handlers = []
+        if self.log_to_file:
+            handlers.append(logging.FileHandler(self.log_to_file))
         if self.log_to_console:
             handlers.append(logging.StreamHandler(sys.stdout))
 
-        # Define logging settings
-        logging.basicConfig(
-            # Level INFO means that it's purpose is to confirm things are
-            # working as expected
-            level=logging.INFO,
-            # Format of messages
-            format='%(asctime)s - %(levelname)s -- %(filename)s:\
-                    %(funcName)5s():%(lineno)s -- %(message)s',
-            handlers=handlers
-        )
+        # Add handlers directly to the logger
+        for handler in handlers:
+            self.logger.addHandler(handler)
 
-        # Create logger
-        self.logger = logging.getLogger(__name__)
+        # Set logging level and format. Level 'INFO' means it's purpose is to
+        # confirm things are working as expected.
+        self.logger.setLevel(logging.INFO)
+        formatter = logging.Formatter(
+            '%(asctime)s - %(levelname)s - %(filename)s:'
+            '%(funcName)s():%(lineno)d - %(message)s'
+        )
+        for handler in handlers:
+            handler.setFormatter(formatter)
 
     def log(self, msg):
         """
@@ -111,5 +109,5 @@ class Logger:
             msg (str):
                 Message to log.
         """
-        if self.log_enabled:
+        if self.logger is not None:
             self.logger.info(msg)
