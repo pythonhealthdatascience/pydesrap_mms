@@ -78,7 +78,7 @@ class Sim_Logger:
         """
         # Check if directory exists
         directory = os.path.dirname(self.file_path)
-        if not os.path.exists(directory):
+        if directory and not os.path.exists(directory):
             raise ValueError(f'The directory "{directory}" for the log ' +
                              'file does not exist.')
 
