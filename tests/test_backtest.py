@@ -3,7 +3,7 @@
 These check that the model code produces results consistent with prior code.
 
 License:
-    This project is licensed under the MIT License. See the LICENSE file for
+    This project is licensed under the MIT Licence. See the LICENSE file for
     more details.
 
 Typical usage example:
@@ -12,6 +12,13 @@ Typical usage example:
 
 """
 
+# Modify sys.path to include 'scripts' directory
+import os
+import sys
+sys.path.append(os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', 'scripts')))
+
+# Import other modules
 from scripts.simulation.model import Defaults, Trial
 import pandas as pd
 from pathlib import Path
