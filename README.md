@@ -13,6 +13,21 @@ A `README` template is provided at the **end of this file**.
 
 <br>
 
+**README Sections:**
+
+* [📌  Introduction](#-introduction)
+* [🧐 What are we modelling?](#-what-are-we-modelling)
+* [🛠️ Using this template](#️-using-this-template)
+* [❓ How does the model work?](#-how-does-the-model-work)
+* [📂 Repository structure](#-repository-structure)
+* [⏰ Run time and machine specification](#-run-time-and-machine-specification)
+* [📝 Citation](#-citation)
+* [📜 Licence](#-licence)
+* [💰 Funding](#-funding)
+* [📄 Template README for your project](#-template-readme-for-your-project)
+
+<br>
+
 ## 📌  Introduction
 
 This repository provides a template for building discrete-event simulation (DES) models in Python.
@@ -22,7 +37,7 @@ This repository provides a template for building discrete-event simulation (DES)
 ♻️ **Reproducible:** This template is designed to function as a RAP. It adheres to reproducibility recommendations from:
 
 * ["Levels of RAP" framework](https://nhsdigital.github.io/rap-community-of-practice/introduction_to_RAP/levels_of_RAP/) from the NHS RAP Community of Practice.
-* Recommendations from [Heather et al. 2025](TODO:ADDLINK) "*On the reproducibility of discrete-event simulation studies in health research*".
+* Recommendations from [Heather et al. 2025](TODO:ADDLINK) "*On the reproducibility of discrete-event simulation studies in health research: a computational investigation using open models*".
 
 🚀 **Extendable:** This template adapts from and complements material from Sammi Rosser and Dan Chalk (2024) ["HSMA - the little book of DES"](https://github.com/hsma-programme/hsma6_des_book). The book includes additional advanced features that can be used to extend the model in this template, including.
 
@@ -104,6 +119,8 @@ Note: The provided environment.yaml file is a snapshot of the environment used w
 
 Review the example DES implementation in `scripts`. Modify and extend the code as needed for your specific use case.
 
+Check you still fulfil the criteria in `docs/nhs_rap.md` and `docs/heather_2025.md`.
+
 A template `README` is provided at the end of this file.
 
 Replace entries in the current `CHANGELOG` with your own, alongside creating **GitHub releases**.
@@ -177,9 +194,15 @@ repo/
 
 <br>
 
+## ⏰ Run time and machine specification
+
+As this a template, it is not possible to provide an overall run time, as this will vary depending on how the template model is used. However, this information is provided from some example implementations, within the `.ipynb` files in `scripts`. These times were obtained on an Intel Core i7-12700H with 32GB RAM running Ubuntu 24.04.1 Linux. 
+
+<br>
+
 ## 📝 Citation
 
-If you use this template in your research or poject, please cite as follows:
+If you use this template, please cite as follows:
 
 ```
 Amy Heather, "Simple Reproducible Python DES Template", 2024, GitHub repository: https://github.com/pythonhealthdatascience/rap_template_python_des.
@@ -227,7 +250,7 @@ This project was developed as part of the project STARS: Sharing Tools and Artef
 
 <br>
 
-## 📄 Template for your project
+## 📄 Template README for your project
 
 Delete everything from this line and above, and use the following structure as the starting point for your project README:
 ___
@@ -265,6 +288,20 @@ Clearly indicate which files will create each figure in the paper. Hypothetical 
 
 * To generate **Figures 1 and 2**, execute `scripts/simulation/base_case.ipynb`
 * To generate **Table 1** and **Figures 3 to 5**, execute `scripts/simulation/scenario_analysis.ipynb`
+
+<br>
+
+## Run time and machine specification
+
+State the run time, and give the specification of the machine used (which achieved that run time).
+
+**Example:** Intel Core i7-12700H with 32GB RAM running Ubuntu 24.04.1 Linux. 
+
+To find this information:
+
+* **Linux:** Run `neofetch` on the terminal and record your CPU, memory and operating system.
+* **Windows:** Open "Task Manager" (Ctrl + Shift + Esc), go to the "Performance" tab, then select "CPU" and "Memory" for relevant information.
+* **Mac:** Click the "Apple Menu", select "About This Mac", then window will display the details.
 
 <br>
 
