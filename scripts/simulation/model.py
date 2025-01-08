@@ -145,7 +145,7 @@ class Patient:
     Represents a patient.
 
     Attributes:
-        patient_id (int):
+        patient_id (int|float|string):
             Patient's unique identifier.
         arrival_time (float):
             Arrival time for the patient in minutes.
@@ -317,16 +317,19 @@ class Model:
             p = Patient(len(self.patients) + 1)
             p.arrival_time = self.env.now
 
-            # Log arrival time
-            self.param.logger.log(
-                f'Patient {p.patient_id} arrives at: {p.arrival_time:.3f}'
-            )
-
             # If the warm-up period has passed, add the patient to the list.
             # The list stores a reference to the patient object, so any updates
             # to the patient attributes will be reflected in the list as well
             if self.env.now >= self.param.warm_up_period:
                 self.patients.append(p)
+            # If still during warm-up, amend ID (so not set to 1)
+            else:
+                p.patient_id = 'X (warm-up)'
+
+            # Log arrival time
+            self.param.logger.log(
+                f'Patient {p.patient_id} arrives at: {p.arrival_time:.3f}'
+            )
 
             # Start process of attending clinic
             self.env.process(self.attend_clinic(p))
