@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "template-des"
-version = "0.0.1"
+version = "0.1.0"
 description = "Simple Reproducible Python Discrete-Event Simulation (DES) Template"
 authors = [
     {name = "Amy Heather", email = "a.heather2@exeter.ac.uk"}
