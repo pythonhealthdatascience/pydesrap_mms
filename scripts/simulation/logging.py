@@ -12,9 +12,9 @@ License:
     more details.
 
 Typical usage example:
-    logger = Sim_Logger(log_to_console=True,
-                        log_to_file=True,
-                        file_path='../outputs/logs/log.log')
+    logger = SimLogger(log_to_console=True,
+                       log_to_file=True,
+                       file_path='../outputs/logs/log.log')
     logger.log('Log message')
 """
 
@@ -24,7 +24,7 @@ import sys
 import time
 
 
-class Sim_Logger:
+class SimLogger:
     """
     Provides log of events as the simulation runs.
 

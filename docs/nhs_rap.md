@@ -34,7 +34,7 @@ Meeting all of the above requirements, plus:
 | Pipeline includes a testing framework ([unit tests](https://nhsdigital.github.io/rap-community-of-practice/training_resources/python/unit-testing/), [back tests](https://nhsdigital.github.io/rap-community-of-practice/training_resources/python/backtesting/)). | ✅ | `tests/` contains unit and back tests
 | Repository includes dependency information (e.g. [requirements.txt](https://pip.pypa.io/en/stable/user_guide/#requirements-files), [PipFile](https://github.com/pypa/pipfile/blob/main/README.rst), [environment.yml](https://nhsdigital.github.io/rap-community-of-practice/training_resources/python/virtual-environments/conda/)). | ✅ | `environment.yaml` |
 | [Logs](https://nhsdigital.github.io/rap-community-of-practice/training_resources/python/logging-and-error-handling/) are automatically recorded by the pipeline to ensure outputs are as expected. | ✅ | - |
-| Data is handled and output in a [Tidy data format](https://medium.com/@kimrodrikwa/untidy-data-a90b6e3ebe4c). | ❌ | **TODO: Look into this** |
+| Data is handled and output in a [Tidy data format](https://medium.com/@kimrodrikwa/untidy-data-a90b6e3ebe4c). | ✅ | Meets the requirements of tidy data (each variable forms a column, each observation forms a row, each type of observational unit forms a table). |
 
 ## 🥇 Gold 
 

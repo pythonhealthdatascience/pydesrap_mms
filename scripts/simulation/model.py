@@ -28,7 +28,7 @@ Typical usage example:
 """
 
 from joblib import Parallel, delayed
-from simulation.logging import Sim_Logger
+from simulation.logging import SimLogger
 import numpy as np
 import pandas as pd
 import scipy.stats as st
@@ -82,7 +82,7 @@ class Defaults():
         self.audit_interval = 120  # every 2 hours
         self.scenario_name = 0
         self.cores = -1
-        self.logger = Sim_Logger(log_to_console=False, log_to_file=False)
+        self.logger = SimLogger(log_to_console=False, log_to_file=False)
 
         # Re-enable attribute checks after initialisation
         object.__setattr__(self, '_initialising', False)

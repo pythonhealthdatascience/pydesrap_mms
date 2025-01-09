@@ -16,7 +16,7 @@ from io import StringIO
 import logging
 import os
 import pytest
-from scripts.simulation.logging import Sim_Logger
+from scripts.simulation.logging import SimLogger
 from unittest.mock import patch, MagicMock
 
 
@@ -25,7 +25,7 @@ def test_log_to_console():
     Confirm that logger.log() prints the provided message to the console.
     """
     with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
-        logger = Sim_Logger(log_to_console=True)
+        logger = SimLogger(log_to_console=True)
         logger.log('Test console log')
         # Check if console output matches
         assert 'Test console log' in mock_stdout.getvalue()
@@ -39,7 +39,7 @@ def test_log_to_file():
     # Mock the file open operation
     with patch('builtins.open', new_callable=MagicMock) as mock_open:
         # Create the logger and log a simple example
-        logger = Sim_Logger(log_to_file=True, file_path='test.log')
+        logger = SimLogger(log_to_file=True, file_path='test.log')
         logger.log('Log message')
 
         # Check that the file was opened in append mode at the absolute path
@@ -56,7 +56,7 @@ def test_invalid_path():
     Ensure there is appropriate error handling for an invalid file path.
     """
     with pytest.raises(ValueError):
-        Sim_Logger(log_to_file=True, file_path='/invalid/path/to/log.log')
+        SimLogger(log_to_file=True, file_path='/invalid/path/to/log.log')
 
 
 def test_invalid_file_extension():
@@ -64,4 +64,4 @@ def test_invalid_file_extension():
     Ensure there is appropriate error handling for an invalid file extension.
     """
     with pytest.raises(ValueError):
-        Sim_Logger(log_to_file=True, file_path='test.txt')
+        SimLogger(log_to_file=True, file_path='test.txt')
