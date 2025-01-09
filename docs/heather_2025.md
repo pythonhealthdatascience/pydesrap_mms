@@ -30,9 +30,9 @@ As part of the project STARS (Sharing Tools and Artefacts for Reproducible Simul
 | Comment sufficiently | ✅ | - |
 | Ensure clarity and consistency in the model results tables | ✅ | - |
 | Include run instructions | ✅ | - |
-| State run times and machine specifications | ✅ | - |
+| State run times and machine specifications | ✅ | In `REAME.md` and `.ipynb` files |
 | **Functionality** |
 | Optimise model run time | ✅ | Provides option of parallel processing. |
-| Save outputs to a file | ✅ | - |
+| Save outputs to a file | ✅ | Includes some examples (in `analysis.ipynb`) where outputs are saved. |
 | Avoid excessive output files | ✅ | - |
-| Address large file sizes | N/A | No large files. |
+| Address large file sizes | ✅ | Includes an example (in `analysis.ipynb`) where patient results are compressed when saving to file (`.csv.gz`). |
