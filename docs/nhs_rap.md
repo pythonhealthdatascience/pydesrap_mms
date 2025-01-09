@@ -44,7 +44,7 @@ Meeting all of the above requirements, plus:
 
 | Criteria | Completion | Further details |
 | - | - | - |
-| Code is fully [packaged](https://packaging.python.org/en/latest/). | ✅ |
-| Repository automatically runs tests etc. via CI/CD or a different integration/deployment tool e.g. [GitHub Actions](https://docs.github.com/en/actions). | ❌ | **TODO: Set up tests to run with GitHub actions** |
+| Code is fully [packaged](https://packaging.python.org/en/latest/). | ✅ | `__init__.py` (shows directory should be treated like package) and `pyproject.toml` (specifies package details) |
+| Repository automatically runs tests etc. via CI/CD or a different integration/deployment tool e.g. [GitHub Actions](https://docs.github.com/en/actions). | ✅ | `.github/workflows/tests.yaml` |
 | Process runs based on event-based triggers (e.g., new data in database) or on a schedule. | N/A | - |
 | Changes to the RAP are clearly signposted. E.g. a changelog in the package, releases etc. (See gov.uk info on [Semantic Versioning](https://github.com/alphagov/govuk-frontend/blob/main/docs/contributing/versioning.md)). | ✅ | `CHANGELOG.md` and GitHub releases |

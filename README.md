@@ -5,6 +5,7 @@
 ![python](https://img.shields.io/badge/-Python_3.13-306998?logo=python&logoColor=white)
 ![licence](https://img.shields.io/badge/Licence-MIT-green.svg?labelColor=gray)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14622466.svg)](https://doi.org/10.5281/zenodo.14622466)
+![Tests](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/tests.yaml/badge.svg)
 
 A simple template for creating DES models in Python, within a **reproducible analytical pipeline (RAP)** <br>
 Click on <kbd>Use this template</kbd> to initialise new repository.<br>
@@ -136,6 +137,8 @@ To run tests, ensure environment is active and located in main directory (i.e. p
 pytest
 ```
 
+The repository contains a GitHub action `tests.yaml` which will automatically run tests with new commits to GitHub. This is continuous integration, helping to catch bugs early and keep the code stable.
+
 You can lint the `.py` files by running either of this commands from the terminal:
 
 ```
@@ -182,6 +185,7 @@ This section describes the purposes of each class in the simulation.
 
 ```
 repo/
+├── .github/workflows/    # GitHub actions
 ├── docs/                 # Documentation
 ├── scripts/              # Code for DES model and analysis
 ├── tests/                # Unit tests
