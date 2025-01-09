@@ -21,3 +21,6 @@ abstract: >-
   Template reproducible analytical pipeline (RAP) for simple
   python DES model.
 license: MIT
+# TODO: Manually update with each GitHub release
+version: '0.1.0'
+date-released: '2025-01-09'
