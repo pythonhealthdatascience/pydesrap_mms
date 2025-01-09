@@ -1,0 +1,22 @@
+name: tests
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install python and dependencies
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest
