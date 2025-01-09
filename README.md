@@ -4,6 +4,7 @@
 
 ![python](https://img.shields.io/badge/-Python_3.13-306998?logo=python&logoColor=white)
 ![licence](https://img.shields.io/badge/Licence-MIT-green.svg?labelColor=gray)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14622466.svg)](https://doi.org/10.5281/zenodo.14622466)
 
 A simple template for creating DES models in Python, within a **reproducible analytical pipeline (RAP)** <br>
 Click on <kbd>Use this template</kbd> to initialise new repository.<br>
@@ -13,7 +14,7 @@ A `README` template is provided at the **end of this file**.
 
 <br>
 
-**README Sections:**
+Table of contents:
 
 * [📌  Introduction](#-introduction)
 * [🧐 What are we modelling?](#-what-are-we-modelling)
@@ -113,7 +114,9 @@ conda env create --file environment.yaml
 conda activate
 ```
 
-Note: The provided environment.yaml file is a snapshot of the environment used when creating the template, including specific package versions. You can update this file if necessary, but be sure to test that everything continues to work as expected after any updates. Also note that some dependencies are not required for modelling, but instead served other purposes, like running `.ipynb` files and linting.
+The provided environment.yaml file is a snapshot of the environment used when creating the template, including specific package versions. You can update this file if necessary, but be sure to test that everything continues to work as expected after any updates. Also note that some dependencies are not required for modelling, but instead served other purposes, like running `.ipynb` files and linting.
+
+As an alternative, a `requirements.txt` file is provided which can be used to set up the environment with `virtualenv`. In this case, it won't fetch a specific version of Python - so please note that this was developed with Python 3.13.0.
 
 ### Step 3: Explore and modify
 
@@ -202,11 +205,15 @@ As this a template, it is not possible to provide an overall run time, as this w
 
 ## 📝 Citation
 
-If you use this template, please cite as follows:
+If you use this template, please cite the archived repository:
 
-```
-Amy Heather, "Simple Reproducible Python DES Template", 2024, GitHub repository: https://github.com/pythonhealthdatascience/rap_template_python_des.
-```
+> Heather, A. (2025). Simple Reproducible Python Discrete-Event Simulation (DES) Template. Zenodo. https://doi.org/10.5281/zenodo.14622466
+
+You can also cite the GitHub repository:
+
+> Heather, A. (2025). Simple Reproducible Python Discrete-Event Simulation (DES) Template. GitHub. https://github.com/pythonhealthdatascience/rap_template_python_des.
+
+Researcher details:
 
 | Contributor | ORCID | GitHub |
 | --- | --- | --- |
