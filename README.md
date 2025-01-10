@@ -2,10 +2,10 @@
 
 # Simple Reproducible Python<br>Discrete-Event Simulation (DES) Template
 
-![python](https://img.shields.io/badge/-Python_3.13-306998?logo=python&logoColor=white)
-![licence](https://img.shields.io/badge/Licence-MIT-green.svg?labelColor=gray)
+[![python](https://img.shields.io/badge/-Python_3.13-306998?logo=python&logoColor=white)](https://www.python.org/)
+[![licence](https://img.shields.io/badge/Licence-MIT-green.svg?labelColor=gray)](https://github.com/pythonhealthdatascience/rap_template_python_des/blob/main/LICENSE)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14622466.svg)](https://doi.org/10.5281/zenodo.14622466)
-![Tests](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/tests.yaml/badge.svg)
+[![Tests](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/tests.yaml/badge.svg)](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/tests.yaml)
 
 A simple template for creating DES models in Python, within a **reproducible analytical pipeline (RAP)** <br>
 Click on <kbd>Use this template</kbd> to initialise new repository.<br>
@@ -38,10 +38,10 @@ This repository provides a template for building discrete-event simulation (DES)
 
 ♻️ **Reproducible:** This template is designed to function as a RAP. It adheres to reproducibility recommendations from:
 
-* ["Levels of RAP" framework](https://nhsdigital.github.io/rap-community-of-practice/introduction_to_RAP/levels_of_RAP/) from the NHS RAP Community of Practice (as documented in `docs/nhs_rap.md`).
-* Recommendations from [Heather et al. 2025](TODO:ADDLINK) "*On the reproducibility of discrete-event simulation studies in health research: a computational investigation using open models*" (as documented in `docs/heather_2025.md`).
+* ["Levels of RAP" framework](https://nhsdigital.github.io/rap-community-of-practice/introduction_to_RAP/levels_of_RAP/) from the NHS RAP Community of Practice (`docs/nhs_rap.md`).
+* Recommendations from [Heather et al. 2025](TODO:ADDLINK) "*On the reproducibility of discrete-event simulation studies in health research: a computational investigation using open models*" (`docs/heather_2025.md`).
 
-🚀 **Extendable:** This template adapts from and complements material from Sammi Rosser and Dan Chalk (2024) ["HSMA - the little book of DES"](https://github.com/hsma-programme/hsma6_des_book). For clarity, changes from the DES book in this template are explained in `docs/hsma_changes.md`. The book includes additional advanced features that can be used to extend the model in this template, including:
+🚀 **Extendable:** This template adapts from and complements material from Sammi Rosser and Dan Chalk (2024) ["HSMA - the little book of DES"](https://github.com/hsma-programme/hsma6_des_book). The book includes additional advanced features that can be used to extend the model in this template, including:
 
 * Multiple activities
 * Branching paths
@@ -49,6 +49,8 @@ This repository provides a template for building discrete-event simulation (DES)
 * Reneging, blaking and jockeying
 * Variable arrival rates
 * Appointment booking
+
+For clarity, changes from the DES book in this template are explained in `docs/hsma_changes.md`.
 
 ✨ **Style:** Coding style based on the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html). Used `flake8` and `pylint` to lint `.py` files, and `pycodestyle` for `.ipynb` files.
 
@@ -121,15 +123,21 @@ As an alternative, a `requirements.txt` file is provided which can be used to se
 
 ### Step 3: Explore and modify
 
-Review the example DES implementation in `scripts`. Modify and extend the code as needed for your specific use case.
+🔎 Review the example DES implementation in `scripts`. Modify and extend the code as needed for your specific use case.
 
-Check you still fulfil the criteria in `docs/nhs_rap.md` and `docs/heather_2025.md`.
+🔎 Check you still fulfil the criteria in `docs/nhs_rap.md` and `docs/heather_2025.md`.
 
-A template `README` is provided at the end of this file.
+🔎 Adapt the template `README` provided at the end of this file.
 
-Replace entries in the current `CHANGELOG` with your own, alongside creating **GitHub releases**.
+🔎 Create your own `CITATION.cff` file using [cff-init](https://citation-file-format.github.io/cff-initializer-javascript/#/).
 
-Create your own `CITATION.cff` file using [cff-init](https://citation-file-format.github.io/cff-initializer-javascript/#/).
+🔎 Replace entries in the current `CHANGELOG` with your own, and create GitHub releases.
+
+🔎 Archive your repository (e.g. [Zenodo](https://zenodo.org/)).
+
+🔎 Complete the Strengthening The Reporting of Empirical Simulation Studies (STRESS) checklist (`stress_des.md`) and use this to support writing publication/report, and attach as an appendice to report.
+
+🔎 **Tests**
 
 To run tests, ensure environment is active and located in main directory (i.e. parent of `tests/`) and then run the following command. The tests may take around one minute to run. As they run, you will see '.' if the test passes and 'F' if it fails (e.g. `tests/test_model.py ..F..`). When it finishes, you will see the final result (e.g. `==== 1 failed, 4 passed in 51s ====`)
 
@@ -137,7 +145,11 @@ To run tests, ensure environment is active and located in main directory (i.e. p
 pytest
 ```
 
-The repository contains a GitHub action `tests.yaml` which will automatically run tests with new commits to GitHub. This is continuous integration, helping to catch bugs early and keep the code stable.
+The repository contains a GitHub action `tests.yaml` which will automatically run tests with new commits to GitHub. This is continuous integration, helping to catch bugs early and keep the code stable. It will run the tests on three operating systems: Ubuntu, Windows and Mac.
+
+If you have changed the model behaviour, you may wish to amend, remove or write new tests.
+
+🔎 **Linting**
 
 You can lint the `.py` files by running either of this commands from the terminal:
 
