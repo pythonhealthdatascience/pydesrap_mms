@@ -1,3 +1,7 @@
+# This file runs the tests in `tests/` with every push to GitHub
+# They will run in parallel, and run on three operating systems:
+# Ubuntu, Windows and Mac.
+
 name: tests
 
 on:
@@ -5,9 +9,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-tests:
+
+  # Run tests on Ubuntu
+  tests-on-ubuntu:
     runs-on: ubuntu-latest
     steps:
+
       - name: Check out repository
         uses: actions/checkout@v4
 
@@ -20,3 +27,48 @@ jobs:
 
       - name: Run tests
         run: pytest
+
+      - name: List the environment variables
+        run: env
+
+  # Run tests on Windows
+  tests-on-windows:
+    runs-on: windows-latest
+    steps:
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install python and dependencies
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest
+
+      - name: List the environment variables
+        run: env
+
+  # Run tests on Mac
+  tests-on-macos:
+    runs-on: macos-latest
+    steps:
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install python and dependencies
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest
+
+      - name: List the environment variables
+        run: env
