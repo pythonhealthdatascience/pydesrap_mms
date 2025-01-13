@@ -32,6 +32,8 @@ Table of contents:
 
 ## 📌  Introduction
 
+<!--TODO: Add links to STARS, relevant publication, and https://github.com/pythonhealthdatascience/rap_des/ -->
+
 This repository provides a template for building discrete-event simulation (DES) models in Python.
 
 😊 **Simple:** Easy-to-follow code structure using [SimPy](https://simpy.readthedocs.io/en/latest/). Implements a simple M/M/s queueing model in which patients arrive, wait to see a nurse, have a consultation with the nurse and then leave. Follows a modular structure: uses object-oriented programming, with the simulation implemented through classes.
@@ -52,9 +54,9 @@ This repository provides a template for building discrete-event simulation (DES)
 
 For clarity, changes from the DES book in this template are explained in `docs/hsma_changes.md`.
 
-✨ **Style and structure:** The coding style is based on the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html). Linting is implemented using `flake8` and `pylint` for `.py` files, and `pycodestyle` for `.ipynb` files. While this repository is designed to be used as a template—helping you create a new repository with all relevant metadata (e.g., `README.md`, `CITATION.cff`, `LICENSE`) and scripts—it also adheres to a package-like structure. This is aligned with the NHS Gold RAP tier, and key indicators of this structure include `__init__.py` marking directories to be treated like packages, and `pyproject.toml` specifying package metadata.
+✨ **Style:** The coding style is based on the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html). Linting is implemented using `flake8` and `pylint` for `.py` files, and `pycodestyle` for `.ipynb` files.
 
-<!--TODO: Add links to STARS, relevant publication, and https://github.com/pythonhealthdatascience/rap_des/ -->
+🧱 **Package structure:** In Python, a package can simply be defined as a directory with an `__init__.py` file in it. In this repository, the scripts for model (within `simulation/`) are treated as a little local package. This keeps the code model code isolated from our experiments and analysis. It is installed as an editable (`-e`) local import - with `-e` meaning it will update with changes to the local files in `simulation/`. As it is installed in our environment, it can then easily be used anywhere else in the directory - here, in `notebooks/` and `tests/` - without needing any additional code (e.g. no need to modify `sys.path`, or have additional `__init__.py` files).
 
 <br>
 
@@ -125,7 +127,7 @@ As an alternative, a `requirements.txt` file is provided which can be used to se
 
 🔎 Choose your desired licence (e.g. <https://choosealicense.com/>). If keeping an MIT licence, just modify the copyright holder in `LICENSE`.
 
-🔎 Review the example DES implementation in `scripts`. Modify and extend the code as needed for your specific use case.
+🔎 Review the example DES implementation in `simulation` and `notebooks`. Modify and extend the code as needed for your specific use case.
 
 🔎 Check you still fulfil the criteria in `docs/nhs_rap.md` and `docs/heather_2025.md`.
 
@@ -156,8 +158,8 @@ If you have changed the model behaviour, you may wish to amend, remove or write 
 You can lint the `.py` files by running either of this commands from the terminal:
 
 ```
-flake8 scripts/simulation/model.py
-pylint scripts/simulation/model.py
+flake8 simulation/model.py
+pylint simulation/model.py
 ```
 
 The first commands in the `.ipynb` files will lint the notebooks using `pycodestyle` when executed:
@@ -201,15 +203,18 @@ This section describes the purposes of each class in the simulation.
 repo/
 ├── .github/workflows/    # GitHub actions
 ├── docs/                 # Documentation
-├── scripts/              # Code for DES model and analysis
-├── tests/                # Unit tests
+├── inputs/               # Folder to store any input data
+├── notebooks/            # Run DES model and analyse results
+├── outputs/              # Folder to save any outputs from model
+├── simulation/           # Local package containing code for the DES model
+├── tests/                # Unit and back testing of the DES model
 ├── .gitignore            # Untracked files
 ├── CHANGELOG.md          # Describes changes between releases
 ├── CITATION.cff          # How to cite the repository
 ├── CONTRIBUTING.md       # Contribution instructions
 ├── environment.yaml      # Conda environment (includes Python version)
 ├── LICENSE               # Licence file
-├── pyproject.toml        # Project metadata and build system configuration
+├── pyproject.toml        # Metadata for local `simulation/` package
 ├── README.md             # This file! Describes the repository
 └── requirements.txt      # Virtual environment (used by GitHub actions)
 ```
@@ -218,7 +223,7 @@ repo/
 
 ## ⏰ Run time and machine specification
 
-As this a template, it is not possible to provide an overall run time, as this will vary depending on how the template model is used. However, this information is provided from some example implementations, within the `.ipynb` files in `scripts`. These times were obtained on an Intel Core i7-12700H with 32GB RAM running Ubuntu 24.04.1 Linux. 
+As this a template, it is not possible to provide an overall run time, as this will vary depending on how the template model is used. However, this information is provided from some example implementations, within the `.ipynb` files in `notebooks`. These times were obtained on an Intel Core i7-12700H with 32GB RAM running Ubuntu 24.04.1 Linux. 
 
 <br>
 
@@ -312,8 +317,8 @@ Provide step-by-step instructions and examples.
 
 Clearly indicate which files will create each figure in the paper. Hypothetical example:
 
-* To generate **Figures 1 and 2**, execute `scripts/simulation/base_case.ipynb`
-* To generate **Table 1** and **Figures 3 to 5**, execute `scripts/simulation/scenario_analysis.ipynb`
+* To generate **Figures 1 and 2**, execute `notebooks/base_case.ipynb`
+* To generate **Table 1** and **Figures 3 to 5**, execute `notebooks/scenario_analysis.ipynb`
 
 <br>
 

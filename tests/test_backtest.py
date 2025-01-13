@@ -12,14 +12,7 @@ Typical usage example:
 
 """
 
-# Modify sys.path to include 'scripts' directory
-import os
-import sys
-sys.path.append(os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', 'scripts')))
-
-# Import other modules
-from scripts.simulation.model import Defaults, Trial
+from simulation.model import Defaults, Trial
 import pandas as pd
 from pathlib import Path
 

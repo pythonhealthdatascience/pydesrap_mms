@@ -16,7 +16,7 @@ from io import StringIO
 import logging
 import os
 import pytest
-from scripts.simulation.logging import SimLogger
+from simulation.logging import SimLogger
 from unittest.mock import patch, MagicMock
 
 

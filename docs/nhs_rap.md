@@ -44,7 +44,7 @@ Meeting all of the above requirements, plus:
 
 | Criteria | Completion | Further details |
 | - | - | - |
-| Code is fully [packaged](https://packaging.python.org/en/latest/). | ✅ | `__init__.py` (shows directory should be treated like package) and `pyproject.toml` (specifies package details). Based on src/package layout described by [PyOpenSci](https://www.pyopensci.org/python-package-guide/package-structure-code/python-package-structure.html) |
+| Code is fully [packaged](https://packaging.python.org/en/latest/). | ✅ | With thanks to [Joshua Cook](https://joshuacook.netlify.app/posts/2024-07-27_python-data-analysis-org/), whose blog post I used to help me structure this analysis as a package. |
 | Repository automatically runs tests etc. via CI/CD or a different integration/deployment tool e.g. [GitHub Actions](https://docs.github.com/en/actions). | ✅ | `.github/workflows/tests.yaml` |
 | Process runs based on event-based triggers (e.g., new data in database) or on a schedule. | N/A | - |
 | Changes to the RAP are clearly signposted. E.g. a changelog in the package, releases etc. (See gov.uk info on [Semantic Versioning](https://github.com/alphagov/govuk-frontend/blob/main/docs/contributing/versioning.md)). | ✅ | `CHANGELOG.md` and GitHub releases |

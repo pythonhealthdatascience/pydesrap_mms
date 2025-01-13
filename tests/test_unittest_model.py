@@ -12,14 +12,7 @@ Typical usage example:
     pytest
 """
 
-# Modify sys.path to include 'scripts' directory
-import os
-import sys
-sys.path.append(os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', 'scripts')))
-
-# Import other modules
-from scripts.simulation.model import Defaults, Exponential, Model, Trial
+from simulation.model import Defaults, Exponential, Model, Trial
 import numpy as np
 import pandas as pd
 import pytest
@@ -89,13 +82,13 @@ def test_negative_results():
     # Check that queue time is non-negative
     for result in model.results_list:
         error_msg = ('Nurse queue time should not be negative, but found: ' +
-                     f'{result['q_time_nurse']}.')
+                     f'{result["q_time_nurse"]}.')
         assert result['q_time_nurse'] >= 0, error_msg
 
     # Check that consultation time is non-negative
     for result in model.results_list:
         error_msg = ('Nurse consultation times should not be negative, but ' +
-                     f'found: {result['time_with_nurse']}.')
+                     f'found: {result["time_with_nurse"]}.')
         assert result['time_with_nurse'] >= 0, error_msg
 
 
@@ -212,17 +205,17 @@ def test_warmup_impact():
     )
     assert first_warmup['q_time_nurse'] > 0, (
         'Expect first patient to need to queue in model with warm-up and ' +
-        f'high arrival rate, but got {first_warmup['q_time_nurse']}.'
+        f'high arrival rate, but got {first_warmup["q_time_nurse"]}.'
     )
 
     # Check that model without warm-up has arrival and queue time of 0
     assert first_none['arrival_time'] == 0, (
         'Expect first patient to arrive at time 0 when model is run ' +
-        f'without warm-up, but got {first_none['arrival_time']}.'
+        f'without warm-up, but got {first_none["arrival_time"]}.'
     )
     assert first_none['q_time_nurse'] == 0, (
         'Expect first patient to have no wait time in model without warm-up ' +
-        f'but got {first_none['q_time_nurse']}.'
+        f'but got {first_none["q_time_nurse"]}.'
     )
 
 

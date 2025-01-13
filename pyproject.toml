@@ -1,21 +1,7 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["flit"]
+build-backend = "flit_core.buildapi"
 
 [project]
-name = "template-des"
-version = "0.1.0"
-description = "Simple Reproducible Python Discrete-Event Simulation (DES) Template"
-authors = [
-    {name = "Amy Heather", email = "a.heather2@exeter.ac.uk"}
-]
-keywords = ["template", "project", "example"]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License"
-]
-readme = "README.md"
-requires-python = ">=3.13"
-
-[project.urls]
-Homepage = "https://github.com/pythonhealthdatascience/rap_template_python_des"
+name = "simulation"
+dynamic = ["version", "description"]

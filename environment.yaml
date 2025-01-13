@@ -15,3 +15,4 @@ dependencies:
   - simpy=4.1.1
   - pip:
     - pycodestyle_magic==0.5
+    - -e .[dev]
