@@ -413,3 +413,23 @@ def test_exponentional():
     assert not np.array_equal(sample1, sample2), (
         'Samples with different random seeds should not be equal.'
     )
+
+
+def test_parallel():
+    """
+    Check that sequential and parallel execution produce consistent results.
+    """
+    # Sequential (1 core) and parallel (-1 cores) execution
+    results = {}
+    for mode, cores in [('seq', 1), ('par', -1)]:
+        param = Defaults()
+        param.cores = cores
+        trial = Trial(param)
+        results[mode] = trial.run_single(run=0)
+
+    # Verify results are identical
+    pd.testing.assert_frame_equal(
+        results['seq']['patient'], results['par']['patient'])
+    pd.testing.assert_frame_equal(
+        results['seq']['interval_audit'], results['par']['interval_audit'])
+    assert results['seq']['trial'] == results['par']['trial']
