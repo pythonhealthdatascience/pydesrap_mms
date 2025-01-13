@@ -52,7 +52,7 @@ This repository provides a template for building discrete-event simulation (DES)
 
 For clarity, changes from the DES book in this template are explained in `docs/hsma_changes.md`.
 
-✨ **Style:** Coding style based on the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html). Used `flake8` and `pylint` to lint `.py` files, and `pycodestyle` for `.ipynb` files.
+✨ **Style and structure:** The coding style is based on the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html). Linting is implemented using `flake8` and `pylint` for `.py` files, and `pycodestyle` for `.ipynb` files. While this repository is designed to be used as a template—helping you create a new repository with all relevant metadata (e.g., `README.md`, `CITATION.cff`, `LICENSE`) and scripts—it also adheres to a package-like structure. This is aligned with the NHS Gold RAP tier, and key indicators of this structure include `__init__.py` marking directories to be treated like packages, and `pyproject.toml` specifying package metadata.
 
 <!--TODO: Add links to STARS, relevant publication, and https://github.com/pythonhealthdatascience/rap_des/ -->
 
@@ -119,7 +119,7 @@ conda activate
 
 The provided environment.yaml file is a snapshot of the environment used when creating the template, including specific package versions. You can update this file if necessary, but be sure to test that everything continues to work as expected after any updates. Also note that some dependencies are not required for modelling, but instead served other purposes, like running `.ipynb` files and linting.
 
-As an alternative, a `requirements.txt` file is provided which can be used to set up the environment with `virtualenv`. In this case, it won't fetch a specific version of Python - so please note that this was developed with Python 3.13.0.
+As an alternative, a `requirements.txt` file is provided which can be used to set up the environment with `virtualenv`. This is used by GitHub actions, which run much faster with a virtual environment than a conda environment. However, we recommend locally installing the environment using conda, as it will also manage the Python version for you. If using `virtualenv`, it won't fetch a specific version of Python - so please note the version listed in `environment.yaml`.
 
 ### Step 3: Explore and modify
 
@@ -207,10 +207,11 @@ repo/
 ├── CHANGELOG.md          # Describes changes between releases
 ├── CITATION.cff          # How to cite the repository
 ├── CONTRIBUTING.md       # Contribution instructions
-├── environment.yaml      # Conda environment
+├── environment.yaml      # Conda environment (includes Python version)
 ├── LICENSE               # Licence file
 ├── pyproject.toml        # Project metadata and build system configuration
-└── README.md             # This file! Describes the repository
+├── README.md             # This file! Describes the repository
+└── requirements.txt      # Virtual environment (used by GitHub actions)
 ```
 
 <br>
