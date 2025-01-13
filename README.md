@@ -123,6 +123,8 @@ As an alternative, a `requirements.txt` file is provided which can be used to se
 
 ### Step 3: Explore and modify
 
+🔎 Choose your desired licence (e.g. <https://choosealicense.com/>). If keeping an MIT licence, just modify the copyright holder in `LICENSE`.
+
 🔎 Review the example DES implementation in `scripts`. Modify and extend the code as needed for your specific use case.
 
 🔎 Check you still fulfil the criteria in `docs/nhs_rap.md` and `docs/heather_2025.md`.
@@ -131,7 +133,7 @@ As an alternative, a `requirements.txt` file is provided which can be used to se
 
 🔎 Create your own `CITATION.cff` file using [cff-init](https://citation-file-format.github.io/cff-initializer-javascript/#/).
 
-🔎 Replace entries in the current `CHANGELOG` with your own, and create GitHub releases.
+🔎 Replace `pyproject.toml` and entries in the current `CHANGELOG.md` with your own versions, and create GitHub releases.
 
 🔎 Archive your repository (e.g. [Zenodo](https://zenodo.org/)).
 
