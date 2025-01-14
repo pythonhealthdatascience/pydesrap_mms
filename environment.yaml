@@ -14,5 +14,6 @@ dependencies:
   - python=3.13.0
   - simpy=4.1.1
   - pip:
+    - kaleido==0.2.1
     - pycodestyle_magic==0.5
     - -e .[dev]
