@@ -41,7 +41,7 @@ This repository provides a template for building discrete-event simulation (DES)
 ♻️ **Reproducible:** This template is designed to function as a RAP. It adheres to reproducibility recommendations from:
 
 * ["Levels of RAP" framework](https://nhsdigital.github.io/rap-community-of-practice/introduction_to_RAP/levels_of_RAP/) from the NHS RAP Community of Practice (`docs/nhs_rap.md`).
-* Recommendations from [Heather et al. 2025](TODO:ADDLINK) "*On the reproducibility of discrete-event simulation studies in health research: a computational investigation using open models*" (`docs/heather_2025.md`).
+* Recommendations from [Heather et al. 2025](TODO:ADDLINK) "*On the reproducibility of discrete-event simulation studies in health research: an empirical study using open models*" (`docs/heather_2025.md`).
 
 🚀 **Extendable:** This template adapts from and complements material from Sammi Rosser and Dan Chalk (2024) ["HSMA - the little book of DES"](https://github.com/hsma-programme/hsma6_des_book). The book includes additional advanced features that can be used to extend the model in this template, including:
 
