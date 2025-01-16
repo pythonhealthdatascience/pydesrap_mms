@@ -35,4 +35,4 @@ As part of the project STARS (Sharing Tools and Artefacts for Reproducible Simul
 | Optimise model run time | ✅ | Provides option of parallel processing. |
 | Save outputs to a file | ✅ | Includes some examples (in `analysis.ipynb`) where outputs are saved. |
 | Avoid excessive output files | ✅ | - |
-| Address large file sizes | ✅ | Includes an example (in `analysis.ipynb`) where patient results are compressed when saving to file (`.csv.gz`). |
+| Address large file sizes | ✅ | Includes an example (in `analysis.ipynb`) where patient results are not saved as large but unnecessary - but notes how these could be compressed when saving to file (`.csv.gz`). |
