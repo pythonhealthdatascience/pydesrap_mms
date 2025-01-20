@@ -224,7 +224,13 @@ repo/
 
 ## ⏰ Run time and machine specification
 
-As this a template, it is not possible to provide an overall run time, as this will vary depending on how the template model is used. However, this information is provided from some example implementations, within the `.ipynb` files in `notebooks`. These times were obtained on an Intel Core i7-12700H with 32GB RAM running Ubuntu 24.04.1 Linux. 
+The overall run time will vary depending on how the template model is used. A few example implementations are provided in `notebooks/` and the run times for these were:
+
+* `analysis.ipynb` - 23s
+* `choosing_parameters.ipynb` - 22s
+* `generate_exp_results.ipynb` - 0s
+
+These times were obtained on an Intel Core i7-12700H with 32GB RAM running Ubuntu 24.04.1 Linux. 
 
 <br>
 
