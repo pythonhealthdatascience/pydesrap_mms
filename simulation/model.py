@@ -51,7 +51,7 @@ class Defaults():
             not yet collecting results.
         data_collection_period (int):
             Duration of data collection period in minutes (also known as the
-            measurement interval) - which begins after any warm-up period
+            measurement interval) - which begins after any warm-up period.
         number_of_runs (int):
             The number of runs (also known as replications), defining how many
             times to re-run the simulation (with different random numbers).
@@ -115,9 +115,9 @@ def summary_stats(data):
 
     Arguments:
         data (pd.Series):
-            Data to use in calculation
+            Data to use in calculation.
     Returns:
-        tuple: (mean, standard deviation, CI lower, CI upper)
+        tuple: (mean, standard deviation, CI lower, CI upper).
     """
     mean = data.mean()
     count = len(data)
@@ -471,7 +471,7 @@ class Trial:
 
         Arguments:
             run (int):
-                The run number for the simulation
+                The run number for the simulation.
 
         Returns:
             dict:

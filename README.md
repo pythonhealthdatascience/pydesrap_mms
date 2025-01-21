@@ -259,7 +259,7 @@ This template is licensed under the MIT License.
 ```
 MIT License
 
-Copyright (c) 2024 STARS Project Team
+Copyright (c) 2025 STARS Project Team
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
