@@ -14,7 +14,8 @@ Typical usage example:
 
 from simulation.model import Defaults, Exponential, Model, Trial
 import numpy as np
-import pandas as pd
+from polars.testing import assert_frame_equal, assert_series_equal
+import polars as pl
 import pytest
 
 
@@ -129,11 +130,11 @@ def test_high_demand():
 
     # Check that the final patient in the patient-level results is not seen
     # by a nurse.
-    last_patient = results['patient'].iloc[-1]
-    assert np.isnan(last_patient['q_time_nurse']), (
+    last_patient = results['patient'].tail(1)
+    assert np.isnan(last_patient.select('q_time_nurse')), (
         'Expect last patient in high demand scenario to have queue time NaN.'
     )
-    assert np.isnan(last_patient['time_with_nurse']), (
+    assert np.isnan(last_patient.select('time_with_nurse')), (
         'Expect last patient in high demand scenario to have NaN for time' +
         'with nurse.'
     )
@@ -194,26 +195,26 @@ def test_warmup_impact():
     results_none = helper_warmup(warm_up_period=0)
 
     # Extract result of first patient
-    first_warmup = results_warmup['patient'].iloc[0]
-    first_none = results_none['patient'].iloc[0]
+    first_warmup = results_warmup['patient'].head(1)
+    first_none = results_none['patient'].head(1)
 
     # Check that model with warm-up has arrival time later than warm-up length
     # and queue time greater than 0
-    assert first_warmup['arrival_time'] > 500, (
+    assert first_warmup.select('arrival_time').item() > 500, (
         'Expect first patient to arrive after time 500 when model is run ' +
         f'with warm-up, but got {first_warmup["arrival_time"]}.'
     )
-    assert first_warmup['q_time_nurse'] > 0, (
+    assert first_warmup.select('q_time_nurse').item() > 0, (
         'Expect first patient to need to queue in model with warm-up and ' +
         f'high arrival rate, but got {first_warmup["q_time_nurse"]}.'
     )
 
     # Check that model without warm-up has arrival and queue time of 0
-    assert first_none['arrival_time'] == 0, (
+    assert first_none.select('arrival_time').item() == 0, (
         'Expect first patient to arrive at time 0 when model is run ' +
         f'without warm-up, but got {first_none["arrival_time"]}.'
     )
-    assert first_none['q_time_nurse'] == 0, (
+    assert first_none.select('q_time_nurse').item() == 0, (
         'Expect first patient to have no wait time in model without warm-up ' +
         f'but got {first_none["q_time_nurse"]}.'
     )
@@ -228,14 +229,13 @@ def test_arrivals():
     trial.run_trial()
 
     # Get count of patients from patient-level and trial-level results
-    patient_n = trial.patient_results_df.groupby('run')['patient_id'].count()
+    patient_n = trial.patient_results_df.group_by('run').agg(
+        pl.col('patient_id').count()).get_column('patient_id')
     trial_n = trial.trial_results_df['arrivals']
 
     # Compare the counts from each run
-    assert all(patient_n == trial_n), (
-        'The number of arrivals in the trial-level results should be ' +
-        'consistent with the number of patients in the patient-level results.'
-    )
+    assert_series_equal(
+        patient_n, trial_n, check_dtypes=False, check_names=False)
 
 
 @pytest.mark.parametrize('param_name, initial_value, adjusted_value', [
@@ -349,7 +349,7 @@ def test_seed_stability():
     result2 = trial2.run_single(run=33)
 
     # Check that dataframes with patient-level results are equal
-    pd.testing.assert_frame_equal(result1['patient'], result2['patient'])
+    assert_frame_equal(result1['patient'], result2['patient'])
 
 
 def test_interval_audit_time():
@@ -421,8 +421,8 @@ def test_parallel():
         results[mode] = trial.run_single(run=0)
 
     # Verify results are identical
-    pd.testing.assert_frame_equal(
+    assert_frame_equal(
         results['seq']['patient'], results['par']['patient'])
-    pd.testing.assert_frame_equal(
+    assert_frame_equal(
         results['seq']['interval_audit'], results['par']['interval_audit'])
     assert results['seq']['trial'] == results['par']['trial']
