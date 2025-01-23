@@ -30,7 +30,7 @@ Typical usage example:
 from joblib import Parallel, delayed
 from simulation.logging import SimLogger
 import numpy as np
-import pandas as pd
+import polars as pl
 import scipy.stats as st
 import simpy
 
@@ -114,7 +114,7 @@ def summary_stats(data):
     Calculate mean, standard deviation and 95% confidence interval (CI).
 
     Arguments:
-        data (pd.Series):
+        data (pl.Series):
             Data to use in calculation.
     Returns:
         tuple: (mean, standard deviation, CI lower, CI upper).
@@ -440,13 +440,13 @@ class Trial:
     Attributes:
         param (Defaults):
             Simulation parameters.
-        patient_results_df (pandas.DataFrame):
+        patient_results_df (pl.DataFrame):
             Dataframe to store patient-level results.
-        trial_results_df (pandas.DataFrame):
+        trial_results_df (pl.DataFrame):
             Dataframe to store trial-level results.
-        interval_audit_df (pandas.DataFrame):
+        interval_audit_df (pl.DataFrame):
             Dataframe to store interval audit results.
-        overall_results_df (pandas.DataFrame):
+        overall_results_df (pl.DataFrame):
             Dataframe to store average results from runs of the trial.
     """
     def __init__(self, param):
@@ -460,10 +460,10 @@ class Trial:
         # Store model parameters
         self.param = param
         # Initialise empty dataframes to store results
-        self.patient_results_df = pd.DataFrame()
-        self.trial_results_df = pd.DataFrame()
-        self.interval_audit_df = pd.DataFrame()
-        self.overall_results_df = pd.DataFrame()
+        self.patient_results_df = pl.DataFrame()
+        self.trial_results_df = pl.DataFrame()
+        self.interval_audit_df = pl.DataFrame()
+        self.overall_results_df = pl.DataFrame()
 
     def run_single(self, run):
         """
@@ -483,24 +483,30 @@ class Trial:
         model.run()
 
         # Convert patient-level results to a dataframe and add column with run
-        patient_results = pd.DataFrame(model.results_list)
-        patient_results['run'] = run
+        patient_results = pl.DataFrame(model.results_list)
+        patient_results = patient_results.with_columns(
+            pl.lit(run).alias('run'))
 
         # Create dictionary recording the trial-level results
+        # Drop NaN when calculating mean times (will be NaN for patients still
+        # waiting at end of simulation))
         trial_results = {
             'run_number': run,
             'scenario': self.param.scenario_name,
             'arrivals': len(patient_results),
-            'mean_q_time_nurse': patient_results['q_time_nurse'].mean(),
-            'mean_time_with_nurse': patient_results['time_with_nurse'].mean(),
+            'mean_q_time_nurse': (
+                patient_results['q_time_nurse'].drop_nans().mean()),
+            'mean_time_with_nurse': (
+                patient_results['time_with_nurse'].drop_nans().mean()),
             'mean_nurse_utilisation': (model.nurse_time_used /
                                        (self.param.number_of_nurses *
                                         self.param.data_collection_period))
         }
 
         # Convert interval audit results to a dataframe and add run column
-        interval_audit_df = pd.DataFrame(model.audit_list)
-        interval_audit_df['run'] = run
+        interval_audit_df = pl.DataFrame(model.audit_list)
+        interval_audit_df = interval_audit_df.with_columns(
+            pl.lit(run).alias('run'))
 
         return {
             'patient': patient_results,
@@ -534,22 +540,17 @@ class Trial:
             result['interval_audit'] for result in all_results]
 
         # Convert lists into dataframes
-        self.patient_results_df = pd.concat(patient_results_list,
-                                            ignore_index=True)
-        self.trial_results_df = pd.DataFrame(trial_results_list)
-        self.interval_audit_df = pd.concat(interval_audit_list,
-                                           ignore_index=True)
+        self.patient_results_df = pl.concat(patient_results_list)
+        self.trial_results_df = pl.DataFrame(trial_results_list)
+        self.interval_audit_df = pl.concat(interval_audit_list)
+
+        # Get columns from trial results that contain performance measures
+        relevant_df = self.trial_results_df.select(
+            pl.exclude(['run_number', 'scenario']))
 
         # Calculate average results and uncertainty from across all trials
-        uncertainty_metrics = {}
-        trial_col = self.trial_results_df.columns
-
-        # Loop through the trial-level performance measure columns
-        # Calculate mean, standard deviation and 95% confidence interval
-        for col in trial_col[~trial_col.isin(['run_number', 'scenario'])]:
-            uncertainty_metrics[col] = dict(zip(
-                ['mean', 'std_dev', 'lower_95_ci', 'upper_95_ci'],
-                summary_stats(self.trial_results_df[col])
-            ))
-        # Convert to dataframe
-        self.overall_results_df = pd.DataFrame(uncertainty_metrics)
+        self.overall_results_df = pl.DataFrame({
+            'metric': ['mean', 'std_dev', 'lower_95_ci', 'upper_95_ci'],
+            **{col: summary_stats(relevant_df[col])
+               for col in relevant_df.columns}
+        })
