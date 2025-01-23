@@ -13,8 +13,9 @@ Typical usage example:
 """
 
 from simulation.model import Defaults, Trial
-import pandas as pd
 from pathlib import Path
+import polars as pl
+from polars.testing import assert_frame_equal
 
 
 def test_reproduction():
@@ -39,21 +40,23 @@ def test_reproduction():
     trial.run_trial()
 
     # Compare patient-level results
-    exp_patient = pd.read_csv(
-        Path(__file__).parent.joinpath('exp_results/patient.csv'))
-    pd.testing.assert_frame_equal(trial.patient_results_df, exp_patient)
+    exp_patient = pl.read_csv(
+        Path(__file__).parent.joinpath('exp_results/patient.csv')).cast({
+            'run': pl.Int32})
+    assert_frame_equal(trial.patient_results_df, exp_patient)
 
     # Compare trial-level results
-    exp_trial = pd.read_csv(
+    exp_trial = pl.read_csv(
         Path(__file__).parent.joinpath('exp_results/trial.csv'))
-    pd.testing.assert_frame_equal(trial.trial_results_df, exp_trial)
+    assert_frame_equal(trial.trial_results_df, exp_trial)
 
     # Compare interval audit results
-    exp_interval = pd.read_csv(
-        Path(__file__).parent.joinpath('exp_results/interval.csv'))
-    pd.testing.assert_frame_equal(trial.interval_audit_df, exp_interval)
+    exp_interval = pl.read_csv(
+        Path(__file__).parent.joinpath('exp_results/interval.csv')).cast({
+            'run': pl.Int32})
+    assert_frame_equal(trial.interval_audit_df, exp_interval)
 
     # Compare overall results
-    exp_overall = pd.read_csv(
-        Path(__file__).parent.joinpath('exp_results/overall.csv'), index_col=0)
-    pd.testing.assert_frame_equal(trial.overall_results_df, exp_overall)
+    exp_overall = pl.read_csv(
+        Path(__file__).parent.joinpath('exp_results/overall.csv'))
+    assert_frame_equal(trial.overall_results_df, exp_overall)
