@@ -3,7 +3,7 @@
 These check specific parts of the simulation and code, ensuring they work
 correctly and as expected.
 
-License:
+Licence:
     This project is licensed under the MIT Licence. See the LICENSE file for
     more details.
 

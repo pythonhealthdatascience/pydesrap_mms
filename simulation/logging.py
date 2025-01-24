@@ -7,7 +7,7 @@ Credit:
     > This code is adapted from NHS Digital (2024) RAP repository template
     (https://github.com/NHSDigital/rap-package-template) (MIT Licence).
 
-License:
+Licence:
     This project is licensed under the MIT Licence. See the LICENSE file for
     more details.
 

@@ -2,7 +2,7 @@
 
 These check that the model code produces results consistent with prior code.
 
-License:
+Licence:
     This project is licensed under the MIT Licence. See the LICENSE file for
     more details.
 
