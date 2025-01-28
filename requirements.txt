@@ -12,5 +12,6 @@ pycodestyle==2.12.1
 pycodestyle_magic==0.5
 pylint==3.3.3
 pytest==8.3.4
+pytest-xdist==3.6.1
 simpy==4.1.1
 -e .[dev]
