@@ -97,6 +97,7 @@ class Defaults:
         used was incorrect.
         """
         # Skip the check if the object is still initialising
+        # pylint: disable=maybe-no-member
         if hasattr(self, '_initialising') and self._initialising:
             super().__setattr__(name, value)
         else:

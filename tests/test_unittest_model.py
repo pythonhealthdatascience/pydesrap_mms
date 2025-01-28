@@ -12,10 +12,10 @@ Typical usage example:
     pytest
 """
 
-from simulation.model import Defaults, Exponential, Model, Runner
 import numpy as np
 import pandas as pd
 import pytest
+from simulation.model import Defaults, Exponential, Model, Runner
 
 
 def test_new_attribute():
@@ -57,7 +57,7 @@ def test_negative_inputs(param_name, value, rule):
     # Construct the expected error message
     if rule == 'positive':
         expected_message = f'Parameter "{param_name}" must be greater than 0.'
-    elif rule == 'non_negative':
+    else:
         expected_message = (f'Parameter "{param_name}" must be greater than ' +
                             'or equal to 0.')
 
@@ -381,7 +381,7 @@ def test_exponentional():
     d = Exponential(mean=10, random_seed=42)
 
     # Check that sample is a float
-    assert type(d.sample()) == float, (
+    assert isinstance(d.sample(), float), (
         f'Expected sample() to return a float - instead: {type(d.sample())}'
     )
 

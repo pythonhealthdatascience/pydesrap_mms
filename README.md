@@ -213,6 +213,7 @@ repo/
 ├── simulation/           # Local package containing code for the DES model
 ├── tests/                # Unit and back testing of the DES model
 ├── .gitignore            # Untracked files
+├── .pylintrc             # Pylint settings
 ├── CHANGELOG.md          # Describes changes between releases
 ├── CITATION.cff          # How to cite the repository
 ├── CONTRIBUTING.md       # Contribution instructions

@@ -15,9 +15,9 @@ Typical usage example:
 from io import StringIO
 import logging
 import os
+from unittest.mock import patch, MagicMock
 import pytest
 from simulation.logging import SimLogger
-from unittest.mock import patch, MagicMock
 
 
 def test_log_to_console():

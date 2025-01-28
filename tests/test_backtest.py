@@ -12,9 +12,9 @@ Typical usage example:
 
 """
 
-from simulation.model import Defaults, Runner
-import pandas as pd
 from pathlib import Path
+import pandas as pd
+from simulation.model import Defaults, Runner
 
 
 def test_reproduction():
