@@ -200,11 +200,11 @@ class MonitoredResource(simpy.Resource):
     Attributes:
         time_last_event (float):
             Time of last resource request or release.
-        queue_time (float):
+        area_n_in_queue (float):
             Total time that patients have spent queueing for the resource
             (i.e. sum of the times each patient spent waiting). Used to
             calculate the average queue length.
-        resource_busy_time (float):
+        area_resource_busy (float):
             Total time that resources have been in use during the simulation
             (i.e. sum of the times each individual resource was busy). Used
             to calculated utilisation.
@@ -230,8 +230,8 @@ class MonitoredResource(simpy.Resource):
         Resets monitoring attributes to initial values.
         """
         self.time_last_event = self._env.now
-        self.queue_time = 0.0
-        self.resource_busy_time = 0.0
+        self.area_n_in_queue = 0.0
+        self.area_resource_busy = 0.0
 
     def request(self, *args, **kwargs):
         """
@@ -277,7 +277,7 @@ class MonitoredResource(simpy.Resource):
 
         Between every request or release of the resource, it calculates the
         relevant statistics - e.g.:
-        - Total waiting times (number of requests in queue * time)
+        - Total queue time (number of requests in queue * time)
         - Total resource use (number of resources in use * time)
         These are summed to return the totals from across the whole simulation.
         In Runner.run_single(), these are then used to calculate utilisation.
@@ -296,28 +296,9 @@ class MonitoredResource(simpy.Resource):
 
         # Update the statistics
         # len(self.queue) is the number of requests queued
-        self.queue_time += len(self.queue) * time_since_last_event
+        self.area_n_in_queue += len(self.queue) * time_since_last_event
         # self.count is the number of resources in use
-        self.resource_busy_time += self.count * time_since_last_event
-
-    def end_of_run_cleanup(self, run_length):
-        """
-        Cleans up and finalises statistics at the end of the simulation run.
-
-        If the simulation ends while resources are still in use or requests are
-        still in the queue, the time between the last recorded event and the
-        simulation end will not have been accounted for. This method fills
-        in that gap, avoiding underestimation of resource usage and queue
-        sizes.
-
-        Arguments:
-            run_length (float):
-                Duration of the simulation run.
-        """
-        # Delay clean up until the entire simulation has completed
-        yield self._env.timeout(run_length)
-        # Update the time-weighted statistics
-        self.update_time_weighted_stats()
+        self.area_resource_busy += self.count * time_since_last_event
 
 
 class Exponential:
@@ -354,7 +335,7 @@ class Exponential:
 
         Returns:
             float or numpy.ndarray:
-                A single sample if size is None, or an array of samples if 
+                A single sample if size is None, or an array of samples if
                 size is specified.
         """
         return self.rand.exponential(self.mean, size=size)
@@ -576,15 +557,15 @@ class Model:
         # Delay process until warm-up period has completed
         yield self.env.timeout(self.param.warm_up_period)
 
+        # Reset results collection variables
+        self.init_results_variables()
+
         # If there was a warm-up period, log that this time has passed so we
         # can distinguish between patients before and after warm-up in logs
         if self.param.warm_up_period > 0:
             self.param.logger.log('─' * 10)
             self.param.logger.log(f'{self.env.now:.2f}: Warm up complete.')
             self.param.logger.log('─' * 10)
-
-        # Reset results collection variables
-        self.init_results_variables()
 
     def run(self):
         """
@@ -604,12 +585,20 @@ class Model:
         self.env.process(
             self.interval_audit(interval=self.param.audit_interval))
 
-        # Schedule process which will clean up monitoring of resources at the
-        # end of the run
-        self.env.process(self.nurse.end_of_run_cleanup(run_length))
-
         # Run the simulation
         self.env.run(until=run_length)
+
+        # If the simulation ends while resources are still in use or requests
+        # are still in the queue, the time between the last recorded event and
+        # the simulation end will not have been accounted for. Hence, we call 
+        # update_time_weighted_stats() to run for last event --> end.
+        self.nurse.update_time_weighted_stats()
+
+        # Error handling - if there was no data collection period, the
+        # simulation ends before it has a chance to reset the results,
+        # so we do so manually
+        if self.param.data_collection_period == 0:
+            self.init_results_variables()
 
         # Convert list of patient objects into a list that just contains the
         # attributes of each of those patients as dictionaries
@@ -674,7 +663,6 @@ class Runner:
 
         # Create dictionary recording the run results
         # Currently has two alternative methods of measuring utilisation
-        # TODO: Is mean_q_time_nurse and mean_nurse_q_length the same?
         run_results = {
             'run_number': run,
             'scenario': self.param.scenario_name,
@@ -684,10 +672,10 @@ class Runner:
             'mean_nurse_utilisation': (model.nurse_time_used /
                                        (self.param.number_of_nurses *
                                         self.param.data_collection_period)),
-            'mean_nurse_utilisation_tw': (model.nurse.resource_busy_time /
+            'mean_nurse_utilisation_tw': (model.nurse.area_resource_busy /
                                           (self.param.number_of_nurses *
                                            self.param.data_collection_period)),
-            'mean_nurse_q_length': (model.nurse.queue_time /
+            'mean_nurse_q_length': (model.nurse.area_n_in_queue /
                                     self.param.data_collection_period)
         }
 
