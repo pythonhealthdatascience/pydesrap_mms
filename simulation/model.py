@@ -22,20 +22,20 @@ Licence:
     more details.
 
 Typical usage example:
-    trial = Trial(param=Defaults())
-    trial.run_trial()
-    print(trial.trial_results_df)
+    experiment = Runner(param=Defaults())
+    experiment.run_reps()
+    print(experiment.run_results_df)
 """
 
 from joblib import Parallel, delayed
-from simulation.logging import SimLogger
 import numpy as np
 import pandas as pd
 import scipy.stats as st
 import simpy
+from simulation.logging import SimLogger
 
 
-class Defaults():
+class Defaults:
     """
     Default parameters for simulation.
 
@@ -433,25 +433,28 @@ class Model:
         self.results_list = [x.__dict__ for x in self.patients]
 
 
-class Trial:
+class Runner:
     """
-    Manages multiple simulation runs.
+    Run the simulation.
+
+    Manages simulation runs, either running the model once or multiple times
+    (replications).
 
     Attributes:
         param (Defaults):
             Simulation parameters.
         patient_results_df (pandas.DataFrame):
             Dataframe to store patient-level results.
-        trial_results_df (pandas.DataFrame):
-            Dataframe to store trial-level results.
+        run_results_df (pandas.DataFrame):
+            Dataframe to store results from each run.
         interval_audit_df (pandas.DataFrame):
             Dataframe to store interval audit results.
         overall_results_df (pandas.DataFrame):
-            Dataframe to store average results from runs of the trial.
+            Dataframe to store average results from across the runs.
     """
     def __init__(self, param):
         '''
-        Initialise a new instance of the trial class.
+        Initialise a new instance of the Runner class.
 
         Arguments:
             param (Defaults):
@@ -461,7 +464,7 @@ class Trial:
         self.param = param
         # Initialise empty dataframes to store results
         self.patient_results_df = pd.DataFrame()
-        self.trial_results_df = pd.DataFrame()
+        self.run_results_df = pd.DataFrame()
         self.interval_audit_df = pd.DataFrame()
         self.overall_results_df = pd.DataFrame()
 
@@ -475,8 +478,8 @@ class Trial:
 
         Returns:
             dict:
-                A dictionary containing the patient-level results, trial-level
-                results, and interval audit results.
+                A dictionary containing the patient-level results, results
+                from each run, and interval audit results.
         """
         # Run model
         model = Model(param=self.param, run_number=run)
@@ -486,8 +489,8 @@ class Trial:
         patient_results = pd.DataFrame(model.results_list)
         patient_results['run'] = run
 
-        # Create dictionary recording the trial-level results
-        trial_results = {
+        # Create dictionary recording the run results
+        run_results = {
             'run_number': run,
             'scenario': self.param.scenario_name,
             'arrivals': len(patient_results),
@@ -504,16 +507,15 @@ class Trial:
 
         return {
             'patient': patient_results,
-            'trial': trial_results,
+            'run': run_results,
             'interval_audit': interval_audit_df
         }
 
-    def run_trial(self):
+    def run_reps(self):
         """
         Execute a single model configuration for multiple runs/replications.
 
-        This is known as a trial, experiment, batch or scenario. These can be
-        run sequentially or in parallel.
+        These can be run sequentially or in parallel.
         """
         # Sequential execution
         if self.param.cores == 1:
@@ -528,28 +530,28 @@ class Trial:
         # Seperate results from each run into appropriate lists
         patient_results_list = [
             result['patient'] for result in all_results]
-        trial_results_list = [
-            result['trial'] for result in all_results]
+        run_results_list = [
+            result['run'] for result in all_results]
         interval_audit_list = [
             result['interval_audit'] for result in all_results]
 
         # Convert lists into dataframes
         self.patient_results_df = pd.concat(patient_results_list,
                                             ignore_index=True)
-        self.trial_results_df = pd.DataFrame(trial_results_list)
+        self.run_results_df = pd.DataFrame(run_results_list)
         self.interval_audit_df = pd.concat(interval_audit_list,
                                            ignore_index=True)
 
-        # Calculate average results and uncertainty from across all trials
+        # Calculate average results and uncertainty from across all runs
         uncertainty_metrics = {}
-        trial_col = self.trial_results_df.columns
+        run_col = self.run_results_df.columns
 
-        # Loop through the trial-level performance measure columns
+        # Loop through the run performance measure columns
         # Calculate mean, standard deviation and 95% confidence interval
-        for col in trial_col[~trial_col.isin(['run_number', 'scenario'])]:
+        for col in run_col[~run_col.isin(['run_number', 'scenario'])]:
             uncertainty_metrics[col] = dict(zip(
                 ['mean', 'std_dev', 'lower_95_ci', 'upper_95_ci'],
-                summary_stats(self.trial_results_df[col])
+                summary_stats(self.run_results_df[col])
             ))
         # Convert to dataframe
         self.overall_results_df = pd.DataFrame(uncertainty_metrics)

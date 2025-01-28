@@ -184,10 +184,12 @@ This section describes the purposes of each class in the simulation.
     * `generate_patient_arrivals()` to handle patient creation, then sending them on to `attend_clinic()`.
     * `interval_audit()` to record utilisation and wait times at specified intervals during the simulation.
 
-**Trial Class Usage:**
+**Runner Class Usage:**
 
-* **Single Run:** Use `trial.run_single()` to execute a single model run.
-* **Multiple Runs:** Use `trial.run_trial()` to perform multiple replications of the model.
+Having set up `experiment = Runner()`...
+
+* **Single Run:** Use `experiment.run_single()` to execute a single model run.
+* **Multiple Runs:** Use `experiment.run_reps()` to perform multiple replications of the model.
 
 <br>
 

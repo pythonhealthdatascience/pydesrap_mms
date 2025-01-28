@@ -12,7 +12,7 @@ Typical usage example:
     pytest
 """
 
-from simulation.model import Defaults, Exponential, Model, Trial
+from simulation.model import Defaults, Exponential, Model, Runner
 import numpy as np
 import pandas as pd
 import pytest
@@ -101,18 +101,18 @@ def test_high_demand():
     param = Defaults()
     param.number_of_nurses = 1
     param.patient_inter = 0.1
-    trial = Trial(param)
-    results = trial.run_single(run=0)
+    experiment = Runner(param)
+    results = experiment.run_single(run=0)
 
     # Check that the utilisation as calculated from total_nurse_time_used
     # does not exceed 1 or drop below 0
-    util = results['trial']['mean_nurse_utilisation']
+    util = results['run']['mean_nurse_utilisation']
     assert util <= 1, (
-        'The trial `mean_nurse_utilisation` should not exceed 1, but ' +
+        'The run `mean_nurse_utilisation` should not exceed 1, but ' +
         f'found utilisation of {util}.'
     )
     assert util >= 0, (
-        'The trial `mean_nurse_utilisation` should not drop below 0, but ' +
+        'The run `mean_nurse_utilisation` should not drop below 0, but ' +
         f'found utilisation of {util}.'
     )
 
@@ -186,8 +186,8 @@ def test_warmup_impact():
         param.patient_inter = 1
         param.warm_up_period = warm_up_period
         param.data_collection_period = 1500
-        trial = Trial(param)
-        return trial.run_single(run=0)
+        experiment = Runner(param)
+        return experiment.run_single(run=0)
 
     # Run model with and without warm-up period
     results_warmup = helper_warmup(warm_up_period=500)
@@ -221,19 +221,22 @@ def test_warmup_impact():
 
 def test_arrivals():
     """
-    Check that trial-level count of arrivals is consistent with the number of
+    Check that count of arrivals in each run is consistent with the number of
     patients recorded in the patient-level results.
     """
-    trial = Trial(Defaults())
-    trial.run_trial()
+    experiment = Runner(Defaults())
+    experiment.run_reps()
 
-    # Get count of patients from patient-level and trial-level results
-    patient_n = trial.patient_results_df.groupby('run')['patient_id'].count()
-    trial_n = trial.trial_results_df['arrivals']
+    # Get count of patients from patient-level and run results
+    patient_n = (experiment
+                 .patient_results_df
+                 .groupby('run')['patient_id']
+                 .count())
+    run_n = experiment.run_results_df['arrivals']
 
     # Compare the counts from each run
-    assert all(patient_n == trial_n), (
-        'The number of arrivals in the trial-level results should be ' +
+    assert all(patient_n == run_n), (
+        'The number of arrivals in the results from each run should be ' +
         'consistent with the number of patients in the patient-level results.'
     )
 
@@ -283,9 +286,9 @@ def test_waiting_time_utilisation(param_name, initial_value, adjusted_value):
         # Modify chosen parameter for the test
         setattr(param, param_name, value)
 
-        # Run the trial and return the mean queue time for nurses
-        trial = Trial(param)
-        return trial.run_single(run=0)['trial']
+        # Run replications and return the mean queue time for nurses
+        experiment = Runner(param)
+        return experiment.run_single(run=0)['run']
 
     # Run model with initial and adjusted values
     initial_results = helper_param(param_name, initial_value)
@@ -321,14 +324,14 @@ def test_arrivals_decrease(param_name, initial_value, adjusted_value):
     # Run model with initial value
     param = Defaults()
     setattr(param, param_name, initial_value)
-    trial = Trial(param)
-    initial_arrivals = trial.run_single(run=0)['trial']['arrivals']
+    experiment = Runner(param)
+    initial_arrivals = experiment.run_single(run=0)['run']['arrivals']
 
     # Run model with adjusted value
     param = Defaults()
     setattr(param, param_name, adjusted_value)
-    trial = Trial(param)
-    adjusted_arrivals = trial.run_single(run=0)['trial']['arrivals']
+    experiment = Runner(param)
+    adjusted_arrivals = experiment.run_single(run=0)['run']['arrivals']
 
     # Check that arrivals from adjusted model are less
     assert initial_arrivals > adjusted_arrivals, (
@@ -342,11 +345,11 @@ def test_seed_stability():
     """
     Check that two runs using the same random seed return the same results.
     """
-    # Run trial twice, with same run number (and therefore same seed) each time
-    trial1 = Trial(param=Defaults())
-    result1 = trial1.run_single(run=33)
-    trial2 = Trial(param=Defaults())
-    result2 = trial2.run_single(run=33)
+    # Run model twice, with same run number (and therefore same seed) each time
+    experiment1 = Runner(param=Defaults())
+    result1 = experiment1.run_single(run=33)
+    experiment2 = Runner(param=Defaults())
+    result2 = experiment2.run_single(run=33)
 
     # Check that dataframes with patient-level results are equal
     pd.testing.assert_frame_equal(result1['patient'], result2['patient'])
@@ -356,10 +359,10 @@ def test_interval_audit_time():
     """
     Check that length of interval audit is less than the length of simulation.
     """
-    # Run single trial with default parameters and get max time from audit
+    # Run model once with default parameters and get max time from audit
     param = Defaults()
-    trial = Trial(param)
-    results = trial.run_single(run=0)
+    experiment = Runner(param)
+    results = experiment.run_single(run=0)
     max_time = max(results['interval_audit']['simulation_time'])
 
     # Check that max time in audit is less than simulation length
@@ -417,12 +420,12 @@ def test_parallel():
     for mode, cores in [('seq', 1), ('par', -1)]:
         param = Defaults()
         param.cores = cores
-        trial = Trial(param)
-        results[mode] = trial.run_single(run=0)
+        experiment = Runner(param)
+        results[mode] = experiment.run_single(run=0)
 
     # Verify results are identical
     pd.testing.assert_frame_equal(
         results['seq']['patient'], results['par']['patient'])
     pd.testing.assert_frame_equal(
         results['seq']['interval_audit'], results['par']['interval_audit'])
-    assert results['seq']['trial'] == results['par']['trial']
+    assert results['seq']['run'] == results['par']['run']

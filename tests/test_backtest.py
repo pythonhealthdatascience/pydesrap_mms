@@ -12,7 +12,7 @@ Typical usage example:
 
 """
 
-from simulation.model import Defaults, Trial
+from simulation.model import Defaults, Runner
 import pandas as pd
 from pathlib import Path
 
@@ -34,26 +34,26 @@ def test_reproduction():
     param.scenario_name = 0
     param.cores = 1
 
-    # Run the trial
-    trial = Trial(param)
-    trial.run_trial()
+    # Run the replications
+    experiment = Runner(param)
+    experiment.run_reps()
 
     # Compare patient-level results
     exp_patient = pd.read_csv(
         Path(__file__).parent.joinpath('exp_results/patient.csv'))
-    pd.testing.assert_frame_equal(trial.patient_results_df, exp_patient)
+    pd.testing.assert_frame_equal(experiment.patient_results_df, exp_patient)
 
-    # Compare trial-level results
-    exp_trial = pd.read_csv(
-        Path(__file__).parent.joinpath('exp_results/trial.csv'))
-    pd.testing.assert_frame_equal(trial.trial_results_df, exp_trial)
+    # Compare run results
+    exp_run = pd.read_csv(
+        Path(__file__).parent.joinpath('exp_results/run.csv'))
+    pd.testing.assert_frame_equal(experiment.run_results_df, exp_run)
 
     # Compare interval audit results
     exp_interval = pd.read_csv(
         Path(__file__).parent.joinpath('exp_results/interval.csv'))
-    pd.testing.assert_frame_equal(trial.interval_audit_df, exp_interval)
+    pd.testing.assert_frame_equal(experiment.interval_audit_df, exp_interval)
 
     # Compare overall results
     exp_overall = pd.read_csv(
         Path(__file__).parent.joinpath('exp_results/overall.csv'), index_col=0)
-    pd.testing.assert_frame_equal(trial.overall_results_df, exp_overall)
+    pd.testing.assert_frame_equal(experiment.overall_results_df, exp_overall)
