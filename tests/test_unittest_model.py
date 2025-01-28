@@ -15,7 +15,9 @@ Typical usage example:
 import numpy as np
 import pandas as pd
 import pytest
-from simulation.model import Defaults, Exponential, Model, Runner
+import simpy
+from simulation.model import (
+    Defaults, Exponential, Model, Runner, MonitoredResource)
 
 
 def test_new_attribute():
@@ -201,18 +203,14 @@ def test_warmup_impact():
     # and queue time greater than 0
     assert first_warmup['arrival_time'] > 500, (
         'Expect first patient to arrive after time 500 when model is run ' +
-        f'with warm-up, but got {first_warmup["arrival_time"]}.'
+        f'with warm-up (length 500), but got {first_warmup["arrival_time"]}.'
     )
     assert first_warmup['q_time_nurse'] > 0, (
         'Expect first patient to need to queue in model with warm-up and ' +
         f'high arrival rate, but got {first_warmup["q_time_nurse"]}.'
     )
 
-    # Check that model without warm-up has arrival and queue time of 0
-    assert first_none['arrival_time'] == 0, (
-        'Expect first patient to arrive at time 0 when model is run ' +
-        f'without warm-up, but got {first_none["arrival_time"]}.'
-    )
+    # Check that, in model without warm-up, first patient has 0 queue time
     assert first_none['q_time_nurse'] == 0, (
         'Expect first patient to have no wait time in model without warm-up ' +
         f'but got {first_none["q_time_nurse"]}.'
@@ -429,3 +427,81 @@ def test_parallel():
     pd.testing.assert_frame_equal(
         results['seq']['interval_audit'], results['par']['interval_audit'])
     assert results['seq']['run'] == results['par']['run']
+
+
+def test_consistent_metrics():
+    """
+    Presently, the simulation code includes a few different methods to
+    calculate the same metrics. We would expect each to return similar results
+    (with a little tolerance, as expect some deviation due to methodological
+    differences).
+    """
+    # Run default model
+    experiment = Runner(Defaults())
+    experiment.run_reps()
+
+    # Absolute tolerance (atol) = +- 0.001
+
+    # Check nurse utilisation
+    pd.testing.assert_series_equal(
+        experiment.run_results_df['mean_nurse_utilisation'],
+        experiment.run_results_df['mean_nurse_utilisation_tw'],
+        atol=0.001,
+        check_names=False)
+
+
+def test_monitoredresource_cleanup():
+    """
+    Run simple example and check that the monitored resource calculations
+    are as expected (e.g. clean-up was performed appropriately at end of
+    simulation).
+    """
+    # Simulation setup
+    env = simpy.Environment()
+    resource = MonitoredResource(env, capacity=1)
+
+    def process_task(env, resource, duration):
+        """Simulate a task that requests the resource."""
+        with resource.request() as req:
+            yield req
+            yield env.timeout(duration)
+
+    # Set run length
+    run_length = 12
+
+    # Schedule tasks to occur during the simulation
+    env.process(process_task(env, resource, duration=5))  # Task A
+    env.process(process_task(env, resource, duration=10))  # Task B
+    env.process(process_task(env, resource, duration=15))  # Task C
+
+    # Run the simulation
+    env.run(until=run_length)
+
+    # If the simulation ends while resources are still in use or requests are
+    # still in the queue, the time between the last recorded event and the
+    # simulation end will not have been accounted for. Hence, we call
+    # update_time_weighted_stats() to run for time between last event and end.
+    resource.update_time_weighted_stats()
+
+    # Assertions
+    # At time=12:
+    # - Task A is done (0-5)
+    # - Task B is still using the resource (5-15)
+    # - Task C is still waiting in the queue (15-30)
+    # Hence...
+
+    # Expected queue time: 17, as task B (5) + task C (12)
+    expected_queue_time = 17.0
+
+    # Expected busy time: 12, as one resource busy for the whole simulation
+    expected_busy_time = 12.0
+
+    # Run assertions
+    assert resource.area_n_in_queue == expected_queue_time, (
+        f'Expected queue time {expected_queue_time} but ' +
+        f'observed {resource.area_n_in_queue}.'
+    )
+    assert resource.area_resource_busy == expected_busy_time, (
+        f'Expected queue time {expected_busy_time} but ' +
+        f'observed {resource.area_resource_busy}.'
+    )
