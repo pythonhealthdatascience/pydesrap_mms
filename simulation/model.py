@@ -9,13 +9,19 @@ Credit:
     > This code is adapted from Sammi Rosser and Dan Chalk (2024) HSMA - the
     little book of DES (https://github.com/hsma-programme/hsma6_des_book)
     (MIT Licence).
-    > The distribution class is copied from Tom Monks (2021) sim-tools:
+    > The Exponential class is based on Tom Monks (2021) sim-tools:
     fundamental tools to support the simulation process in python
     (https://github.com/TomMonks/sim-tools) (MIT Licence). For other
     distributions (bernoulli, lognormal, normal, uniform, triangular, fixed,
     combination, continuous empirical, erlang, weibull, gamma, beta, discrete,
     truncated, raw empirical, pearsonV, pearsonVI, erlangK, poisson), check
     out the sim-tools package.
+    > The MonitoredResource class is based on Tom Monks, Alison Harper and Amy
+    Heather (2025) An introduction to Discrete-Event Simulation (DES) using
+    Free and Open Source Software
+    (https://github.com/pythonhealthdatascience/intro-open-sim/tree/main)
+    (MIT Licence). They based it on the method described in Law. Simulation
+    Modeling and Analysis 4th Ed. Pages 14 - 17.
 
 Licence:
     This project is licensed under the MIT Licence. See the LICENSE file for
@@ -92,10 +98,22 @@ class Defaults:
         """
         Prevent addition of new attributes.
 
-        Only allow modification of existing attributes, and not the addition
-        of new attributes. This helps avoid an error where a parameter appears
-        to have been changed, but remains the same as the attribute name
-        used was incorrect.
+        This method overrides the default `__setattr__` behavior to restrict
+        the addition of new attributes to the instance. It allows modification
+        of existing attributes but raises an `AttributeError` if an attempt is
+        made to create a new attribute. This ensures that accidental typos in
+        attribute names do not silently create new attributes.
+
+        Arguments:
+            name (str):
+                The name of the attribute to set.
+            value (Any):
+                The value to assign to the attribute.
+
+        Raises:
+            AttributeError:
+                If `name` is not an existing attribute and an attempt is made
+                to add it to the instance.
         """
         # Skip the check if the object is still initialising
         # pylint: disable=maybe-no-member
@@ -118,6 +136,7 @@ def summary_stats(data):
     Arguments:
         data (pd.Series):
             Data to use in calculation.
+
     Returns:
         tuple: (mean, standard deviation, CI lower, CI upper).
     """
@@ -170,6 +189,137 @@ class Patient:
         self.time_with_nurse = np.nan
 
 
+class MonitoredResource(simpy.Resource):
+    """
+    Subclass of simpy.Resource used to monitor resource usage during the run.
+
+    Calculates resource utilisation and the queue length during the model run.
+    As it is a subclass, it inherits the attributes and methods from
+    simpy.Resource, which is referred to as the superclass or parent class.
+
+    Attributes:
+        time_last_event (float):
+            Time of last resource request or release.
+        queue_time (float):
+            Total time that patients have spent queueing for the resource
+            (i.e. sum of the times each patient spent waiting). Used to
+            calculate the average queue length.
+        resource_busy_time (float):
+            Total time that resources have been in use during the simulation
+            (i.e. sum of the times each individual resource was busy). Used
+            to calculated utilisation.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Initialises a MonitoredResource - which involves initialising a SimPy
+        resource and resetting monitoring attributes.
+
+        Arguments:
+            *args:
+                Positional arguments to be passed to the parent class.
+            **kwargs:
+                Keyword arguments to be passed to the parent class.
+        """
+        # Initialise a SimPy Resource
+        super().__init__(*args, **kwargs)
+        # Run the init_results() method
+        self.init_results()
+
+    def init_results(self):
+        """
+        Resets monitoring attributes to initial values.
+        """
+        self.time_last_event = self._env.now
+        self.queue_time = 0.0
+        self.resource_busy_time = 0.0
+
+    def request(self, *args, **kwargs):
+        """
+        Requests a resource, but updates time-weighted statistics BEFORE
+        making the request.
+
+        Arguments:
+            *args:
+                Positional arguments to be passed to the parent class.
+            **kwargs:
+                Keyword arguments to be passed to the parent class.
+
+        Returns:
+            simpy.events.Event: Event representing the request.
+        """
+        # Update time-weighted statistics
+        self.update_time_weighted_stats()
+        # Request a resource
+        return super().request(*args, **kwargs)
+
+    def release(self, *args, **kwargs):
+        """
+        Releases a resource, but updates time-weighted statistics BEFORE
+        releasing it.
+
+        Arguments:
+            *args:
+                Positional arguments to be passed to the parent class.
+            **kwargs:
+                Keyword arguments to be passed to the parent class.#
+
+        Returns:
+            simpy.events.Event: Event representing the request.
+        """
+        # Update time-weighted statistics
+        self.update_time_weighted_stats()
+        # Release a resource
+        return super().release(*args, **kwargs)
+
+    def update_time_weighted_stats(self):
+        """
+        Update the time-weighted statistics for resource usage.
+
+        Between every request or release of the resource, it calculates the
+        relevant statistics - e.g.:
+        - Total waiting times (number of requests in queue * time)
+        - Total resource use (number of resources in use * time)
+        These are summed to return the totals from across the whole simulation.
+        In Runner.run_single(), these are then used to calculate utilisation.
+
+        Further details:
+        - These sums can be referred to as "the area under the curve".
+        - They are called "time-weighted" statistics as they account for how
+        long certain events or states (such as resource use or queue length)
+        persist over time.
+        """
+        # Calculate time since last event
+        time_since_last_event = self._env.now - self.time_last_event
+
+        # Update self.time_last_event to current time
+        self.time_last_event = self._env.now
+
+        # Update the statistics
+        # len(self.queue) is the number of requests queued
+        self.queue_time += len(self.queue) * time_since_last_event
+        # self.count is the number of resources in use
+        self.resource_busy_time += self.count * time_since_last_event
+
+    def end_of_run_cleanup(self, run_length):
+        """
+        Cleans up and finalises statistics at the end of the simulation run.
+
+        If the simulation ends while resources are still in use or requests are
+        still in the queue, the time between the last recorded event and the
+        simulation end will not have been accounted for. This method fills
+        in that gap, avoiding underestimation of resource usage and queue
+        sizes.
+
+        Arguments:
+            run_length (float):
+                Duration of the simulation run.
+        """
+        # Delay clean up until the entire simulation has completed
+        yield self._env.timeout(run_length)
+        # Update the time-weighted statistics
+        self.update_time_weighted_stats()
+
+
 class Exponential:
     """
     Generate samples from an exponential distribution.
@@ -177,11 +327,8 @@ class Exponential:
     Attributes:
         mean (float):
             Mean of the exponential distribution.
-        random_seed (int|None):
-            Random seed to reproduce samples.
-        size (int|None):
-            Number of samples to return. If set to none, then returns a single
-            sample.
+        rand (numpy.random.Generator):
+            Random number generator for producing samples.
     """
     def __init__(self, mean, random_seed):
         """
@@ -204,6 +351,11 @@ class Exponential:
             size (int|None):
                 Number of samples to return. If set to none, then returns a
                 single sample.
+
+        Returns:
+            float or numpy.ndarray:
+                A single sample if size is None, or an array of samples if 
+                size is specified.
         """
         return self.rand.exponential(self.mean, size=size)
 
@@ -222,8 +374,9 @@ class Model:
             Run number for random seed generation.
         env (simpy.Environment):
             The SimPy environment for the simulation.
-        nurse (simpy.Resource):
-            SimPy resource representing nurses.
+        nurse (MonitoredResource):
+            Subclass of SimPy resource representing nurses (whilst monitoring
+            the resource during the simulation run).
         patients (list):
             List containing the generated patient objects.
         nurse_time_used (float):
@@ -261,8 +414,8 @@ class Model:
 
         # Create simpy environment and resource
         self.env = simpy.Environment()
-        self.nurse = simpy.Resource(self.env,
-                                    capacity=self.param.number_of_nurses)
+        self.nurse = MonitoredResource(self.env,
+                                       capacity=self.param.number_of_nurses)
 
         # Initialise attributes to store results
         self.patients = []
@@ -319,14 +472,10 @@ class Model:
             p = Patient(len(self.patients) + 1)
             p.arrival_time = self.env.now
 
-            # If the warm-up period has passed, add the patient to the list.
+            # Add the patient to the list.
             # The list stores a reference to the patient object, so any updates
             # to the patient attributes will be reflected in the list as well
-            if self.env.now >= self.param.warm_up_period:
-                self.patients.append(p)
-            # If still during warm-up, amend ID (so not set to 1)
-            else:
-                p.patient_id = 'X (warm-up)'
+            self.patients.append(p)
 
             # Log arrival time
             self.param.logger.log(
@@ -373,16 +522,15 @@ class Model:
                 f'{patient.time_with_nurse:.3f} minutes.'
             )
 
-            # If warm-up period has passed, update the total nurse time used.
+            # Update the total nurse time used.
             # This is used to calculate utilisation. To avoid overestimation,
             # if the consultation would overrun the simulation, just record
             # time to end of the simulation.
-            if self.env.now >= self.param.warm_up_period:
-                remaining_time = (
-                    self.param.warm_up_period +
-                    self.param.data_collection_period) - self.env.now
-                self.nurse_time_used += min(
-                    patient.time_with_nurse, remaining_time)
+            remaining_time = (
+                self.param.warm_up_period +
+                self.param.data_collection_period) - self.env.now
+            self.nurse_time_used += min(
+                patient.time_with_nurse, remaining_time)
 
             # Pass time spent with nurse
             yield self.env.timeout(patient.time_with_nurse)
@@ -401,34 +549,67 @@ class Model:
                 Time between audits in minutes.
         """
         while True:
-            # Only save results if the warm-up period has passed
-            if self.env.now >= self.param.warm_up_period:
-                self.audit_list.append({
-                    'resource_name': 'nurse',
-                    'simulation_time': self.env.now,
-                    'utilisation': self.nurse.count / self.nurse.capacity,
-                    'queue_length': len(self.nurse.queue),
-                    'running_mean_wait_time': self.running_mean_nurse_wait
-                })
+            self.audit_list.append({
+                'resource_name': 'nurse',
+                'simulation_time': self.env.now,
+                'utilisation': self.nurse.count / self.nurse.capacity,
+                'queue_length': len(self.nurse.queue),
+                'running_mean_wait_time': self.running_mean_nurse_wait
+            })
 
             # Trigger next audit after desired interval has passed
             yield self.env.timeout(interval)
+
+    def init_results_variables(self):
+        """
+        Resets all results collection variables to their initial values.
+        """
+        self.patients = []
+        self.nurse_time_used = 0
+        self.audit_list = []
+        self.nurse.init_results()
+
+    def warm_up_complete(self):
+        """
+        Resets all results collection variables once warm-up period has passed.
+        """
+        # Delay process until warm-up period has completed
+        yield self.env.timeout(self.param.warm_up_period)
+
+        # If there was a warm-up period, log that this time has passed so we
+        # can distinguish between patients before and after warm-up in logs
+        if self.param.warm_up_period > 0:
+            self.param.logger.log('─' * 10)
+            self.param.logger.log(f'{self.env.now:.2f}: Warm up complete.')
+            self.param.logger.log('─' * 10)
+
+        # Reset results collection variables
+        self.init_results_variables()
 
     def run(self):
         """
         Runs the simulation for the specified duration.
         """
-        # Start patient generator
+        # Calculate the total run length
+        run_length = (self.param.warm_up_period +
+                      self.param.data_collection_period)
+
+        # Schedule process which will reset results when warm-up period ends
+        self.env.process(self.warm_up_complete())
+
+        # Schedule patient generator to run during simulation
         self.env.process(self.generate_patient_arrivals())
 
-        # Start interval auditor
+        # Schedule interval auditor to run during simulation
         self.env.process(
             self.interval_audit(interval=self.param.audit_interval))
 
-        # Run for specified duration (which is the warm-up period + the
-        # data collection period)
-        self.env.run(until=self.param.data_collection_period +
-                     self.param.warm_up_period)
+        # Schedule process which will clean up monitoring of resources at the
+        # end of the run
+        self.env.process(self.nurse.end_of_run_cleanup(run_length))
+
+        # Run the simulation
+        self.env.run(until=run_length)
 
         # Convert list of patient objects into a list that just contains the
         # attributes of each of those patients as dictionaries
@@ -492,6 +673,8 @@ class Runner:
         patient_results['run'] = run
 
         # Create dictionary recording the run results
+        # Currently has two alternative methods of measuring utilisation
+        # TODO: Is mean_q_time_nurse and mean_nurse_q_length the same?
         run_results = {
             'run_number': run,
             'scenario': self.param.scenario_name,
@@ -500,7 +683,12 @@ class Runner:
             'mean_time_with_nurse': patient_results['time_with_nurse'].mean(),
             'mean_nurse_utilisation': (model.nurse_time_used /
                                        (self.param.number_of_nurses *
-                                        self.param.data_collection_period))
+                                        self.param.data_collection_period)),
+            'mean_nurse_utilisation_tw': (model.nurse.resource_busy_time /
+                                          (self.param.number_of_nurses *
+                                           self.param.data_collection_period)),
+            'mean_nurse_q_length': (model.nurse.queue_time /
+                                    self.param.data_collection_period)
         }
 
         # Convert interval audit results to a dataframe and add run column
@@ -561,12 +749,16 @@ class Runner:
 
 def run_scenarios(scenarios):
     """
-    Run a set of scenarios and return the scenario-level results.
+    Execute a set of scenarios and return the results from each run.
 
     Arguments:
         scenarios (dict):
             Dictionary where key is name of parameter and value is a list
             with different values to run in scenarios.
+
+    Returns:
+        pandas.dataframe:
+            Dataframe with results from each run of each scenario.
     """
     # Find every possible permutation of the scenarios
     all_scenarios_tuples = list(itertools.product(*scenarios.values()))
