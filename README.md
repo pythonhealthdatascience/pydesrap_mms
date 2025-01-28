@@ -1,13 +1,14 @@
 <div align="center">
 
-# Simple Reproducible Python<br>Discrete-Event Simulation (DES) Template
+# Python DES RAP Template
 
 [![python](https://img.shields.io/badge/-Python_3.13-306998?logo=python&logoColor=white)](https://www.python.org/)
 [![licence](https://img.shields.io/badge/Licence-MIT-green.svg?labelColor=gray)](https://github.com/pythonhealthdatascience/rap_template_python_des/blob/main/LICENSE)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14622466.svg)](https://doi.org/10.5281/zenodo.14622466)
 [![Tests](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/tests.yaml/badge.svg)](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/tests.yaml)
 
-A simple template for creating DES models in Python, within a **reproducible analytical pipeline (RAP)** <br>
+<br>A template for creating **discrete-event simulation (DES)** models in Python<br>
+within a **reproducible analytical pipeline (RAP)**. <br><br>
 Click on <kbd>Use this template</kbd> to initialise new repository.<br>
 A `README` template is provided at the **end of this file**.
 
