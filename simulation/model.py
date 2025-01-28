@@ -27,6 +27,7 @@ Typical usage example:
     print(experiment.run_results_df)
 """
 
+import itertools
 from joblib import Parallel, delayed
 import numpy as np
 import pandas as pd
@@ -556,3 +557,41 @@ class Runner:
             ))
         # Convert to dataframe
         self.overall_results_df = pd.DataFrame(uncertainty_metrics)
+
+
+def run_scenarios(scenarios):
+    """
+    Run a set of scenarios and return the scenario-level results.
+
+    Arguments:
+        scenarios (dict):
+            Dictionary where key is name of parameter and value is a list
+            with different values to run in scenarios.
+    """
+    # Find every possible permutation of the scenarios
+    all_scenarios_tuples = list(itertools.product(*scenarios.values()))
+    # Convert back into dictionaries
+    all_scenarios_dicts = [
+        dict(zip(scenarios.keys(), p)) for p in all_scenarios_tuples]
+    # Preview some of the scenarios
+    print(f'There are {len(all_scenarios_dicts)} scenarios. Running:')
+
+    # Run the scenarios...
+    results = []
+    for index, scenario_to_run in enumerate(all_scenarios_dicts):
+        print(scenario_to_run)
+
+        # Overwrite defaults from the passed dictionary
+        param = Defaults()
+        param.scenario_name = index
+        for key in scenario_to_run:
+            setattr(param, key, scenario_to_run[key])
+
+        # Perform replications and keep results from each run, adding the
+        # scenario values to the results dataframe
+        scenario_exp = Runner(param)
+        scenario_exp.run_reps()
+        for key in scenario_to_run:
+            scenario_exp.run_results_df[key] = scenario_to_run[key]
+        results.append(scenario_exp.run_results_df)
+    return pd.concat(results)
