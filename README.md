@@ -42,9 +42,9 @@ This repository provides a template for building discrete-event simulation (DES)
 ♻️ **Reproducible:** This template is designed to function as a RAP. It adheres to reproducibility recommendations from:
 
 * ["Levels of RAP" framework](https://nhsdigital.github.io/rap-community-of-practice/introduction_to_RAP/levels_of_RAP/) from the NHS RAP Community of Practice (`docs/nhs_rap.md`).
-* Recommendations from [Heather et al. 2025](TODO:ADDLINK) "*On the reproducibility of discrete-event simulation studies in health research: an empirical study using open models*" (`docs/heather_2025.md`).
+* Recommendations from [Heather et al. 2025](https://doi.org/10.48550/arXiv.2501.13137) "*On the reproducibility of discrete-event simulation studies in health research: an empirical study using open models*" (`docs/heather_2025.md`).
 
-🚀 **Extendable:** This template adapts from and complements material from Sammi Rosser and Dan Chalk (2024) ["HSMA - the little book of DES"](https://github.com/hsma-programme/hsma6_des_book). The book includes additional advanced features that can be used to extend the model in this template, including:
+🚀 **Extendable:** This template adapts from Sammi Rosser and Dan Chalk (2024) ["HSMA - the little book of DES"](https://github.com/hsma-programme/hsma6_des_book). The book includes additional advanced features that can be used to extend the model in this template, including:
 
 * Multiple activities
 * Branching paths
@@ -150,6 +150,12 @@ To run tests, ensure environment is active and located in main directory (i.e. p
 pytest
 ```
 
+To run tests in parallel -
+
+```
+pytest -n auto
+```
+
 The repository contains a GitHub action `tests.yaml` which will automatically run tests with new commits to GitHub. This is continuous integration, helping to catch bugs early and keep the code stable. It will run the tests on three operating systems: Ubuntu, Windows and Mac.
 
 If you have changed the model behaviour, you may wish to amend, remove or write new tests.
@@ -233,6 +239,8 @@ The overall run time will vary depending on how the template model is used. A fe
 * `analysis.ipynb` - 23s
 * `choosing_parameters.ipynb` - 22s
 * `generate_exp_results.ipynb` - 0s
+
+<!--TODO: Add test times -->
 
 These times were obtained on an Intel Core i7-12700H with 32GB RAM running Ubuntu 24.04.1 Linux. 
 

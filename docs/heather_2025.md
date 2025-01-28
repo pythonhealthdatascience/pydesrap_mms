@@ -1,6 +1,6 @@
 # Reproducibility recommendations from Heather et al. 2025
 
-As part of the project STARS (Sharing Tools and Artefacts for Reproducible Simulations), a series of computational reproducibility assessments were conducted by Heather et al. 2025 (**TODO: add DOI of pre-print**). From these, several recommendations were shared to support reproducibility of healthcare discrete-event simulation (DES) models. These are copied below. Those marked with a star (⭐) were identified as having the greatest impact in Heather et al. 2025.
+As part of the project STARS (Sharing Tools and Artefacts for Reproducible Simulations), a series of computational reproducibility assessments were conducted by [Heather et al. 2025](https://doi.org/10.48550/arXiv.2501.13137). From these, several recommendations were shared to support reproducibility of healthcare discrete-event simulation (DES) models. These are copied below. Those marked with a star (⭐) were identified as having the greatest impact in Heather et al. 2025.
 
 ## Recommendations to support reproduction
 
