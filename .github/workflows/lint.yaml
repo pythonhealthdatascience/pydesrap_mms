@@ -25,10 +25,12 @@ jobs:
 
         - name: Lint model code
           run: |
-            flake8 ./simulation
             pylint ./simulation
 
         - name: Lint tests
           run: |
-            flake8 ./tests
             pylint ./tests
+
+        - name: Lint notebooks
+          run: |
+            nbqa pylint ./notebooks
