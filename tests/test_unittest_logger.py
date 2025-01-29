@@ -3,7 +3,7 @@
 These check specific parts of the simulation and code, ensuring they work
 correctly and as expected.
 
-License:
+Licence:
     This project is licensed under the MIT Licence. See the LICENSE file for
     more details.
 
@@ -15,9 +15,9 @@ Typical usage example:
 from io import StringIO
 import logging
 import os
+from unittest.mock import patch, MagicMock
 import pytest
 from simulation.logging import SimLogger
-from unittest.mock import patch, MagicMock
 
 
 def test_log_to_console():

@@ -3,8 +3,7 @@
 
 cff-version: 1.2.0
 title: >-
-  Simple Reproducible Python Discrete-Event Simulation (DES)
-  Template
+  Python DES RAP Template
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
@@ -18,8 +17,8 @@ authors:
 repository-code: >-
   https://github.com/pythonhealthdatascience/rap_template_python_des
 abstract: >-
-  Template reproducible analytical pipeline (RAP) for simple
-  python DES model.
+  A template for creating discrete-event simulation (DES) models in Python
+  within a reproducible analytical pipeline (RAP).
 license: MIT
 # TODO: Manually update with each GitHub release
 version: '0.1.0'

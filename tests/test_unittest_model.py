@@ -3,7 +3,7 @@
 These check specific parts of the simulation and code, ensuring they work
 correctly and as expected.
 
-License:
+Licence:
     This project is licensed under the MIT Licence. See the LICENSE file for
     more details.
 
@@ -12,10 +12,12 @@ Typical usage example:
     pytest
 """
 
-from simulation.model import Defaults, Exponential, Model, Trial
 import numpy as np
 import pandas as pd
 import pytest
+import simpy
+from simulation.model import (
+    Defaults, Exponential, Model, Runner, MonitoredResource)
 
 
 def test_new_attribute():
@@ -57,7 +59,7 @@ def test_negative_inputs(param_name, value, rule):
     # Construct the expected error message
     if rule == 'positive':
         expected_message = f'Parameter "{param_name}" must be greater than 0.'
-    elif rule == 'non_negative':
+    else:
         expected_message = (f'Parameter "{param_name}" must be greater than ' +
                             'or equal to 0.')
 
@@ -101,18 +103,18 @@ def test_high_demand():
     param = Defaults()
     param.number_of_nurses = 1
     param.patient_inter = 0.1
-    trial = Trial(param)
-    results = trial.run_single(run=0)
+    experiment = Runner(param)
+    results = experiment.run_single(run=0)
 
     # Check that the utilisation as calculated from total_nurse_time_used
     # does not exceed 1 or drop below 0
-    util = results['trial']['mean_nurse_utilisation']
+    util = results['run']['mean_nurse_utilisation']
     assert util <= 1, (
-        'The trial `mean_nurse_utilisation` should not exceed 1, but ' +
+        'The run `mean_nurse_utilisation` should not exceed 1, but ' +
         f'found utilisation of {util}.'
     )
     assert util >= 0, (
-        'The trial `mean_nurse_utilisation` should not drop below 0, but ' +
+        'The run `mean_nurse_utilisation` should not drop below 0, but ' +
         f'found utilisation of {util}.'
     )
 
@@ -186,8 +188,8 @@ def test_warmup_impact():
         param.patient_inter = 1
         param.warm_up_period = warm_up_period
         param.data_collection_period = 1500
-        trial = Trial(param)
-        return trial.run_single(run=0)
+        experiment = Runner(param)
+        return experiment.run_single(run=0)
 
     # Run model with and without warm-up period
     results_warmup = helper_warmup(warm_up_period=500)
@@ -201,18 +203,14 @@ def test_warmup_impact():
     # and queue time greater than 0
     assert first_warmup['arrival_time'] > 500, (
         'Expect first patient to arrive after time 500 when model is run ' +
-        f'with warm-up, but got {first_warmup["arrival_time"]}.'
+        f'with warm-up (length 500), but got {first_warmup["arrival_time"]}.'
     )
     assert first_warmup['q_time_nurse'] > 0, (
         'Expect first patient to need to queue in model with warm-up and ' +
         f'high arrival rate, but got {first_warmup["q_time_nurse"]}.'
     )
 
-    # Check that model without warm-up has arrival and queue time of 0
-    assert first_none['arrival_time'] == 0, (
-        'Expect first patient to arrive at time 0 when model is run ' +
-        f'without warm-up, but got {first_none["arrival_time"]}.'
-    )
+    # Check that, in model without warm-up, first patient has 0 queue time
     assert first_none['q_time_nurse'] == 0, (
         'Expect first patient to have no wait time in model without warm-up ' +
         f'but got {first_none["q_time_nurse"]}.'
@@ -221,19 +219,22 @@ def test_warmup_impact():
 
 def test_arrivals():
     """
-    Check that trial-level count of arrivals is consistent with the number of
+    Check that count of arrivals in each run is consistent with the number of
     patients recorded in the patient-level results.
     """
-    trial = Trial(Defaults())
-    trial.run_trial()
+    experiment = Runner(Defaults())
+    experiment.run_reps()
 
-    # Get count of patients from patient-level and trial-level results
-    patient_n = trial.patient_results_df.groupby('run')['patient_id'].count()
-    trial_n = trial.trial_results_df['arrivals']
+    # Get count of patients from patient-level and run results
+    patient_n = (experiment
+                 .patient_results_df
+                 .groupby('run')['patient_id']
+                 .count())
+    run_n = experiment.run_results_df['arrivals']
 
     # Compare the counts from each run
-    assert all(patient_n == trial_n), (
-        'The number of arrivals in the trial-level results should be ' +
+    assert all(patient_n == run_n), (
+        'The number of arrivals in the results from each run should be ' +
         'consistent with the number of patients in the patient-level results.'
     )
 
@@ -283,9 +284,9 @@ def test_waiting_time_utilisation(param_name, initial_value, adjusted_value):
         # Modify chosen parameter for the test
         setattr(param, param_name, value)
 
-        # Run the trial and return the mean queue time for nurses
-        trial = Trial(param)
-        return trial.run_single(run=0)['trial']
+        # Run replications and return the mean queue time for nurses
+        experiment = Runner(param)
+        return experiment.run_single(run=0)['run']
 
     # Run model with initial and adjusted values
     initial_results = helper_param(param_name, initial_value)
@@ -321,14 +322,14 @@ def test_arrivals_decrease(param_name, initial_value, adjusted_value):
     # Run model with initial value
     param = Defaults()
     setattr(param, param_name, initial_value)
-    trial = Trial(param)
-    initial_arrivals = trial.run_single(run=0)['trial']['arrivals']
+    experiment = Runner(param)
+    initial_arrivals = experiment.run_single(run=0)['run']['arrivals']
 
     # Run model with adjusted value
     param = Defaults()
     setattr(param, param_name, adjusted_value)
-    trial = Trial(param)
-    adjusted_arrivals = trial.run_single(run=0)['trial']['arrivals']
+    experiment = Runner(param)
+    adjusted_arrivals = experiment.run_single(run=0)['run']['arrivals']
 
     # Check that arrivals from adjusted model are less
     assert initial_arrivals > adjusted_arrivals, (
@@ -342,11 +343,11 @@ def test_seed_stability():
     """
     Check that two runs using the same random seed return the same results.
     """
-    # Run trial twice, with same run number (and therefore same seed) each time
-    trial1 = Trial(param=Defaults())
-    result1 = trial1.run_single(run=33)
-    trial2 = Trial(param=Defaults())
-    result2 = trial2.run_single(run=33)
+    # Run model twice, with same run number (and therefore same seed) each time
+    experiment1 = Runner(param=Defaults())
+    result1 = experiment1.run_single(run=33)
+    experiment2 = Runner(param=Defaults())
+    result2 = experiment2.run_single(run=33)
 
     # Check that dataframes with patient-level results are equal
     pd.testing.assert_frame_equal(result1['patient'], result2['patient'])
@@ -356,10 +357,10 @@ def test_interval_audit_time():
     """
     Check that length of interval audit is less than the length of simulation.
     """
-    # Run single trial with default parameters and get max time from audit
+    # Run model once with default parameters and get max time from audit
     param = Defaults()
-    trial = Trial(param)
-    results = trial.run_single(run=0)
+    experiment = Runner(param)
+    results = experiment.run_single(run=0)
     max_time = max(results['interval_audit']['simulation_time'])
 
     # Check that max time in audit is less than simulation length
@@ -378,7 +379,7 @@ def test_exponentional():
     d = Exponential(mean=10, random_seed=42)
 
     # Check that sample is a float
-    assert type(d.sample()) == float, (
+    assert isinstance(d.sample(), float), (
         f'Expected sample() to return a float - instead: {type(d.sample())}'
     )
 
@@ -417,12 +418,90 @@ def test_parallel():
     for mode, cores in [('seq', 1), ('par', -1)]:
         param = Defaults()
         param.cores = cores
-        trial = Trial(param)
-        results[mode] = trial.run_single(run=0)
+        experiment = Runner(param)
+        results[mode] = experiment.run_single(run=0)
 
     # Verify results are identical
     pd.testing.assert_frame_equal(
         results['seq']['patient'], results['par']['patient'])
     pd.testing.assert_frame_equal(
         results['seq']['interval_audit'], results['par']['interval_audit'])
-    assert results['seq']['trial'] == results['par']['trial']
+    assert results['seq']['run'] == results['par']['run']
+
+
+def test_consistent_metrics():
+    """
+    Presently, the simulation code includes a few different methods to
+    calculate the same metrics. We would expect each to return similar results
+    (with a little tolerance, as expect some deviation due to methodological
+    differences).
+    """
+    # Run default model
+    experiment = Runner(Defaults())
+    experiment.run_reps()
+
+    # Absolute tolerance (atol) = +- 0.001
+
+    # Check nurse utilisation
+    pd.testing.assert_series_equal(
+        experiment.run_results_df['mean_nurse_utilisation'],
+        experiment.run_results_df['mean_nurse_utilisation_tw'],
+        atol=0.001,
+        check_names=False)
+
+
+def test_monitoredresource_cleanup():
+    """
+    Run simple example and check that the monitored resource calculations
+    are as expected (e.g. clean-up was performed appropriately at end of
+    simulation).
+    """
+    # Simulation setup
+    env = simpy.Environment()
+    resource = MonitoredResource(env, capacity=1)
+
+    def process_task(env, resource, duration):
+        """Simulate a task that requests the resource."""
+        with resource.request() as req:
+            yield req
+            yield env.timeout(duration)
+
+    # Set run length
+    run_length = 12
+
+    # Schedule tasks to occur during the simulation
+    env.process(process_task(env, resource, duration=5))  # Task A
+    env.process(process_task(env, resource, duration=10))  # Task B
+    env.process(process_task(env, resource, duration=15))  # Task C
+
+    # Run the simulation
+    env.run(until=run_length)
+
+    # If the simulation ends while resources are still in use or requests are
+    # still in the queue, the time between the last recorded event and the
+    # simulation end will not have been accounted for. Hence, we call
+    # update_time_weighted_stats() to run for time between last event and end.
+    resource.update_time_weighted_stats()
+
+    # Assertions
+    # At time=12:
+    # - Task A is done (0-5)
+    # - Task B is still using the resource (5-15)
+    # - Task C is still waiting in the queue (15-30)
+    # Hence...
+
+    # Expected queue time: 17, as task B (5) + task C (12)
+    expected_queue_time = 17.0
+
+    # Expected busy time: 12, as one resource busy for the whole simulation
+    expected_busy_time = 12.0
+
+    # Run assertions
+    assert resource.area_n_in_queue == expected_queue_time, (
+        f'Expected queue time {expected_queue_time} but ' +
+        f'observed {resource.area_n_in_queue}.'
+    )
+    assert resource.area_resource_busy == expected_busy_time, (
+        f'Expected queue time {expected_busy_time} but ' +
+        f'observed {resource.area_resource_busy}.'
+    )

@@ -132,9 +132,9 @@ param.patient_inter = 10
 model = Model(param)
 ```
 
-## Saving trial results
+## Saving replication results
 
-To save trial-level results in the HSMA models, an empty dataframe is initialised during the __init__ method of the `Trial` class.
+To save results from each run in the HSMA models, an empty dataframe is initialised during the __init__ method of the `Trial` class (equivalent to the `Runner` class in this template).
 
 ```
 self.df_trial_results = pd.DataFrame()
@@ -164,7 +164,7 @@ In the template, results are instead saved as a dictionary into a list as the ru
 Also, some of the calculations have been performed directly during the `run_single()` method, instead of from a seperate method `calculate_run_results()`. This is to help simplify the code, as it makes clear how each metric was calculated in one place, rather than needing to refer elsewhere.
 
 ```
-trial_results = {
+run_results = {
     'run_number': run,
     'scenario': self.param.scenario_name,
     'arrivals': len(patient_results),
@@ -176,7 +176,7 @@ trial_results = {
 
 ...
 
-self.trial_results_df = pd.DataFrame(trial_results_list)
+self.run_results_df = pd.DataFrame(run_results_list)
 ```
 
 ## Extra features

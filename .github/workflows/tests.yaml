@@ -1,4 +1,4 @@
-# This file runs the tests in `tests/` with every push to GitHub
+# This file runs the tests in `tests/`
 # They will run in parallel, and run on three operating systems:
 # Ubuntu, Windows and Mac.
 
@@ -6,6 +6,8 @@ name: tests
 
 on:
   push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 
 jobs:
