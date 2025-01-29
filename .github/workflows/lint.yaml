@@ -34,3 +34,7 @@ jobs:
         - name: Lint notebooks
           run: |
             nbqa pylint ./notebooks
+
+        - name: Lint time-weighted averages notebook
+          run: |
+            nbqa pylint ./docs/time_weighted_averages.ipynb
