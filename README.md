@@ -55,7 +55,7 @@ This repository provides a template for building discrete-event simulation (DES)
 
 For clarity, changes from the DES book in this template are explained in `docs/hsma_changes.md`.
 
-✨ **Style:** The coding style is based on the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html). Linting is implemented using `flake8` and `pylint` for `.py` files, and `pycodestyle` for `.ipynb` files.
+✨ **Style:** The coding style is based on the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html). Linting is implemented using `pylint` (with `nbqa` to enable it to run on jupyter notebooks).
 
 🧱 **Package structure:** In Python, a package can simply be defined as a directory with an `__init__.py` file in it. In this repository, the scripts for model (within `simulation/`) are treated as a little local package. This keeps the code model code isolated from our experiments and analysis. It is installed as an editable (`-e`) local import - with `-e` meaning it will update with changes to the local files in `simulation/`. As it is installed in our environment, it can then easily be used anywhere else in the directory - here, in `notebooks/` and `tests/` - without needing any additional code (e.g. no need to modify `sys.path`, or have additional `__init__.py` files).
 
@@ -162,18 +162,16 @@ If you have changed the model behaviour, you may wish to amend, remove or write 
 
 🔎 **Linting**
 
-You can lint the `.py` files by running either of this commands from the terminal:
+You can lint the `.py` files by running:
 
 ```
-flake8 simulation/model.py
 pylint simulation/model.py
 ```
 
-The first commands in the `.ipynb` files will lint the notebooks using `pycodestyle` when executed:
+You can lint the `.ipynb` by adding `nbqa` to the start of the command - e.g.:
 
 ```
-%load_ext pycodestyle_magic
-%pycodestyle_on
+nbqa pylint notebooks/analysis.ipynb
 ```
 
 <br>
