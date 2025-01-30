@@ -1,22 +1,24 @@
 0.000: Initialise model:
+
 {   'audit_list': [],
-    'env': <simpy.core.Environment object at 0x7b43a1a0af90>,
-    'nurse': <simulation.model.MonitoredResource object at 0x7b43a1a0b0e0>,
+    'env': '<simpy.core.Environment>',
+    'nurse': '<simulation.model.MonitoredResource>',
     'nurse_consult_count': 0,
-    'nurse_consult_time_dist': <simulation.model.Exponential object at 0x7b43a1a36990>,
+    'nurse_consult_time_dist': '<simulation.model.Exponential>',
     'nurse_time_used': 0,
-    'param': <simulation.model.Defaults object at 0x7b43a1a09010>,
-    'patient_inter_arrival_dist': <simulation.model.Exponential object at 0x7b43a1a0b230>,
+    'param': '<simulation.model.Defaults>',
+    'patient_inter_arrival_dist': '<simulation.model.Exponential>',
     'patients': [],
     'results_list': [],
     'run_number': 0,
     'running_mean_nurse_wait': 0}
 0.000: Parameters:
- {   '_initialising': False,
+ 
+{   '_initialising': False,
     'audit_interval': 120,
     'cores': 0,
     'data_collection_period': 50,
-    'logger': <simulation.logging.SimLogger object at 0x7b447823b250>,
+    'logger': '<simulation.logging.SimLogger>',
     'mean_n_consult_time': 10,
     'number_of_nurses': 1,
     'number_of_runs': 1,

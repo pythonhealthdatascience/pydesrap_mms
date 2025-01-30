@@ -21,10 +21,11 @@ Typical usage example:
 
 import logging
 import os
+from pprint import pformat
+import time
+
 from rich.logging import RichHandler
 from rich.console import Console
-import sys
-import time
 
 
 class SimLogger:
@@ -38,12 +39,16 @@ class SimLogger:
             Whether to save log to a file.
         file_path (str):
             Path to save log to file.
+        sanitise (boolean):
+            Whether to sanitise dictionaries to remove memory addresses in
+            logs, default False.
         logger (logging.Logger):
             The logging instance used for logging messages.
     """
     def __init__(self, log_to_console=False, log_to_file=False,
                  file_path=('../outputs/logs/' +
-                            f'{time.strftime("%Y-%m-%d_%H-%M-%S")}.log')):
+                            f'{time.strftime("%Y-%m-%d_%H-%M-%S")}.log'),
+                 sanitise=False):
         """
         Initialise the Logger class.
 
@@ -56,10 +61,14 @@ class SimLogger:
                 Path to save log to file. Note, if you use an existing .log
                 file name, it will append to that log. Defaults to filename
                 based on current date and time, and folder '../outputs/log/'.
+            sanitise (boolean):
+                Whether to sanitise dictionaries to remove memory addresses
+                in logs, default False.
         """
         self.log_to_console = log_to_console
         self.log_to_file = log_to_file
         self.file_path = file_path
+        self.sanitise = sanitise
         self.logger = None
 
         # If saving to file, check path is valid
@@ -127,15 +136,48 @@ class SimLogger:
         for handler in handlers:
             handler.setFormatter(formatter)
 
-    def log(self, sim_time, msg):
+    def sanitise_object(self, obj):
+        """
+        Sanitise object references to avoid memory addresses in logs.
+
+        Arguments:
+            obj (object):
+                Object to sanitise
+
+        Returns:
+            str:
+                Sanitised version of the object. If it's an object,
+                it returns the class name; otherwise, it returns the
+                object itself.
+        """
+        # Only sanitise custom objects (not basic types like int, str, etc.)
+        if isinstance(obj, object) and not isinstance(
+            obj, (int, float, bool, str, list, dict, tuple, set)
+        ):
+            # Return the class name instead of the memory address
+            return f'<{obj.__class__.__module__}.{obj.__class__.__name__}>'
+        return obj
+
+    def log(self, msg, sim_time=None):
         """
         Log a message if logging is enabled.
 
         Arguments:
-            sim_time (float):
-                Current simulation time.
             msg (str):
                 Message to log.
+            sim_time (float|None, optional):
+                Current simulation time. If provided, prints before message.
         """
+        # Sanitise (if enabled) and pretty format dictionaries
+        if isinstance(msg, dict):
+            if self.sanitise:
+                msg = {key: self.sanitise_object(value)
+                       for key, value in msg.items()}
+            msg = pformat(msg, indent=4)
+
         if self.log_to_console or self.log_to_file:
-            self.logger.info(f'{sim_time:.3f}: {msg}')
+            # Log message, with simulation time rounded to 3dp if given.
+            if sim_time is not None:
+                self.logger.info('%0.3f: %s', sim_time, msg)
+            else:
+                self.logger.info(msg)

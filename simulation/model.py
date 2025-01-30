@@ -34,12 +34,13 @@ Typical usage example:
 """
 
 import itertools
+
 from joblib import Parallel, delayed
 import numpy as np
 import pandas as pd
-from pprint import pformat
 import scipy.stats as st
 import simpy
+
 from simulation.logging import SimLogger
 
 
@@ -444,12 +445,10 @@ class Model:
                     )
 
         # Log model initialisation
-        self.param.logger.log(
-            sim_time=self.env.now,
-            msg='Initialise model:\n' + pformat(vars(self), indent=4))
-        self.param.logger.log(
-            sim_time=self.env.now,
-            msg='Parameters:\n ' + pformat(vars(self.param), indent=4))
+        self.param.logger.log(sim_time=self.env.now, msg='Initialise model:\n')
+        self.param.logger.log(vars(self))
+        self.param.logger.log(sim_time=self.env.now, msg='Parameters:\n ')
+        self.param.logger.log(vars(self.param))
 
     def generate_patient_arrivals(self):
         """
