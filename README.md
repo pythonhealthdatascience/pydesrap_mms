@@ -7,8 +7,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14622466.svg)](https://doi.org/10.5281/zenodo.14622466)
 [![Tests](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/tests.yaml/badge.svg)](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/tests.yaml)
 
-<br>A template for creating **discrete-event simulation (DES)** models in Python<br>
-within a **reproducible analytical pipeline (RAP)**. <br><br>
+<br>A template for creating **discrete-event simulation (DES)** models in Python within a **reproducible analytical pipeline (RAP)**. <br><br>
 Click on <kbd>Use this template</kbd> to initialise new repository.<br>
 A `README` template is provided at the **end of this file**.
 
@@ -154,6 +153,12 @@ To run tests in parallel -
 
 ```
 pytest -n auto
+```
+
+To run a specific test:
+
+```
+pytest tests/testfile.py -k 'testname'
 ```
 
 The repository contains a GitHub action `tests.yaml` which will automatically run tests with new commits to GitHub. This is continuous integration, helping to catch bugs early and keep the code stable. It will run the tests on three operating systems: Ubuntu, Windows and Mac.
