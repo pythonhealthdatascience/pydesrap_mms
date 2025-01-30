@@ -224,20 +224,20 @@ def test_warmup_impact():
     # results of 0
     first_interval = results_none['interval_audit'].iloc[0]
     assert first_interval['simulation_time'] == 0, (
-        'With no warm-up, expect first entry in interval audit results to be ' +
+        'With no warm-up, expect first entry in interval audit to be ' +
         f'at time 0, but it was at time {first_interval['simulation_time']}.'
     )
     assert first_interval['utilisation'] == 0, (
-        'With no warm-up, expect first entry in interval audit results to ' +
+        'With no warm-up, expect first entry in interval audit to ' +
         f'have 0 utilisation, but it was {first_interval['utilisation']}.'
     )
     assert first_interval['queue_length'] == 0, (
-        'With no warm-up, expect first entry in interval audit results to ' +
+        'With no warm-up, expect first entry in interval audit to ' +
         'have no queue, but there was queue length of ' +
         f'{first_interval['queue_length']}.'
     )
     assert first_interval['running_mean_wait_time'] == 0, (
-        'With no warm-up, expect first entry in interval audit results to ' +
+        'With no warm-up, expect first entry in interval audit to ' +
         'have running mean wait time of 0 but it was ' +
         f'{first_interval['running_mean_wait_time']}.'
     )

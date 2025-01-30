@@ -554,20 +554,22 @@ class Model:
 
     def warm_up_complete(self):
         """
-        Resets all results collection variables once warm-up period has passed.
+        If there is a warm-up period, then reset all results collection
+        variables once warm-up period has passed.
         """
-        # Delay process until warm-up period has completed
-        yield self.env.timeout(self.param.warm_up_period)
-
-        # Reset results collection variables
-        self.init_results_variables()
-
-        # If there was a warm-up period, log that this time has passed so we
-        # can distinguish between patients before and after warm-up in logs
         if self.param.warm_up_period > 0:
-            self.param.logger.log('─' * 10)
-            self.param.logger.log(f'{self.env.now:.2f}: Warm up complete.')
-            self.param.logger.log('─' * 10)
+            # Delay process until warm-up period has completed
+            yield self.env.timeout(self.param.warm_up_period)
+
+            # Reset results collection variables
+            self.init_results_variables()
+
+            # If there was a warm-up period, log that this time has passed so
+            # can distinguish between patients before and after warm-up in logs
+            if self.param.warm_up_period > 0:
+                self.param.logger.log('─' * 10)
+                self.param.logger.log(f'{self.env.now:.2f}: Warm up complete.')
+                self.param.logger.log('─' * 10)
 
     def run(self):
         """
@@ -578,6 +580,7 @@ class Model:
                       self.param.data_collection_period)
 
         # Schedule process which will reset results when warm-up period ends
+        # (or does nothing if these is no warm-up)
         self.env.process(self.warm_up_complete())
 
         # Schedule patient generator to run during simulation
