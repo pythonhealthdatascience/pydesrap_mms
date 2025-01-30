@@ -497,11 +497,11 @@ def test_monitoredresource_cleanup():
     expected_busy_time = 12.0
 
     # Run assertions
-    assert resource.area_n_in_queue == expected_queue_time, (
+    assert sum(resource.area_n_in_queue) == expected_queue_time, (
         f'Expected queue time {expected_queue_time} but ' +
         f'observed {resource.area_n_in_queue}.'
     )
-    assert resource.area_resource_busy == expected_busy_time, (
+    assert sum(resource.area_resource_busy) == expected_busy_time, (
         f'Expected queue time {expected_busy_time} but ' +
         f'observed {resource.area_resource_busy}.'
     )

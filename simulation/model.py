@@ -198,14 +198,14 @@ class MonitoredResource(simpy.Resource):
     simpy.Resource, which is referred to as the superclass or parent class.
 
     Attributes:
-        time_last_event (float):
+        time_last_event (list):
             Time of last resource request or release.
-        area_n_in_queue (float):
-            Total time that patients have spent queueing for the resource
+        area_n_in_queue (list):
+            Time that patients have spent queueing for the resource
             (i.e. sum of the times each patient spent waiting). Used to
             calculate the average queue length.
-        area_resource_busy (float):
-            Total time that resources have been in use during the simulation
+        area_resource_busy (list):
+            Time that resources have been in use during the simulation
             (i.e. sum of the times each individual resource was busy). Used
             to calculated utilisation.
     """
@@ -229,9 +229,9 @@ class MonitoredResource(simpy.Resource):
         """
         Resets monitoring attributes to initial values.
         """
-        self.time_last_event = self._env.now
-        self.area_n_in_queue = 0.0
-        self.area_resource_busy = 0.0
+        self.time_last_event = [self._env.now]
+        self.area_n_in_queue = [0.0]
+        self.area_resource_busy = [0.0]
 
     def request(self, *args, **kwargs):
         """
@@ -289,16 +289,18 @@ class MonitoredResource(simpy.Resource):
         persist over time.
         """
         # Calculate time since last event
-        time_since_last_event = self._env.now - self.time_last_event
+        time_since_last_event = self._env.now - self.time_last_event[-1]
 
-        # Update self.time_last_event to current time
-        self.time_last_event = self._env.now
+        # Add record of current time
+        self.time_last_event.append(self._env.now)
 
-        # Update the statistics
+        # Add "area under curve" of people in queue
         # len(self.queue) is the number of requests queued
-        self.area_n_in_queue += len(self.queue) * time_since_last_event
+        self.area_n_in_queue.append(len(self.queue) * time_since_last_event)
+
+        # Add "area under curve" of resources in use
         # self.count is the number of resources in use
-        self.area_resource_busy += self.count * time_since_last_event
+        self.area_resource_busy.append(self.count * time_since_last_event)
 
 
 class Exponential:
@@ -590,7 +592,7 @@ class Model:
 
         # If the simulation ends while resources are still in use or requests
         # are still in the queue, the time between the last recorded event and
-        # the simulation end will not have been accounted for. Hence, we call 
+        # the simulation end will not have been accounted for. Hence, we call
         # update_time_weighted_stats() to run for last event --> end.
         self.nurse.update_time_weighted_stats()
 
@@ -672,10 +674,10 @@ class Runner:
             'mean_nurse_utilisation': (model.nurse_time_used /
                                        (self.param.number_of_nurses *
                                         self.param.data_collection_period)),
-            'mean_nurse_utilisation_tw': (model.nurse.area_resource_busy /
+            'mean_nurse_utilisation_tw': (sum(model.nurse.area_resource_busy) /
                                           (self.param.number_of_nurses *
                                            self.param.data_collection_period)),
-            'mean_nurse_q_length': (model.nurse.area_n_in_queue /
+            'mean_nurse_q_length': (sum(model.nurse.area_n_in_queue) /
                                     self.param.data_collection_period)
         }
 
