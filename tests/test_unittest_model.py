@@ -210,9 +210,10 @@ def test_warmup_impact():
         f'high arrival rate, but got {first_warmup["q_time_nurse"]}.'
     )
 
-    # Check that model without warm-up has arrival and queue time of 0
-    assert first_none['arrival_time'] == 0, (
-        'Expect first patient to arrive at time 0 when model is run ' +
+    # Check that model without warm-up has arrival first arrival after time 0,
+    # but a queue time of 0
+    assert first_none['arrival_time'] > 0, (
+        'Expect first patient to arrive after time 0 when model is run ' +
         f'without warm-up, but got {first_none["arrival_time"]}.'
     )
     assert first_none['q_time_nurse'] == 0, (
@@ -228,10 +229,10 @@ def test_warmup_impact():
         'With no warm-up, expect first entry in interval audit to be ' +
         f'at time 0, but it was at time {first_interval['simulation_time']}.'
     )
-    assert first_interval['utilisation'] > 0, (
+    assert first_interval['utilisation'] == 0, (
         'With no warm-up, expect first entry in interval audit to ' +
-        'have utilisation greater than 0 (as first patient arrives at time ' +
-        f'0), but utilisation was {first_interval['utilisation']}.'
+        'have utilisation of 0 but utilisation was ' + 
+        f'{first_interval['utilisation']}.'
     )
     assert first_interval['queue_length'] == 0, (
         'With no warm-up, expect first entry in interval audit to ' +

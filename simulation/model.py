@@ -451,6 +451,10 @@ class Model:
         Generate patient arrivals.
         """
         while True:
+            # Sample and pass time to arrival
+            sampled_inter = self.patient_inter_arrival_dist.sample()
+            yield self.env.timeout(sampled_inter)
+
             # Create new patient, with ID based on length of patient list + 1
             p = Patient(len(self.patients) + 1)
             p.arrival_time = self.env.now
@@ -467,10 +471,6 @@ class Model:
 
             # Start process of attending clinic
             self.env.process(self.attend_clinic(p))
-
-            # Sample and pass time to next arrival
-            sampled_inter = self.patient_inter_arrival_dist.sample()
-            yield self.env.timeout(sampled_inter)
 
     def attend_clinic(self, patient):
         """
