@@ -210,10 +210,36 @@ def test_warmup_impact():
         f'high arrival rate, but got {first_warmup["q_time_nurse"]}.'
     )
 
-    # Check that, in model without warm-up, first patient has 0 queue time
+    # Check that model without warm-up has arrival and queue time of 0
+    assert first_none['arrival_time'] == 0, (
+        'Expect first patient to arrive at time 0 when model is run ' +
+        f'without warm-up, but got {first_none["arrival_time"]}.'
+    )
     assert first_none['q_time_nurse'] == 0, (
         'Expect first patient to have no wait time in model without warm-up ' +
         f'but got {first_none["q_time_nurse"]}.'
+    )
+
+    # Check that the first interval audit entry with no warm-up has time and
+    # results of 0
+    first_interval = results_none['interval_audit'].iloc[0]
+    assert first_interval['simulation_time'] == 0, (
+        'With no warm-up, expect first entry in interval audit to be ' +
+        f'at time 0, but it was at time {first_interval['simulation_time']}.'
+    )
+    assert first_interval['utilisation'] == 0, (
+        'With no warm-up, expect first entry in interval audit to ' +
+        f'have 0 utilisation, but it was {first_interval['utilisation']}.'
+    )
+    assert first_interval['queue_length'] == 0, (
+        'With no warm-up, expect first entry in interval audit to ' +
+        'have no queue, but there was queue length of ' +
+        f'{first_interval['queue_length']}.'
+    )
+    assert first_interval['running_mean_wait_time'] == 0, (
+        'With no warm-up, expect first entry in interval audit to ' +
+        'have running mean wait time of 0 but it was ' +
+        f'{first_interval['running_mean_wait_time']}.'
     )
 
 
@@ -497,11 +523,11 @@ def test_monitoredresource_cleanup():
     expected_busy_time = 12.0
 
     # Run assertions
-    assert resource.area_n_in_queue == expected_queue_time, (
+    assert sum(resource.area_n_in_queue) == expected_queue_time, (
         f'Expected queue time {expected_queue_time} but ' +
         f'observed {resource.area_n_in_queue}.'
     )
-    assert resource.area_resource_busy == expected_busy_time, (
+    assert sum(resource.area_resource_busy) == expected_busy_time, (
         f'Expected queue time {expected_busy_time} but ' +
         f'observed {resource.area_resource_busy}.'
     )

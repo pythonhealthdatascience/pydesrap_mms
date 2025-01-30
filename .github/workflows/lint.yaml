@@ -23,12 +23,6 @@ jobs:
             cache: 'pip'
         - run: pip install -r requirements.txt
 
-        - name: Lint model code
+        - name: Lint
           run: |
-            flake8 ./simulation
-            pylint ./simulation
-
-        - name: Lint tests
-          run: |
-            flake8 ./tests
-            pylint ./tests
+            bash lint.sh
