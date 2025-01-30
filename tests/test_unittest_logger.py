@@ -26,7 +26,7 @@ def test_log_to_console():
     """
     with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
         logger = SimLogger(log_to_console=True)
-        logger.log('Test console log')
+        logger.log(sim_time=None, msg='Test console log')
         # Check if console output matches
         assert 'Test console log' in mock_stdout.getvalue()
 
@@ -40,11 +40,11 @@ def test_log_to_file():
     with patch('builtins.open', new_callable=MagicMock) as mock_open:
         # Create the logger and log a simple example
         logger = SimLogger(log_to_file=True, file_path='test.log')
-        logger.log('Log message')
+        logger.log(sim_time=None, msg='Log message')
 
-        # Check that the file was opened in append mode at the absolute path
+        # Check that the file was opened in write mode at the absolute path
         mock_open.assert_called_with(
-            os.path.abspath('test.log'), 'a', encoding='locale', errors=None)
+            os.path.abspath('test.log'), 'w', encoding='locale', errors=None)
 
         # Verify a FileHandler is attached to the logger
         assert (any(isinstance(handler, logging.FileHandler)
