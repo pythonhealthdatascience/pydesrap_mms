@@ -521,6 +521,7 @@ class Model:
     def interval_audit(self, interval):
         """
         Audit waiting times and resource utilisation at regular intervals.
+        This is set-up to start when the warm-up period has ended.
 
         The running mean wait time is calculated using Welford's Running
         Average, which is a method that avoids the need to store previous wait
@@ -531,6 +532,10 @@ class Model:
             interval (int, optional):
                 Time between audits in minutes.
         """
+        # Wait until warm-up period has passed
+        yield self.env.timeout(self.param.warm_up_period)
+
+        # Begin interval auditor
         while True:
             self.audit_list.append({
                 'resource_name': 'nurse',
