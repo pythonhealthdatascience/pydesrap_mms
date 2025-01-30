@@ -499,7 +499,7 @@ class Model:
             # Log wait time and time spent with nurse
             self.param.logger.log(
                 f'Patient {patient.patient_id} is seen by nurse after ' +
-                f'{patient.arrival_time:.3f} minutes. Consultation length: ' +
+                f'{patient.q_time_nurse:.3f} minutes. Consultation length: ' +
                 f'{patient.time_with_nurse:.3f} minutes.'
             )
 
