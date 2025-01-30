@@ -37,6 +37,7 @@ import itertools
 from joblib import Parallel, delayed
 import numpy as np
 import pandas as pd
+from pprint import pformat
 import scipy.stats as st
 import simpy
 from simulation.logging import SimLogger
@@ -443,8 +444,12 @@ class Model:
                     )
 
         # Log model initialisation
-        self.param.logger.log(f'Initialised model: {vars(self)}')
-        self.param.logger.log(f'Parameters: {vars(self.param)}')
+        self.param.logger.log(
+            sim_time=self.env.now,
+            msg='Initialise model:\n' + pformat(vars(self), indent=4))
+        self.param.logger.log(
+            sim_time=self.env.now,
+            msg='Parameters:\n ' + pformat(vars(self.param), indent=4))
 
     def generate_patient_arrivals(self):
         """
@@ -465,8 +470,14 @@ class Model:
             self.patients.append(p)
 
             # Log arrival time
+            if p.arrival_time < self.param.warm_up_period:
+                arrive_pre = '\U0001F538 WU'
+            else:
+                arrive_pre = '\U0001F539 DC'
             self.param.logger.log(
-                f'Patient {p.patient_id} arrives at: {p.arrival_time:.3f}'
+                sim_time=self.env.now,
+                msg=(f'{arrive_pre} Patient {p.patient_id} arrives at: ' +
+                     f'{p.arrival_time:.3f}.')
             )
 
             # Start process of attending clinic
@@ -499,10 +510,15 @@ class Model:
             patient.time_with_nurse = self.nurse_consult_time_dist.sample()
 
             # Log wait time and time spent with nurse
+            if patient.arrival_time < self.param.warm_up_period:
+                nurse_pre = '\U0001F536 WU'
+            else:
+                nurse_pre = '\U0001F537 DC'
             self.param.logger.log(
-                f'Patient {patient.patient_id} is seen by nurse after ' +
-                f'{patient.q_time_nurse:.3f} minutes. Consultation length: ' +
-                f'{patient.time_with_nurse:.3f} minutes.'
+                sim_time=self.env.now,
+                msg=(f'{nurse_pre} Patient {patient.patient_id} is seen ' +
+                     f'by nurse after {patient.q_time_nurse:.3f}. ' +
+                     f'Consultation length: {patient.time_with_nurse:.3f}.')
             )
 
             # Update the total nurse time used.
@@ -572,9 +588,12 @@ class Model:
             # If there was a warm-up period, log that this time has passed so
             # can distinguish between patients before and after warm-up in logs
             if self.param.warm_up_period > 0:
-                self.param.logger.log('─' * 10)
-                self.param.logger.log(f'{self.env.now:.2f}: Warm up complete.')
-                self.param.logger.log('─' * 10)
+                self.param.logger.log(sim_time=self.env.now,
+                                      msg='─' * 10)
+                self.param.logger.log(sim_time=self.env.now,
+                                      msg='Warm up complete.')
+                self.param.logger.log(sim_time=self.env.now,
+                                      msg='─' * 10)
 
     def run(self):
         """

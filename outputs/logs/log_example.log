@@ -1,0 +1,49 @@
+0.000: Initialise model:
+{   'audit_list': [],
+    'env': <simpy.core.Environment object at 0x7b43a1a0af90>,
+    'nurse': <simulation.model.MonitoredResource object at 0x7b43a1a0b0e0>,
+    'nurse_consult_count': 0,
+    'nurse_consult_time_dist': <simulation.model.Exponential object at 0x7b43a1a36990>,
+    'nurse_time_used': 0,
+    'param': <simulation.model.Defaults object at 0x7b43a1a09010>,
+    'patient_inter_arrival_dist': <simulation.model.Exponential object at 0x7b43a1a0b230>,
+    'patients': [],
+    'results_list': [],
+    'run_number': 0,
+    'running_mean_nurse_wait': 0}
+0.000: Parameters:
+ {   '_initialising': False,
+    'audit_interval': 120,
+    'cores': 0,
+    'data_collection_period': 50,
+    'logger': <simulation.logging.SimLogger object at 0x7b447823b250>,
+    'mean_n_consult_time': 10,
+    'number_of_nurses': 1,
+    'number_of_runs': 1,
+    'patient_inter': 4,
+    'scenario_name': 0,
+    'warm_up_period': 30}
+13.174: 🔸 WU Patient 1 arrives at: 13.174.
+13.174: 🔶 WU Patient 1 is seen by nurse after 0.000. Consultation length: 8.031.
+16.227: 🔸 WU Patient 2 arrives at: 16.227.
+21.205: 🔶 WU Patient 2 is seen by nurse after 4.979. Consultation length: 3.820.
+21.236: 🔸 WU Patient 3 arrives at: 21.236.
+22.140: 🔸 WU Patient 4 arrives at: 22.140.
+23.023: 🔸 WU Patient 5 arrives at: 23.023.
+25.025: 🔶 WU Patient 3 is seen by nurse after 3.789. Consultation length: 3.642.
+28.667: 🔶 WU Patient 4 is seen by nurse after 6.527. Consultation length: 5.295.
+30.000: ──────────
+30.000: Warm up complete.
+30.000: ──────────
+30.223: 🔹 DC Patient 1 arrives at: 30.223.
+30.487: 🔹 DC Patient 2 arrives at: 30.487.
+33.962: 🔶 WU Patient 5 is seen by nurse after 10.939. Consultation length: 27.884.
+34.089: 🔹 DC Patient 3 arrives at: 34.089.
+35.270: 🔹 DC Patient 4 arrives at: 35.270.
+44.470: 🔹 DC Patient 5 arrives at: 44.470.
+51.904: 🔹 DC Patient 6 arrives at: 51.904.
+51.963: 🔹 DC Patient 7 arrives at: 51.963.
+61.845: 🔷 DC Patient 1 is seen by nurse after 31.623. Consultation length: 19.610.
+74.349: 🔹 DC Patient 8 arrives at: 74.349.
+77.534: 🔹 DC Patient 9 arrives at: 77.534.
+78.932: 🔹 DC Patient 10 arrives at: 78.932.

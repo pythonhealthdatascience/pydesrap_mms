@@ -4,7 +4,8 @@ Logs track events as the code runs - similar to print statements, but keeping a
 more permanent record.
 
 Credit:
-    > This code is adapted from NHS Digital (2024) RAP repository template
+    > Use of the logging module was initially inspired and adapted from NHS
+    Digital (2024) RAP repository template
     (https://github.com/NHSDigital/rap-package-template) (MIT Licence).
 
 Licence:
@@ -20,6 +21,8 @@ Typical usage example:
 
 import logging
 import os
+from rich.logging import RichHandler
+from rich.console import Console
 import sys
 import time
 
@@ -95,34 +98,44 @@ class SimLogger:
         for handler in self.logger.handlers[:]:
             self.logger.removeHandler(handler)
 
+        # Configure RichHandler without INFO/ERROR labels, times or paths
+        # to log message. Set up console with jupyter-specific behaviour
+        # disabled to prevent large gaps between each log message on ipynb.
+        console = Console()
+        console.is_jupyter = False
+        rich_handler = RichHandler(console=console, show_time=False,
+                                   show_level=False, show_path=False)
+
         # Add handlers for saving messages to file and/or printing to console
         handlers = []
         if self.log_to_file:
-            handlers.append(logging.FileHandler(self.file_path))
+            # In write mode, meaning will overwrite existing log of same name
+            # (append mode 'a' would add to the end of the log)
+            handlers.append(logging.FileHandler(self.file_path, mode='w'))
         if self.log_to_console:
-            handlers.append(logging.StreamHandler(sys.stdout))
+            handlers.append(rich_handler)
+            #handlers.append(logging.StreamHandler(sys.stdout))
 
         # Add handlers directly to the logger
         for handler in handlers:
             self.logger.addHandler(handler)
 
-        # Set logging level and format. Level 'INFO' means it's purpose is to
-        # confirm things are working as expected.
+        # Set logging level and format. If don't set level info, it would
+        # only show log messages which are warning, error or critical.
         self.logger.setLevel(logging.INFO)
-        formatter = logging.Formatter(
-            '%(asctime)s - %(levelname)s - %(filename)s:'
-            '%(funcName)s():%(lineno)d - %(message)s'
-        )
+        formatter = logging.Formatter('%(message)s')
         for handler in handlers:
             handler.setFormatter(formatter)
 
-    def log(self, msg):
+    def log(self, sim_time, msg):
         """
         Log a message if logging is enabled.
 
         Arguments:
+            sim_time (float):
+                Current simulation time.
             msg (str):
                 Message to log.
         """
         if self.log_to_console or self.log_to_file:
-            self.logger.info(msg)
+            self.logger.info(f'{sim_time:.3f}: {msg}')

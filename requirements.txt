@@ -11,5 +11,6 @@ plotly_express==0.4.1
 pylint==3.3.4
 pytest==8.3.4
 pytest-xdist==3.6.1
+rich==13.9.4
 simpy==4.1.1
 -e .[dev]
