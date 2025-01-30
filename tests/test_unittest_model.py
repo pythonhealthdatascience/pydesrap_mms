@@ -220,6 +220,28 @@ def test_warmup_impact():
         f'but got {first_none["q_time_nurse"]}.'
     )
 
+    # Check that the first interval audit entry with no warm-up has time and
+    # results of 0
+    first_interval = results_none['interval_audit'].iloc[0]
+    assert first_interval['simulation_time'] == 0, (
+        'With no warm-up, expect first entry in interval audit results to be ' +
+        f'at time 0, but it was at time {first_interval['simulation_time']}.'
+    )
+    assert first_interval['utilisation'] == 0, (
+        'With no warm-up, expect first entry in interval audit results to ' +
+        f'have 0 utilisation, but it was {first_interval['utilisation']}.'
+    )
+    assert first_interval['queue_length'] == 0, (
+        'With no warm-up, expect first entry in interval audit results to ' +
+        'have no queue, but there was queue length of ' +
+        f'{first_interval['queue_length']}.'
+    )
+    assert first_interval['running_mean_wait_time'] == 0, (
+        'With no warm-up, expect first entry in interval audit results to ' +
+        'have running mean wait time of 0 but it was ' +
+        f'{first_interval['running_mean_wait_time']}.'
+    )
+
 
 def test_arrivals():
     """
