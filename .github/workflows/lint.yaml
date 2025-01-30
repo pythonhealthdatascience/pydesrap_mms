@@ -23,18 +23,6 @@ jobs:
             cache: 'pip'
         - run: pip install -r requirements.txt
 
-        - name: Lint model code
+        - name: Lint
           run: |
-            pylint ./simulation
-
-        - name: Lint tests
-          run: |
-            pylint ./tests
-
-        - name: Lint notebooks
-          run: |
-            nbqa pylint ./notebooks
-
-        - name: Lint time-weighted averages notebook
-          run: |
-            nbqa pylint ./docs/time_weighted_averages.ipynb
+            bash lint.sh

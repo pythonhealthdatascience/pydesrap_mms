@@ -174,6 +174,12 @@ You can lint the `.ipynb` by adding `nbqa` to the start of the command - e.g.:
 nbqa pylint notebooks/analysis.ipynb
 ```
 
+A bash script has been provided which can be used to lint all files in succession by running:
+
+```
+bash lint.sh
+```
+
 <br>
 
 ## ❓ How does the model work?
@@ -223,6 +229,7 @@ repo/
 ├── CONTRIBUTING.md       # Contribution instructions
 ├── environment.yaml      # Conda environment (includes Python version)
 ├── LICENSE               # Licence file
+├── lint.sh               # Bash script to lint all .py and .ipynb files at once
 ├── pyproject.toml        # Metadata for local `simulation/` package
 ├── README.md             # This file! Describes the repository
 └── requirements.txt      # Virtual environment (used by GitHub actions)
