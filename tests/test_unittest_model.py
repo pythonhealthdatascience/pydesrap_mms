@@ -210,9 +210,10 @@ def test_warmup_impact():
         f'high arrival rate, but got {first_warmup["q_time_nurse"]}.'
     )
 
-    # Check that model without warm-up has arrival and queue time of 0
-    assert first_none['arrival_time'] == 0, (
-        'Expect first patient to arrive at time 0 when model is run ' +
+    # Check that model without warm-up has arrival first arrival after time 0,
+    # but a queue time of 0
+    assert first_none['arrival_time'] > 0, (
+        'Expect first patient to arrive after time 0 when model is run ' +
         f'without warm-up, but got {first_none["arrival_time"]}.'
     )
     assert first_none['q_time_nurse'] == 0, (
@@ -221,7 +222,8 @@ def test_warmup_impact():
     )
 
     # Check that the first interval audit entry with no warm-up has time and
-    # results of 0
+    # no queue or wait time. However, as our first patient arrives at time 0,
+    # we do expect to have utilisation over 0.
     first_interval = results_none['interval_audit'].iloc[0]
     assert first_interval['simulation_time'] == 0, (
         'With no warm-up, expect first entry in interval audit to be ' +
@@ -229,7 +231,8 @@ def test_warmup_impact():
     )
     assert first_interval['utilisation'] == 0, (
         'With no warm-up, expect first entry in interval audit to ' +
-        f'have 0 utilisation, but it was {first_interval['utilisation']}.'
+        'have utilisation of 0 but utilisation was ' + 
+        f'{first_interval['utilisation']}.'
     )
     assert first_interval['queue_length'] == 0, (
         'With no warm-up, expect first entry in interval audit to ' +
@@ -240,6 +243,16 @@ def test_warmup_impact():
         'With no warm-up, expect first entry in interval audit to ' +
         'have running mean wait time of 0 but it was ' +
         f'{first_interval['running_mean_wait_time']}.'
+    )
+
+    # Check that first interval audit entry with a warm-up has time 500
+    # (matching length of warm-up period) - and so ensuring the first entry
+    # in the interval audit, which occurs at the end of the warm-up period,
+    # has not been deleted.
+    first_interval_warmup = results_warmup['interval_audit'].iloc[0]
+    assert first_interval_warmup['simulation_time'] == 500, (
+        'With warm-up of 500, expect first entry in interval audit to be ' +
+        f'at time 500, but it was at time {first_interval['simulation_time']}.'
     )
 
 
