@@ -260,17 +260,18 @@ These times were obtained on an Intel Core i7-12700H with 32GB RAM running Ubunt
 
 If you use this template, please cite the archived repository:
 
-> Heather, A. (2025). Simple Reproducible Python Discrete-Event Simulation (DES) Template. Zenodo. https://doi.org/10.5281/zenodo.14622466
+> Heather, A. Monks, T. (2025). Python DES RAP Template. Zenodo. https://doi.org/10.5281/zenodo.14622466
 
 You can also cite the GitHub repository:
 
-> Heather, A. (2025). Simple Reproducible Python Discrete-Event Simulation (DES) Template. GitHub. https://github.com/pythonhealthdatascience/rap_template_python_des.
+> Heather, A. Monks, T. (2025). Python DES RAP Template. GitHub. https://github.com/pythonhealthdatascience/rap_template_python_des.
 
 Researcher details:
 
-| Contributor | ORCID | GitHub |
-| --- | --- | --- |
-| Amy Heather | [![ORCID: Heather](https://img.shields.io/badge/ORCID-0000--0002--6596--3479-brightgreen)](https://orcid.org/0000-0002-6596-3479) | https://github.com/amyheather |
+| Contributor | Role | ORCID | GitHub |
+| --- | --- | --- | --- |
+| Amy Heather | Author | [![ORCID: Heather](https://img.shields.io/badge/ORCID-0000--0002--6596--3479-brightgreen)](https://orcid.org/0000-0002-6596-3479) | https://github.com/amyheather |
+| Tom Monks | Code review | [![ORCID: Monks](https://img.shields.io/badge/ORCID-0000--0003--2631--4481-brightgreen)](https://orcid.org/0000-0003-2631-4481) | https://github.com/TomMonks |
 
 <br>
 
