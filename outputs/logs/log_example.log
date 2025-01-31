@@ -6,7 +6,7 @@
     'nurse_consult_count': 0,
     'nurse_consult_time_dist': '<simulation.model.Exponential>',
     'nurse_time_used': 0,
-    'param': '<simulation.model.Defaults>',
+    'param': '<simulation.model.Param>',
     'patient_inter_arrival_dist': '<simulation.model.Exponential>',
     'patients': [],
     'results_list': [],

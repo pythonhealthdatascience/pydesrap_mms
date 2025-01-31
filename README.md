@@ -193,7 +193,7 @@ This section describes the purposes of each class in the simulation.
 
 **Model Run Process:**
 
-1. **Set Parameters:** Create a `Defaults` instance and modify it with desired model parameters.
+1. **Set Parameters:** Create a `Param` instance with desired model parameters.
 2. **Initialise Model:** Instantiate `Model` using the parameters. During setup, `Model` creates `Exponential` instances for each distribution.
 3. **Run Simulation:** Call `model.run()` to execute the simulation within the SimPy environment, running two processes:
 

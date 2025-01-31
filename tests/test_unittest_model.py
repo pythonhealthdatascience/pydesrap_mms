@@ -18,14 +18,17 @@ import pandas as pd
 import pytest
 import simpy
 from simulation.model import (
-    Defaults, Exponential, Model, Runner, MonitoredResource)
+    Param, Exponential, Model, Runner, MonitoredResource)
 
 
 def test_new_attribute():
     """
-    Confirm that it is not possible to add new attributes to Defaults.
+    Confirm that it is impossible to add new attributes to the parameter class.
     """
-    param = Defaults()
+    # No need to test when creating class (e.g. Param(new_entry=3)) as it will
+    # not allow input of variables not inputs for __init__.
+    # However, do need to check it is preventing additions after creating class
+    param = Param()
     with pytest.raises(AttributeError,
                        match='only possible to modify existing attributes'):
         param.new_entry = 3
@@ -45,17 +48,15 @@ def test_negative_inputs(param_name, value, rule):
 
     Arguments:
         param_name (string):
-            Name of parameter to change from the Defaults() class.
+            Name of parameter to change in the Param() class.
         value (float|int):
             Invalid value for parameter.
         rule (string):
             Either 'positive' (if value must be > 0) or 'non-negative' (if
             value must be >= 0).
     """
-    param = Defaults()
-
-    # Set parameter to an invalid value
-    setattr(param, param_name, value)
+    # Create parameter class with an invalid value
+    param = Param(**{param_name: value})
 
     # Construct the expected error message
     if rule == 'positive':
@@ -74,7 +75,7 @@ def test_negative_results():
     Check that values are non-negative.
     """
     # Run model with standard parameters
-    model = Model(param=Defaults(), run_number=0)
+    model = Model(param=Param(), run_number=0)
     model.run()
 
     # Check that at least one patient was processed
@@ -101,9 +102,8 @@ def test_high_demand():
     unseen patients are still in the dataset.
     """
     # Run model with high number of arrivals and only one nurse
-    param = Defaults()
-    param.number_of_nurses = 1
-    param.patient_inter = 0.1
+    param = Param(number_of_nurses=1,
+                  patient_inter=0.1)
     experiment = Runner(param)
     results = experiment.run_single(run=0)
 
@@ -150,9 +150,8 @@ def test_warmup_only():
     and then checking that results are all zero or empty.
     """
     # Run model with only a warm-up period and no time for results collection.
-    param = Defaults()
-    param.warm_up_period = 500
-    param.data_collection_period = 0
+    param = Param(warm_up_period=500,
+                  data_collection_period=0)
     model = Model(param, run_number=0)
     model.run()
 
@@ -185,10 +184,9 @@ def test_warmup_impact():
                 Duration of the warm-up period - running simulation but not yet
                 collecting results.
         """
-        param = Defaults()
-        param.patient_inter = 1
-        param.warm_up_period = warm_up_period
-        param.data_collection_period = 1500
+        param = Param(patient_inter=1,
+                      warm_up_period=warm_up_period,
+                      data_collection_period=1500)
         experiment = Runner(param)
         return experiment.run_single(run=0)
 
@@ -262,7 +260,7 @@ def test_arrivals():
     Check that count of arrivals in each run is consistent with the number of
     patients recorded in the patient-level results.
     """
-    experiment = Runner(Defaults())
+    experiment = Runner(Param())
     experiment.run_reps()
 
     # Get count of patients from patient-level and run results
@@ -290,7 +288,7 @@ def test_waiting_time_utilisation(param_name, initial_value, adjusted_value):
 
     Arguments:
         param_name (string):
-            Name of parameter to change from the Defaults() class.
+            Name of parameter to change in the Param() class.
         initial_value (float|int):
             Value with which we expect longer waiting times.
         adjusted_value (float|int):
@@ -315,13 +313,10 @@ def test_waiting_time_utilisation(param_name, initial_value, adjusted_value):
         # Create a default parameter, but set some specific values
         # (which will ensure sufficient arrivals/capacity/etc. that we will
         # see variation in wait time, and not just no wait time with all
-        # different parameters tried).
-        param = Defaults()
-        param.number_of_nurses = 4
-        param.patient_inter = 3
-        param.mean_n_consult_time = 15
-
-        # Modify chosen parameter for the test
+        # different parameters tried), then modify chosen parameter for test.
+        param = Param(number_of_nurses=4,
+                      patient_inter=3,
+                      mean_n_consult_time=15)
         setattr(param, param_name, value)
 
         # Run replications and return the mean queue time for nurses
@@ -360,14 +355,12 @@ def test_arrivals_decrease(param_name, initial_value, adjusted_value):
     Test that adjusting parameters reduces the number of arrivals as expected.
     """
     # Run model with initial value
-    param = Defaults()
-    setattr(param, param_name, initial_value)
+    param = Param(**{param_name: initial_value})
     experiment = Runner(param)
     initial_arrivals = experiment.run_single(run=0)['run']['arrivals']
 
     # Run model with adjusted value
-    param = Defaults()
-    setattr(param, param_name, adjusted_value)
+    param = Param(**{param_name: adjusted_value})
     experiment = Runner(param)
     adjusted_arrivals = experiment.run_single(run=0)['run']['arrivals']
 
@@ -384,9 +377,9 @@ def test_seed_stability():
     Check that two runs using the same random seed return the same results.
     """
     # Run model twice, with same run number (and therefore same seed) each time
-    experiment1 = Runner(param=Defaults())
+    experiment1 = Runner(param=Param())
     result1 = experiment1.run_single(run=33)
-    experiment2 = Runner(param=Defaults())
+    experiment2 = Runner(param=Param())
     result2 = experiment2.run_single(run=33)
 
     # Check that dataframes with patient-level results are equal
@@ -398,7 +391,7 @@ def test_interval_audit_time():
     Check that length of interval audit is less than the length of simulation.
     """
     # Run model once with default parameters and get max time from audit
-    param = Defaults()
+    param = Param()
     experiment = Runner(param)
     results = experiment.run_single(run=0)
     max_time = max(results['interval_audit']['simulation_time'])
@@ -456,8 +449,7 @@ def test_parallel():
     # Sequential (1 core) and parallel (-1 cores) execution
     results = {}
     for mode, cores in [('seq', 1), ('par', -1)]:
-        param = Defaults()
-        param.cores = cores
+        param = Param(cores=cores)
         experiment = Runner(param)
         results[mode] = experiment.run_single(run=0)
 
@@ -476,8 +468,7 @@ def test_valid_cores(cores):
     """
     Check there is error handling for input of invalid number of cores.
     """
-    param = Defaults()
-    param.cores = cores
+    param = Param(cores=cores)
     runner = Runner(param)
     with pytest.raises(ValueError):
         runner.run_reps()
@@ -491,7 +482,7 @@ def test_consistent_metrics():
     differences).
     """
     # Run default model
-    experiment = Runner(Defaults())
+    experiment = Runner(Param())
     experiment.run_reps()
 
     # Absolute tolerance (atol) = +- 0.001
