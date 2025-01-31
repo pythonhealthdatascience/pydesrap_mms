@@ -12,6 +12,7 @@ Typical usage example:
     pytest
 """
 
+from joblib import cpu_count
 import numpy as np
 import pandas as pd
 import pytest
@@ -466,6 +467,20 @@ def test_parallel():
     pd.testing.assert_frame_equal(
         results['seq']['interval_audit'], results['par']['interval_audit'])
     assert results['seq']['run'] == results['par']['run']
+
+
+@pytest.mark.parametrize('cores', [
+    (-2), (0), (cpu_count()), (cpu_count()+1)
+])
+def test_valid_cores(cores):
+    """
+    Check there is error handling for input of invalid number of cores.
+    """
+    param = Defaults()
+    param.cores = cores
+    runner = Runner(param)
+    with pytest.raises(ValueError):
+        runner.run_reps()
 
 
 def test_consistent_metrics():

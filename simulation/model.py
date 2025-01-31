@@ -35,7 +35,7 @@ Typical usage example:
 
 import itertools
 
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed, cpu_count
 import numpy as np
 import pandas as pd
 import scipy.stats as st
@@ -729,6 +729,29 @@ class Runner:
                            for run in range(self.param.number_of_runs)]
         # Parallel execution
         else:
+
+            # Check number of cores is valid - must be -1, or between 1 and
+            # total CPUs-1 (saving one for logic control).
+            # Done here rather than in model as this is called before model,
+            # and only relevant for Runner.
+            valid_cores = [-1] + list(range(1, cpu_count()))
+            if self.param.cores not in valid_cores:
+                raise ValueError(
+                    f'Invalid cores: {self.param.cores}. Must be one of: ' +
+                    f'{valid_cores}.')
+
+            # Warn users that logging will not run as it is in parallel
+            if (
+                self.param.logger.log_to_console or
+                self.param.logger.log_to_file
+            ):
+                self.param.logger.log(
+                    'WARNING: Logging is disabled in parallel ' +
+                    '(multiprocessing mode). Simulation log will not appear.' +
+                    ' If you wish to generate logs, switch to `cores=1`, or ' +
+                    'just run one replication with `run_single()`.')
+
+            # Execute replications
             all_results = Parallel(n_jobs=self.param.cores)(
                 delayed(self.run_single)(run)
                 for run in range(self.param.number_of_runs))

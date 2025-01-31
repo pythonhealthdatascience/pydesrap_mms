@@ -16,7 +16,7 @@
  
 {   '_initialising': False,
     'audit_interval': 120,
-    'cores': 0,
+    'cores': 1,
     'data_collection_period': 50,
     'logger': '<simulation.logging.SimLogger>',
     'mean_n_consult_time': 10,
