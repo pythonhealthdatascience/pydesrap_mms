@@ -44,6 +44,7 @@ from simulation.logging import SimLogger
 from simulation.helper import summary_stats
 
 
+# pylint: disable=too-many-instance-attributes,too-few-public-methods
 class Param:
     """
     Default parameters for simulation.
