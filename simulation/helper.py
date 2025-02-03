@@ -28,19 +28,21 @@ def summary_stats(data):
     # Remove any NaN from the series
     data = data.dropna()
 
-    # Calculate mean and number of observations
-    mean = data.mean()
+    # Find number of observations
     count = len(data)
 
-    # Cannot calculate some metrics if there is only 1 sample in data
-    if count == 1:
-        std_dev = np.nan
-        ci_lower = np.nan
-        ci_upper = np.nan
+    # If there are no observations, then set all to NaN
+    if count == 0:
+        mean, std_dev, ci_lower, ci_upper = np.nan, np.nan, np.nan, np.nan
+    # If there is only one observation, can do mean but not others
+    elif count == 1:
+        mean = data.mean()
+        std_dev, ci_lower, ci_upper = np.nan, np.nan, np.nan
+    # With more than one observation, can calculate all...
     else:
+        mean = data.mean()
         std_dev = data.std()
-
-        # Special case, if variance is 0
+        # Special case for CI if variance is 0
         if np.var(data) == 0:
             ci_lower, ci_upper = mean, mean
         else:
