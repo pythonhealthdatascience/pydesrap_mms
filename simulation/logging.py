@@ -123,7 +123,6 @@ class SimLogger:
             handlers.append(logging.FileHandler(self.file_path, mode='w'))
         if self.log_to_console:
             handlers.append(rich_handler)
-            #handlers.append(logging.StreamHandler(sys.stdout))
 
         # Add handlers directly to the logger
         for handler in handlers:

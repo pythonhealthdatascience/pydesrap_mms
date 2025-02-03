@@ -25,22 +25,33 @@ def summary_stats(data):
     Returns:
         tuple: (mean, standard deviation, CI lower, CI upper).
     """
-    mean = data.mean()
+    # Remove any NaN from the series
+    data = data.dropna()
+
+    # Find number of observations
     count = len(data)
 
-    # Cannot calculate some metrics if there is only 1 sample in data
-    if count == 1:
-        std_dev = np.nan
-        ci_lower = np.nan
-        ci_upper = np.nan
+    # If there are no observations, then set all to NaN
+    if count == 0:
+        mean, std_dev, ci_lower, ci_upper = np.nan, np.nan, np.nan, np.nan
+    # If there is only one observation, can do mean but not others
+    elif count == 1:
+        mean = data.mean()
+        std_dev, ci_lower, ci_upper = np.nan, np.nan, np.nan
+    # With more than one observation, can calculate all...
     else:
+        mean = data.mean()
         std_dev = data.std()
-        # Calculation of CI uses t-distribution, which is suitable for
-        # smaller sample sizes (n<30)
-        ci_lower, ci_upper = st.t.interval(
-            confidence=0.95,
-            df=count-1,
-            loc=mean,
-            scale=st.sem(data))
+        # Special case for CI if variance is 0
+        if np.var(data) == 0:
+            ci_lower, ci_upper = mean, mean
+        else:
+            # Calculation of CI uses t-distribution, which is suitable for
+            # smaller sample sizes (n<30)
+            ci_lower, ci_upper = st.t.interval(
+                confidence=0.95,
+                df=count-1,
+                loc=mean,
+                scale=st.sem(data))
 
     return mean, std_dev, ci_lower, ci_upper

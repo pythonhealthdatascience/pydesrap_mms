@@ -44,6 +44,7 @@ from simulation.logging import SimLogger
 from simulation.helper import summary_stats
 
 
+# pylint: disable=too-many-instance-attributes,too-few-public-methods
 class Param:
     """
     Default parameters for simulation.
@@ -679,6 +680,13 @@ class Runner:
         patient_results = pd.DataFrame(model.results_list)
         patient_results['run'] = run
 
+        # Add a column with the wait time of patients who remained unseen
+        # at the end of the simulation
+        patient_results['q_time_unseen'] = np.where(
+            patient_results['time_with_nurse'].isna(),
+            model.env.now - patient_results['arrival_time'], np.nan
+        )
+
         # Create dictionary recording the run results
         # Currently has two alternative methods of measuring utilisation
         run_results = {
@@ -694,7 +702,9 @@ class Runner:
                                           (self.param.number_of_nurses *
                                            self.param.data_collection_period)),
             'mean_nurse_q_length': (sum(model.nurse.area_n_in_queue) /
-                                    self.param.data_collection_period)
+                                    self.param.data_collection_period),
+            'count_unseen': patient_results['time_with_nurse'].isna().sum(),
+            'mean_q_time_unseen': patient_results['q_time_unseen'].mean()
         }
 
         # Convert interval audit results to a dataframe and add run column
@@ -776,7 +786,7 @@ class Runner:
         self.overall_results_df = pd.DataFrame(uncertainty_metrics)
 
 
-def run_scenarios(scenarios):
+def run_scenarios(scenarios, base_param=None):
     """
     Execute a set of scenarios and return the results from each run.
 
@@ -784,6 +794,9 @@ def run_scenarios(scenarios):
         scenarios (dict):
             Dictionary where key is name of parameter and value is a list
             with different values to run in scenarios.
+        base_param (dict):
+            Dictionary with parameters for base case. Optional, defaults to
+            use those as set in Param.
 
     Returns:
         pandas.dataframe:
@@ -802,9 +815,17 @@ def run_scenarios(scenarios):
     for index, scenario_to_run in enumerate(all_scenarios_dicts):
         print(scenario_to_run)
 
-        # Pass scenario arguments to Param()
-        param = Param(scenario_name=index,
-                      **scenario_to_run)
+        # Create instance of parameter class with any specified base case
+        # parameters
+        if base_param is None:
+            param = Param()
+        else:
+            param = Param(**base_param)
+
+        # Update parameter list with the scenario parameters
+        param.scenario_name = index
+        for key in scenario_to_run:
+            setattr(param, key, scenario_to_run[key])
 
         # Perform replications and keep results from each run, adding the
         # scenario values to the results dataframe

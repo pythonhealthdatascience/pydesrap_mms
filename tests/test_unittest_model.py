@@ -230,7 +230,7 @@ def test_warmup_impact():
     )
     assert first_interval['utilisation'] == 0, (
         'With no warm-up, expect first entry in interval audit to ' +
-        'have utilisation of 0 but utilisation was ' + 
+        'have utilisation of 0 but utilisation was ' +
         f'{first_interval['utilisation']}.'
     )
     assert first_interval['queue_length'] == 0, (
@@ -476,16 +476,12 @@ def test_valid_cores(cores):
 
 def test_consistent_metrics():
     """
-    Presently, the simulation code includes a few different methods to
-    calculate the same metrics. We would expect each to return similar results
-    (with a little tolerance, as expect some deviation due to methodological
-    differences).
+    Expect utilisation to be pretty much the same, between the two methods
+    implemented for calculating the overall mean utilisation.
     """
     # Run default model
     experiment = Runner(Param())
     experiment.run_reps()
-
-    # Absolute tolerance (atol) = +- 0.001
 
     # Check nurse utilisation
     pd.testing.assert_series_equal(
