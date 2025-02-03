@@ -380,6 +380,9 @@ class Model:
         self.param = param
         self.run_number = run_number
 
+        # Check validity of provided parameters
+        self.valid_inputs()
+
         # Create simpy environment and resource
         self.env = simpy.Environment()
         self.nurse = MonitoredResource(self.env,
@@ -404,6 +407,16 @@ class Model:
         self.nurse_consult_time_dist = Exponential(
             mean=self.param.mean_n_consult_time, random_seed=seeds[1])
 
+        # Log model initialisation
+        self.param.logger.log(sim_time=self.env.now, msg='Initialise model:\n')
+        self.param.logger.log(vars(self))
+        self.param.logger.log(sim_time=self.env.now, msg='Parameters:\n ')
+        self.param.logger.log(vars(self.param))
+
+    def valid_inputs(self):
+        """
+        Checks validity of provided parameters.
+        """
         # Define validation rules for attributes
         # Doesn't include number_of_nurses as this is tested by simpy.Resource
         validation_rules = {
@@ -426,12 +439,6 @@ class Model:
                         f'Parameter "{param_name}" must be greater than or ' +
                         'equal to 0.'
                     )
-
-        # Log model initialisation
-        self.param.logger.log(sim_time=self.env.now, msg='Initialise model:\n')
-        self.param.logger.log(vars(self))
-        self.param.logger.log(sim_time=self.env.now, msg='Parameters:\n ')
-        self.param.logger.log(vars(self.param))
 
     def generate_patient_arrivals(self):
         """
