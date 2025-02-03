@@ -73,6 +73,8 @@ class Patient:
         self.time_with_nurse = np.nan
 ```
 
+This enables metrics like `count_unseen` and `mean_q_time_unseen`, which can show backlog in the system at the end of the simulation.
+
 ## Seeds
 
 The HSMA models use a multiplied version of the `run_number` as a seed when sampling:
@@ -111,24 +113,31 @@ class g:
 g.patient_inter = 10
 ```
 
-To resolve this, the template creates an instance of the parameter class, and never uses or alters it directly. For clarity, the class is called `Defaults()` and instances are typicallyed called `param`.
+To resolve this, the template creates an instance of the parameter class, and never uses or alters it directly. For clarity, the class is called `Param()` and instances are typically called `param`.
 
 ```
-class Defaults():
-    def __init__(self):
-        self.patient_inter = 5
-        self.mean_n_consult_time = 35
-        self.number_of_nurses = 9
-        self.warm_up_period = 0
-        self.data_collection_period = 600
-        self.number_of_runs = 5
-        self.audit_interval = 5
-        self.scenario_name = 0
+class Param:
+    """
+    Default parameters for simulation.
 
-...
+    Attributes are described in initialisation docstring.
+    """
+    def __init__(
+        self,
+        patient_inter=4,
+        mean_n_consult_time=10,
+        number_of_nurses=5,
+        warm_up_period=1440*13,
+        data_collection_period=1440*30,
+        number_of_runs=31,
+        audit_interval=120,  # every 2 hours
+        scenario_name=0,
+        cores=-1,
+        logger=SimLogger(log_to_console=False, log_to_file=False)
+    ):
+    ...
 
-param = Defaults()
-param.patient_inter = 10
+param = Defaults(patient_inter = 10)
 model = Model(param)
 ```
 
@@ -179,6 +188,51 @@ run_results = {
 self.run_results_df = pd.DataFrame(run_results_list)
 ```
 
+### First arrival at time 0
+
+In the HSMA model, there will always be an arrival at time 0, since that is the first action in `generator_patient_arrivals()`:
+
+```
+def generator_patient_arrivals(self):
+    while True:
+        self.patient_counter += 1
+        p = Patient(self.patient_counter)
+        sampled_inter = random.expovariate(1.0 / g.patient_inter)
+        yield self.env.timeout(sampled_inter)
+```
+
+This has been altered, so the first patient arrives after a sampled inter-arrival time, by moving the sampling to the start of the method.
+
+```
+def generate_patient_arrivals(self):
+    while True:
+        sampled_inter = self.patient_inter_arrival_dist.sample()
+        yield self.env.timeout(sampled_inter)
+        p = Patient(len(self.patients) + 1)
+        p.arrival_time = self.env.now
+        ...
+```
+
+### MonitoredResource and warm-up
+
+The same metrics can be calculated in several possible ways. In this model, time-weighted averages have been included using the `MonitoredResource`. This requires methods `init_results_variables()` and `warm_up_complete()`, which have meant that implementation of warm-up can be done using `warm_up_complete()` rather than by checking whether warm up is complete every time a metric is saved.
+
+```
+def warm_up_complete(self):
+    if self.param.warm_up_period > 0:
+        yield self.env.timeout(self.param.warm_up_period)
+        self.init_results_variables()
+```
+
+As opposed to, for example:
+
+```
+if self.env.now > g.warm_up_period:
+    self.results_df.at[patient.id, "Q Time Nurse"] = (
+        patient.q_time_nurse
+    )
+```
+
 ## Extra features
 
 ### Prevent addition of new attributes to the parameter class
@@ -191,15 +245,8 @@ The parameter class includes a function that:
 This is to avoid an error where it looks like a parameter has been changed, but actually the wrong attribute name was used - for example, setting `param.nurses = 3` and thinking this has reduced the number of nurse resources, but actually this is based on `param.number_of_nurses` which remains set to 9.
 
 ```
-class Defaults():
-    def __init__(self):
-        object.__setattr__(self, '_initialising', True)
-
-        self.patient_inter = 5
-        self.mean_n_consult_time = 35
-        ...
-
-        object.__setattr__(self, '_initialising', False)
+class Param():
+    ...
 
     def __setattr__(self, name, value):
         if hasattr(self, '_initialising') and self._initialising:
@@ -242,7 +289,7 @@ for rule, param_names in validation_rules.items():
 
 ### Tests
 
-The files `test_unittest.py` and `test_backtest.py` include various tests which check the model is functioning as expected. For example, checking that:
+The files `test_unittest_model.py`, `test_unittest_logger.py` and `test_backtest.py` include various tests which check the model is functioning as expected. For example, checking that:
 
 * It is not possible to add new attributes to the parameter class.
 * Invalid inputs to `Model()` return an `ValueError`.
@@ -256,11 +303,15 @@ The `summary_stats()` function is used to find the overall results from across t
 
 It can also be applied to other results dataframes if desired.
 
+### Logger
+
+The `SimLogger` class will generate logs which can be saved to a file or printed to a console. This includes information on when patients arrive and are seen. This can be helpful for understanding the simulation or when debugging.
+
 ### Other minor changes
 
 There are a few smaller changes to the model with minimal impact on function. These include:
 
-* **Names** - for example, `Patient.id` was changed to `Patient.patient_id`, as the patient objects are used to create the patient-level results dataframe, and want "patient_id" as the column name.
+* **Names** - for example, `Patient.id` was changed to `Patient.patient_id`, as the patient objects are used to create the patient-level results dataframe, and want "patient_id" as the column name. Also, `Trial` was changed to `Runner` with methods changed to e.g. `run_reps()`.
 * **Comments and docstrings**
 * **Removed `patient_counter`** - as can just use the length of the `patients` list now.
 * **Interval audit** - records cumulative mean wait time, as well as utilisation.
