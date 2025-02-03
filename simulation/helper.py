@@ -25,6 +25,10 @@ def summary_stats(data):
     Returns:
         tuple: (mean, standard deviation, CI lower, CI upper).
     """
+    # Remove any NaN from the series
+    data = data.dropna()
+
+    # Calculate mean and number of observations
     mean = data.mean()
     count = len(data)
 
@@ -35,12 +39,17 @@ def summary_stats(data):
         ci_upper = np.nan
     else:
         std_dev = data.std()
-        # Calculation of CI uses t-distribution, which is suitable for
-        # smaller sample sizes (n<30)
-        ci_lower, ci_upper = st.t.interval(
-            confidence=0.95,
-            df=count-1,
-            loc=mean,
-            scale=st.sem(data))
+
+        # Special case, if variance is 0
+        if np.var(data) == 0:
+            ci_lower, ci_upper = mean, mean
+        else:
+            # Calculation of CI uses t-distribution, which is suitable for
+            # smaller sample sizes (n<30)
+            ci_lower, ci_upper = st.t.interval(
+                confidence=0.95,
+                df=count-1,
+                loc=mean,
+                scale=st.sem(data))
 
     return mean, std_dev, ci_lower, ci_upper
