@@ -28,68 +28,85 @@ Licence:
     more details.
 
 Typical usage example:
-    experiment = Runner(param=Defaults())
+    experiment = Runner(param=Param())
     experiment.run_reps()
     print(experiment.run_results_df)
 """
 
 import itertools
-from joblib import Parallel, delayed
+
+from joblib import Parallel, delayed, cpu_count
 import numpy as np
 import pandas as pd
-import scipy.stats as st
 import simpy
+
 from simulation.logging import SimLogger
+from simulation.helper import summary_stats
 
 
-class Defaults:
+class Param:
     """
     Default parameters for simulation.
 
-    Attributes:
-        patient_inter (float):
-            Mean inter-arrival time between patients in minutes.
-        mean_n_consult_time (float):
-            Mean nurse consultation time in minutes.
-        number_of_nurses (float):
-            Number of available nurses.
-        warm_up_period (int):
-            Duration of the warm-up period in minutes - running simulation but
-            not yet collecting results.
-        data_collection_period (int):
-            Duration of data collection period in minutes (also known as the
-            measurement interval) - which begins after any warm-up period.
-        number_of_runs (int):
-            The number of runs (also known as replications), defining how many
-            times to re-run the simulation (with different random numbers).
-        audit_interval (int):
-            How frequently to audit resource utilisation, in minutes.
-        scenario_name (int|float|string):
-            Label for the scenario.
-        cores (int):
-            Number of CPU cores to use for parallel execution. Set to
-            desired number, or to -1 to use all available cores. For
-            sequential execution, set to 1 (default).
-        logger (logging.Logger):
-            The logging instance used for logging messages.
+    Attributes are described in initialisation docstring.
     """
-    def __init__(self):
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+    def __init__(
+        self,
+        patient_inter=4,
+        mean_n_consult_time=10,
+        number_of_nurses=5,
+        warm_up_period=1440*13,  # 13 days
+        data_collection_period=1440*30,  # 30 days
+        number_of_runs=31,
+        audit_interval=120,  # every 2 hours
+        scenario_name=0,
+        cores=-1,
+        logger=SimLogger(log_to_console=False, log_to_file=False)
+    ):
         """
         Initalise instance of parameters class.
+
+        Arguments:
+            patient_inter (float):
+                Mean inter-arrival time between patients in minutes.
+            mean_n_consult_time (float):
+                Mean nurse consultation time in minutes.
+            number_of_nurses (float):
+                Number of available nurses.
+            warm_up_period (int):
+                Duration of the warm-up period in minutes - running simulation
+                but not yet collecting results.
+            data_collection_period (int):
+                Duration of data collection period in minutes (also known as
+                measurement interval) - which begins after any warm-up period.
+            number_of_runs (int):
+                The number of runs (i.e. replications), defining how many
+                times to re-run the simulation (with different random numbers).
+            audit_interval (int):
+                How frequently to audit resource utilisation, in minutes.
+            scenario_name (int|float|string):
+                Label for the scenario.
+            cores (int):
+                Number of CPU cores to use for parallel execution. Set to
+                desired number, or to -1 to use all available cores. For
+                sequential execution, set to 1 (default).
+            logger (logging.Logger):
+                The logging instance used for logging messages.
         """
         # Disable restriction on attribute modification during initialisation
         object.__setattr__(self, '_initialising', True)
 
-        self.patient_inter = 4
-        self.mean_n_consult_time = 10
-        self.number_of_nurses = 5
-        self.warm_up_period = 1440*13  # 13 days
-        self.data_collection_period = 1440*30  # 30 days
-        self.number_of_runs = 31
-        self.audit_interval = 120  # every 2 hours
-        self.scenario_name = 0
-        self.cores = -1
-        self.logger = SimLogger(log_to_console=False, log_to_file=False)
+        self.patient_inter = patient_inter
+        self.mean_n_consult_time = mean_n_consult_time
+        self.number_of_nurses = number_of_nurses
+        self.warm_up_period = warm_up_period
+        self.data_collection_period = data_collection_period
+        self.number_of_runs = number_of_runs
+        self.audit_interval = audit_interval
+        self.scenario_name = scenario_name
+        self.cores = cores
+        self.logger = logger
 
         # Re-enable attribute checks after initialisation
         object.__setattr__(self, '_initialising', False)
@@ -127,38 +144,6 @@ class Defaults:
                 raise AttributeError(
                     f'Cannot add new attribute "{name}" - only possible to ' +
                     f'modify existing attributes: {self.__dict__.keys()}')
-
-
-def summary_stats(data):
-    """
-    Calculate mean, standard deviation and 95% confidence interval (CI).
-
-    Arguments:
-        data (pd.Series):
-            Data to use in calculation.
-
-    Returns:
-        tuple: (mean, standard deviation, CI lower, CI upper).
-    """
-    mean = data.mean()
-    count = len(data)
-
-    # Cannot calculate some metrics if there is only 1 sample in data
-    if count == 1:
-        std_dev = np.nan
-        ci_lower = np.nan
-        ci_upper = np.nan
-    else:
-        std_dev = data.std()
-        # Calculation of CI uses t-distribution, which is suitable for
-        # smaller sample sizes (n<30)
-        ci_lower, ci_upper = st.t.interval(
-            confidence=0.95,
-            df=count-1,
-            loc=mean,
-            scale=st.sem(data))
-
-    return mean, std_dev, ci_lower, ci_upper
 
 
 class Patient:
@@ -351,7 +336,7 @@ class Model:
     nurse, have a consultation with the nurse, and then leave.
 
     Attributes:
-        param (Defaults):
+        param (Param):
             Simulation parameters.
         run_number (int):
             Run number for random seed generation.
@@ -385,15 +370,18 @@ class Model:
         Initalise a new model.
 
         Arguments:
-            param (Defaults, optional):
+            param (Param, optional):
                 Simulation parameters. Defaults to new instance of the
-                Defaults() class.
+                Param() class.
             run_number (int):
                 Run number for random seed generation.
         """
         # Set parameters and run number
         self.param = param
         self.run_number = run_number
+
+        # Check validity of provided parameters
+        self.valid_inputs()
 
         # Create simpy environment and resource
         self.env = simpy.Environment()
@@ -419,6 +407,16 @@ class Model:
         self.nurse_consult_time_dist = Exponential(
             mean=self.param.mean_n_consult_time, random_seed=seeds[1])
 
+        # Log model initialisation
+        self.param.logger.log(sim_time=self.env.now, msg='Initialise model:\n')
+        self.param.logger.log(vars(self))
+        self.param.logger.log(sim_time=self.env.now, msg='Parameters:\n ')
+        self.param.logger.log(vars(self.param))
+
+    def valid_inputs(self):
+        """
+        Checks validity of provided parameters.
+        """
         # Define validation rules for attributes
         # Doesn't include number_of_nurses as this is tested by simpy.Resource
         validation_rules = {
@@ -442,10 +440,6 @@ class Model:
                         'equal to 0.'
                     )
 
-        # Log model initialisation
-        self.param.logger.log(f'Initialised model: {vars(self)}')
-        self.param.logger.log(f'Parameters: {vars(self.param)}')
-
     def generate_patient_arrivals(self):
         """
         Generate patient arrivals.
@@ -465,8 +459,14 @@ class Model:
             self.patients.append(p)
 
             # Log arrival time
+            if p.arrival_time < self.param.warm_up_period:
+                arrive_pre = '\U0001F538 WU'
+            else:
+                arrive_pre = '\U0001F539 DC'
             self.param.logger.log(
-                f'Patient {p.patient_id} arrives at: {p.arrival_time:.3f}'
+                sim_time=self.env.now,
+                msg=(f'{arrive_pre} Patient {p.patient_id} arrives at: ' +
+                     f'{p.arrival_time:.3f}.')
             )
 
             # Start process of attending clinic
@@ -499,10 +499,15 @@ class Model:
             patient.time_with_nurse = self.nurse_consult_time_dist.sample()
 
             # Log wait time and time spent with nurse
+            if patient.arrival_time < self.param.warm_up_period:
+                nurse_pre = '\U0001F536 WU'
+            else:
+                nurse_pre = '\U0001F537 DC'
             self.param.logger.log(
-                f'Patient {patient.patient_id} is seen by nurse after ' +
-                f'{patient.q_time_nurse:.3f} minutes. Consultation length: ' +
-                f'{patient.time_with_nurse:.3f} minutes.'
+                sim_time=self.env.now,
+                msg=(f'{nurse_pre} Patient {patient.patient_id} is seen ' +
+                     f'by nurse after {patient.q_time_nurse:.3f}. ' +
+                     f'Consultation length: {patient.time_with_nurse:.3f}.')
             )
 
             # Update the total nurse time used.
@@ -572,9 +577,12 @@ class Model:
             # If there was a warm-up period, log that this time has passed so
             # can distinguish between patients before and after warm-up in logs
             if self.param.warm_up_period > 0:
-                self.param.logger.log('─' * 10)
-                self.param.logger.log(f'{self.env.now:.2f}: Warm up complete.')
-                self.param.logger.log('─' * 10)
+                self.param.logger.log(sim_time=self.env.now,
+                                      msg='─' * 10)
+                self.param.logger.log(sim_time=self.env.now,
+                                      msg='Warm up complete.')
+                self.param.logger.log(sim_time=self.env.now,
+                                      msg='─' * 10)
 
     def run(self):
         """
@@ -623,7 +631,7 @@ class Runner:
     (replications).
 
     Attributes:
-        param (Defaults):
+        param (Param):
             Simulation parameters.
         patient_results_df (pandas.DataFrame):
             Dataframe to store patient-level results.
@@ -639,7 +647,7 @@ class Runner:
         Initialise a new instance of the Runner class.
 
         Arguments:
-            param (Defaults):
+            param (Param):
                 Simulation parameters.
         '''
         # Store model parameters
@@ -711,6 +719,29 @@ class Runner:
                            for run in range(self.param.number_of_runs)]
         # Parallel execution
         else:
+
+            # Check number of cores is valid - must be -1, or between 1 and
+            # total CPUs-1 (saving one for logic control).
+            # Done here rather than in model as this is called before model,
+            # and only relevant for Runner.
+            valid_cores = [-1] + list(range(1, cpu_count()))
+            if self.param.cores not in valid_cores:
+                raise ValueError(
+                    f'Invalid cores: {self.param.cores}. Must be one of: ' +
+                    f'{valid_cores}.')
+
+            # Warn users that logging will not run as it is in parallel
+            if (
+                self.param.logger.log_to_console or
+                self.param.logger.log_to_file
+            ):
+                self.param.logger.log(
+                    'WARNING: Logging is disabled in parallel ' +
+                    '(multiprocessing mode). Simulation log will not appear.' +
+                    ' If you wish to generate logs, switch to `cores=1`, or ' +
+                    'just run one replication with `run_single()`.')
+
+            # Execute replications
             all_results = Parallel(n_jobs=self.param.cores)(
                 delayed(self.run_single)(run)
                 for run in range(self.param.number_of_runs))
@@ -771,11 +802,9 @@ def run_scenarios(scenarios):
     for index, scenario_to_run in enumerate(all_scenarios_dicts):
         print(scenario_to_run)
 
-        # Overwrite defaults from the passed dictionary
-        param = Defaults()
-        param.scenario_name = index
-        for key in scenario_to_run:
-            setattr(param, key, scenario_to_run[key])
+        # Pass scenario arguments to Param()
+        param = Param(scenario_name=index,
+                      **scenario_to_run)
 
         # Perform replications and keep results from each run, adding the
         # scenario values to the results dataframe

@@ -14,7 +14,7 @@ Typical usage example:
 
 from pathlib import Path
 import pandas as pd
-from simulation.model import Defaults, Runner
+from simulation.model import Param, Runner
 
 
 def test_reproduction():
@@ -23,16 +23,17 @@ def test_reproduction():
     generated using the code.
     """
     # Choose a specific set of parameters
-    param = Defaults()
-    param.patient_inter = 4
-    param.mean_n_consult_time = 10
-    param.number_of_nurses = 4
-    param.warm_up_period = 500
-    param.data_collection_period = 1500
-    param.number_of_runs = 5
-    param.audit_interval = 50
-    param.scenario_name = 0
-    param.cores = 1
+    param = Param(
+        patient_inter=4,
+        mean_n_consult_time=10,
+        number_of_nurses=4,
+        warm_up_period=500,
+        data_collection_period=1500,
+        number_of_runs=5,
+        audit_interval=50,
+        scenario_name=0,
+        cores=1
+    )
 
     # Run the replications
     experiment = Runner(param)
