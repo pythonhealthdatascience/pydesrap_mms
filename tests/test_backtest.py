@@ -1,6 +1,7 @@
-"""Back testing for the Discrete-Event Simulation (DES) Model.
+"""Back Testing
 
-These check that the model code produces results consistent with prior code.
+Back tests check that the model code produces results consistent with those
+generated historically/from prior code.
 
 Licence:
     This project is licensed under the MIT Licence. See the LICENSE file for

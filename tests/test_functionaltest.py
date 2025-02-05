@@ -1,7 +1,7 @@
-"""Unit testing for the Discrete-Event Simulation (DES) Model.
+"""Functional Testing
 
-These check specific parts of the simulation and code, ensuring they work
-correctly and as expected.
+Functional tests verify that the system or components perform their intended
+functionality.
 
 Licence:
     This project is licensed under the MIT Licence. See the LICENSE file for
@@ -17,21 +17,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import simpy
-from simulation.model import (
-    Param, Exponential, Model, Runner, MonitoredResource)
-
-
-def test_new_attribute():
-    """
-    Confirm that it is impossible to add new attributes to the parameter class.
-    """
-    # No need to test when creating class (e.g. Param(new_entry=3)) as it will
-    # not allow input of variables not inputs for __init__.
-    # However, do need to check it is preventing additions after creating class
-    param = Param()
-    with pytest.raises(AttributeError,
-                       match='only possible to modify existing attributes'):
-        param.new_entry = 3
+from simulation.model import Param, Model, Runner, MonitoredResource
 
 
 @pytest.mark.parametrize('param_name, value, rule', [
@@ -401,44 +387,6 @@ def test_interval_audit_time():
     assert max_time < full_simulation, (
         f'Max time in interval audit ({max_time}) is greater than length ' +
         f'of the simulation ({full_simulation}).'
-    )
-
-
-def test_exponentional():
-    """
-    Test that the Exponentional class behaves as expected.
-    """
-    # Initialise distribution
-    d = Exponential(mean=10, random_seed=42)
-
-    # Check that sample is a float
-    assert isinstance(d.sample(), float), (
-        f'Expected sample() to return a float - instead: {type(d.sample())}'
-    )
-
-    # Check that correct number of values are returned
-    count = len(d.sample(size=10))
-    assert count == 10, (
-        f'Expected 10 samples - instead got {count} samples.'
-    )
-
-    bigsample = d.sample(size=100000)
-    assert all(x > 0 for x in bigsample), (
-        'Sample contains non-positive values.'
-    )
-
-    # Using the big sample, check that mean is close to expected (allowing
-    # some tolerance)
-    assert np.isclose(np.mean(bigsample), 10, atol=0.1), (
-        'Mean of samples differs beyond tolerance - sample mean ' +
-        f'{np.mean(bigsample)}, expected mean 10.'
-    )
-
-    # Check that different seeds return different samples
-    sample1 = Exponential(mean=10, random_seed=2).sample(size=5)
-    sample2 = Exponential(mean=10, random_seed=3).sample(size=5)
-    assert not np.array_equal(sample1, sample2), (
-        'Samples with different random seeds should not be equal.'
     )
 
 
