@@ -257,8 +257,9 @@ def test_waiting_time_utilisation(param_name, initial_value, adjusted_value):
                 Value to assign to the parameter.
 
         Returns:
-            float:
-                Mean queue time for nurses.
+            dict:
+                'run' dictionary from the run_single() output, containing the
+                average results from run/s of the model.
         """
         # Create a default parameter, but set some specific values
         # (which will ensure sufficient arrivals/capacity/etc. that we will
@@ -269,7 +270,7 @@ def test_waiting_time_utilisation(param_name, initial_value, adjusted_value):
                       mean_n_consult_time=15)
         setattr(param, param_name, value)
 
-        # Run replications and return the mean queue time for nurses
+        # Run a single replication and return the results for that run
         experiment = Runner(param)
         return experiment.run_single(run=0)['run']
 
