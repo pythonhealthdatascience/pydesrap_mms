@@ -248,7 +248,7 @@ def test_waiting_time_utilisation(param_name, initial_value, adjusted_value):
     def helper_param(param_name, value):
         """
         Helper function to set a specific parameter value, run the model,
-        and return the waiting time.
+        and return the results from a single run.
 
         Arguments:
             param_name (string):
@@ -458,4 +458,84 @@ def test_monitoredresource_cleanup():
     assert sum(resource.area_resource_busy) == expected_busy_time, (
         f'Expected queue time {expected_busy_time} but ' +
         f'observed {resource.area_resource_busy}.'
+    )
+
+
+def test_extreme_interarrival():
+    """
+    Check that extremely high interarrival time results in no arrivals, and
+    that the model can cope with having no arrivals.
+    """
+    param = Param(patient_inter=99999999,
+                  warm_up_period=0,
+                  data_collection_period=10000)
+    experiment = Runner(param)
+    results = experiment.run_single(run=0)
+
+    assert results['run']['arrivals'] < 1, (
+        "Expect no arrivals due to extreme interarrival time."
+    )
+
+
+def test_no_missing_values():
+    """
+    Some columns are expected to have some NaN - but for those that don't,
+    check that no missing values exist in the final output.
+    """
+    param = Param()
+    experiment = Runner(param)
+    experiment.run_reps()
+
+    # Define required columns we expect to have no missing values
+    req_patient = ['patient_id', 'arrival_time', 'run']
+    req_run = ['run_number', 'scenario', 'arrivals', 'mean_q_time_nurse',
+               'mean_time_with_nurse', 'mean_nurse_utilisation',
+               'mean_nurse_utilisation_tw', 'mean_nurse_q_length',
+               'count_unseen']
+
+    # Check for missing values
+    res_patient = experiment.patient_results_df[req_patient].isnull().any()
+    assert not res_patient.any(), {
+        'Found missing values in patient results in columns that we expect ' +
+        f'to have none - in the columns marked True: {res_patient}'
+    }
+    res_run = experiment.run_results_df[req_run].isnull().any()
+    assert not res_run.any(), {
+        'Found missing values in run results in columns that we expect ' +
+        f'to have none - in the columns marked True: {res_run}'
+    }
+    res_interval = experiment.interval_audit_df.isnull().any()
+    assert not res_interval.any(), {
+        'Found missing values in interval results - in the columns marked ' +
+        f'True: {res_interval}'
+    }
+    res_overall = experiment.overall_results_df.isnull().any()
+    assert not res_overall.any(), {
+        'Found missing values in overall results - in the columns marked ' +
+        f'True: {res_overall}'
+    }
+
+
+def test_sampled_times():
+    """
+    Ensure that the mean of inter-arrival and consultation times are close to
+    expected value.
+    """
+    param = Param(patient_inter=5, mean_n_consult_time=8)
+    experiment = Runner(param)
+    results = experiment.run_single(run=0)
+
+    # Calculate the inter-arrival times between patients (from arrival times)
+    actual_interarrival = np.diff(sorted(results['patient']['arrival_time']))
+
+    # Check that the mean inter-arrival time is close to 5
+    observed_mean_iat = np.mean(actual_interarrival)
+    assert np.isclose(observed_mean_iat, 5, atol=0.5), (
+        f'Expected mean interarrival time ≈ 5, but got {observed_mean_iat}.'
+    )
+
+    # Check that the mean nurse consultation time is close to 8
+    observed_mean_nur = results['patient']['time_with_nurse'].mean()
+    assert np.isclose(observed_mean_nur, 8, atol=0.5), (
+        f"Expected mean consultation time ≈ 8, but got {observed_mean_nur}."
     )
