@@ -309,6 +309,9 @@ class Exponential:
             random_seed (int|None):
                 Random seed to reproduce samples.
         """
+        if mean <= 0:
+            raise ValueError('Exponential mean must be greater than 0.')
+
         self.mean = mean
         self.rand = np.random.default_rng(random_seed)
 
