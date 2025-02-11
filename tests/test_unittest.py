@@ -4,6 +4,10 @@ Unit tests are a type of functional testing that focuses on individual
 components (e.g. methods, classes) and tests them in isolation to ensure they
 work as intended.
 
+SimPy itself has lots of tests of the SimPy components themselves, as can view:
+https://gitlab.com/team-simpy/simpy/-/tree/master/tests?ref_type=heads.
+Hence, our focus here is testing components we have written ourselves.
+
 Licence:
     This project is licensed under the MIT Licence. See the LICENSE file for
     more details.
@@ -43,6 +47,7 @@ def test_new_attribute():
     ('mean_n_consult_time', 0, 'positive'),
     ('number_of_runs', 0, 'positive'),
     ('audit_interval', 0, 'positive'),
+    ('number_of_nurses', 0, 'positive'),
     ('warm_up_period', -1, 'non_negative'),
     ('data_collection_period', -1, 'non_negative')
 ])
@@ -110,6 +115,19 @@ def test_exponentional():
     assert not np.array_equal(sample1, sample2), (
         'Samples with different random seeds should not be equal.'
     )
+
+
+def test_invalid_exponential():
+    """
+    Ensure that Exponential distribution cannot be created with a negative
+    or zero mean.
+    """
+    # Negative mean
+    with pytest.raises(ValueError):
+        Exponential(mean=-5, random_seed=42)
+    # Zero mean
+    with pytest.raises(ValueError):
+        Exponential(mean=0, random_seed=42)
 
 
 def test_log_to_console():
