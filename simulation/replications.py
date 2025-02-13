@@ -45,8 +45,8 @@ class OnlineStatistics:
             Sum of squared differences from the mean.
         alpha (float):
             Significance level for confidence interval calculations.
-        _observers (list):
-            List of observer objects.
+        observer (list):
+            object to notify on updates.
     """
     def __init__(self, data=None, alpha=0.1, observer=None):
         """
@@ -65,11 +65,7 @@ class OnlineStatistics:
         self.mean = None
         self._sq = None
         self.alpha = alpha
-        self._observers = []
-
-        # If an observer is supplied, then add it to the observer list
-        if observer is not None:
-            self.register_observer(observer)
+        self.observer = observer
 
         # If an array of initial values are supplied, then run update()
         if data is not None:
@@ -81,16 +77,6 @@ class OnlineStatistics:
             else:
                 raise ValueError(
                     f'data must be np.ndarray but is type {type(data)}')
-
-    def register_observer(self, observer):
-        """
-        Registers an observer to be notified of updates.
-
-        Arguments:
-            observer (object):
-                Observer to notify on updates.
-        """
-        self._observers.append(observer)
 
     def update(self, x):
         """
@@ -114,14 +100,8 @@ class OnlineStatistics:
             self._sq += (x - self.mean) * (x - updated_mean)
             self.mean = updated_mean
 
-        self.notify()
-
-    def notify(self):
-        """
-        Notify all registered observers about an update.
-        """
-        for observer in self._observers:
-            observer.update(self)
+        # Run the observer update() method
+        self.observer.update(self)
 
     @property
     def variance(self):
