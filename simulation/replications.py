@@ -243,6 +243,7 @@ class ReplicationTabulizer:
         """
         results = pd.DataFrame(
             {
+                'replications': np.arange(1, self.n + 1),
                 'data': self.x_i,
                 'cumulative_mean': self.cumulative_mean,
                 'stdev': self.stdev,
@@ -251,8 +252,6 @@ class ReplicationTabulizer:
                 'deviation': self.dev
             }
         )
-        results.index = np.arange(1, self.n + 1)
-        results.index.name = 'replications'
         return results
 
 
@@ -279,9 +278,9 @@ class ReplicationsAlgorithm:
         initial_replications (int):
             Number of initial replications to perform.
         look_ahead (int):
-            Additional replications to look ahead to assess stability of
-            precision. When the number of replications is <= 100, the value of
-            look_ahead is used. When they are > 100, then
+            Minimum additional replications to look ahead to assess stability
+            of precision. When the number of replications is <= 100, the value
+            of look_ahead is used. When they are > 100, then
             look_ahead / 100 * max(n, 100) is used.
         replication_budget (int):
             Maximum allowed replications. Use for larger models where
@@ -324,6 +323,24 @@ class ReplicationsAlgorithm:
         self._n_solution = self.replication_budget
         self.observer = observer
         self.stats = None
+
+        # Check validity of provided parameters
+        self.valid_inputs()
+
+    def valid_inputs(self):
+        """
+        Checks validity of provided parameters.
+        """
+        for p in [self.initial_replications, self.look_ahead]:
+            if not isinstance(p, int) or p < 0:
+                raise ValueError(f'{p} must be a non-negative integer.')
+
+        if self.half_width_precision <= 0:
+            raise ValueError('half_width_precision must be greater than 0.')
+
+        if self.replication_budget < self.initial_replications:
+            raise ValueError(
+                'replication_budget must be less than initial_replications.')
 
     def _klimit(self):
         """
@@ -425,8 +442,7 @@ def confidence_interval_method(
     metric,
     alpha=0.05,
     desired_precision=0.05,
-    min_rep=5,
-    decimal_places=2,
+    min_rep=5
 ):
     """
     The confidence interval method for selecting the number of replications.
@@ -451,8 +467,6 @@ def confidence_interval_method(
             Minimum number of replications before checking precision. Useful
             when the number of replications returned does not provide a stable
             precision below target.
-        decimal_places (int, optional):
-            Number of decimal places to round the results table to.
 
     Returns:
         tuple[int, pd.DataFrame]:
@@ -497,11 +511,11 @@ def confidence_interval_method(
         warnings.warn(message)
         n_reps = -1
 
-    return n_reps, results.round(decimal_places)
+    return n_reps, results
 
 
 def confidence_interval_method_simple(
-    replications, metric, desired_precision=0.05, min_rep=5, decimal_places=2
+    replications, metric, desired_precision=0.05, min_rep=5
 ):
     """
     Simple implementation using the confidence interval method to select the
@@ -524,8 +538,6 @@ def confidence_interval_method_simple(
             Minimum number of replications before checking precision. Useful
             when the number of replications returned does not provide a stable
             precision below target.
-        decimal_places (int, optional):
-            Number of decimal places to round the results table to.
 
     Returns:
         tuple[int, pd.DataFrame]:
@@ -550,12 +562,13 @@ def confidence_interval_method_simple(
     # Compute cumulative statistics
     cumulative = pd.DataFrame([
         {
-            'replications': i,
+            'replications': i + 1,  # Adjusted as counted from zero
+            'data': df[metric][i],
             'cumulative_mean': stats[0],
             'stdev': stats[1],
             'lower_ci': stats[2],
             'upper_ci': stats[3],
-            'deviation': ((stats[3] - stats[0]) / stats[0]) * 100
+            'deviation': (stats[3] - stats[0]) / stats[0]
         }
         for i, stats in enumerate(
             (summary_stats(df[metric].iloc[:i])
@@ -567,7 +580,7 @@ def confidence_interval_method_simple(
     try:
         n_reps = (
             cumulative.iloc[min_rep:]
-            .loc[cumulative['deviation'] <= desired_precision*100]
+            .loc[cumulative['deviation'] <= desired_precision]
             .iloc[0]
             .name
         ) + 1
@@ -619,7 +632,7 @@ def plotly_confidence_interval_method(
     ):
         fig.add_trace(
             go.Scatter(
-                x=conf_ints.index,
+                x=conf_ints['replications'],
                 y=conf_ints[col],
                 line={'color': color, 'dash': dash},
                 name=col,
@@ -631,7 +644,7 @@ def plotly_confidence_interval_method(
     # Cumulative mean line with enhanced hover
     fig.add_trace(
         go.Scatter(
-            x=conf_ints.index,
+            x=conf_ints['replications'],
             y=conf_ints['cumulative_mean'],
             line={'color': 'blue', 'width': 2},
             name='Cumulative Mean',
