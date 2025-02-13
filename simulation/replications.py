@@ -72,9 +72,15 @@ class OnlineStatistics:
             self.register_observer(observer)
 
         # If an array of initial values are supplied, then run update()
-        if isinstance(data, np.ndarray):
-            for x in data:
-                self.update(x)
+        if data is not None:
+            if isinstance(data, np.ndarray):
+                for x in data:
+                    self.update(x)
+            # Raise an error if in different format - else will invisibly
+            # proceed and won't notice it hasn't done this
+            else:
+                raise ValueError(
+                    f'data must be np.ndarray but is type {type(data)}')
 
     def register_observer(self, observer):
         """
@@ -488,7 +494,8 @@ def confidence_interval_method(
 
     # Set up method for calculating statistics and saving them as a table
     observer = ReplicationTabulizer()
-    stats = OnlineStatistics(alpha=alpha, data=rep_res[:2], observer=observer)
+    stats = OnlineStatistics(
+        alpha=alpha, data=np.array(rep_res[:2]), observer=observer)
 
     # Calculate statistics with each replication, and get summary table
     for i in range(2, len(rep_res)):

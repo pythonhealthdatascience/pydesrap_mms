@@ -13,9 +13,10 @@ Typical usage example:
     pytest
 """
 
+import pandas as pd
 import pytest
 
-from simulation.replications import ReplicationsAlgorithm
+from simulation.replications import ReplicationsAlgorithm, OnlineStatistics
 
 
 # pylint: disable=protected-access
@@ -70,3 +71,11 @@ def test_algorithm_invalid_budget():
     with pytest.raises(ValueError):
         ReplicationsAlgorithm(initial_replications=10,
                               replication_budget=9)
+
+
+def test_onlinestat_data():
+    """
+    Check that OnlineStatistics will fail if an invalid data type is provided.
+    """
+    with pytest.raises(ValueError):
+        OnlineStatistics(data=pd.Series([9, 2, 3]))
