@@ -14,18 +14,48 @@ Licence:
     more details.
 """
 
+import warnings
+
 import plotly.graph_objects as go
 import numpy as np
 import pandas as pd
 from scipy.stats import t
-import warnings
 
 
 class OnlineStatistics:
     """
+    Computes running sample mean and variance (using Welford's algorithm),
+    which then allows computation of confidence intervals (CIs).
+
+    The statistics are referred to as "online" as they are computed via updates
+    to it's value, rather than storing lots of data and repeatedly taking the
+    mean after new values have been added.
+
+    Attributes:
+        n (int):
+            Number of data points processed.
+        x_i (float):
+            Most recent data point.
+        mean (float):
+            Running mean.
+        _sq (float):
+            Sum of squared differences from the mean.
+        alpha (float):
+            Significance level for confidence interval calculations.
+        _observers (list):
+            List of observer objects.
     """
     def __init__(self, data=None, alpha=0.1, observer=None):
         """
+        Initialises the OnlineStatistics instance.
+
+        Arguments:
+            data (np.ndarray, optional):
+                Array containing an initial data sample.
+            alpha (float, optional):
+                Significance level for confidence interval calculations.
+            observer (object, optional):
+                Observer to notify on updates.
         """
         self.n = 0
         self.x_i = None
@@ -33,77 +63,36 @@ class OnlineStatistics:
         self._sq = None
         self.alpha = alpha
         self._observers = []
+
+        # If an observer is supplied, then add it to the observer list
         if observer is not None:
             self.register_observer(observer)
 
+        # If an array of initial values are supplied, then run update()
         if isinstance(data, np.ndarray):
             for x in data:
                 self.update(x)
 
     def register_observer(self, observer):
         """
+        Registers an observer to be notified of updates.
+
+        Arguments:
+            observer (object):
+                Observer to notify on updates.
         """
         self._observers.append(observer)
 
-    @property
-    def variance(self):
-        """
-        """
-        return self._sq / (self.n - 1)
-
-    @property
-    def std(self):
-        """
-        """
-        if self.n > 2:
-            return np.sqrt(self.variance)
-        else:
-            return np.nan
-
-    @property
-    def std_error(self):
-        """
-        """
-        return self.std / np.sqrt(self.n)
-
-    @property
-    def half_width(self):
-        """
-        """
-        dof = self.n - 1
-        t_value = t.ppf(1 - (self.alpha / 2), dof)
-        return t_value * self.std_error
-
-    @property
-    def lci(self):
-        """
-        """
-        if self.n > 2:
-            return self.mean - self.half_width
-        else:
-            return np.nan
-
-    @property
-    def uci(self):
-        """
-        Lower confidence interval bound
-        """
-        if self.n > 2:
-            return self.mean + self.half_width
-        else:
-            return np.nan
-
-    @property
-    def deviation(self):
-        """
-        """
-        if self.n > 2:
-            return self.half_width / self.mean
-        else:
-            return np.nan
-
     def update(self, x):
         """
+        Running update of mean and variance implemented using Welford's
+        algorithm (1962).
+
+        See Knuth. D `The Art of Computer Programming` Vol 2. 2nd ed. Page 216.
+
+        Arguments:
+            x (float):
+                A new data point.
         """
         self.n += 1
         self.x_i = x
@@ -120,26 +109,118 @@ class OnlineStatistics:
 
     def notify(self):
         """
+        Notify all registered observers about an update.
         """
         for observer in self._observers:
             observer.update(self)
 
+    @property
+    def variance(self):
+        """
+        Computes and returns the variance of the data points.
+        """
+        # Sum of squares of differences from the current mean divided by n - 1
+        return self._sq / (self.n - 1)
+
+    @property
+    def std(self):
+        """
+        Computes and returns the standard deviation, or NaN if not enough data.
+        """
+        if self.n > 2:
+            return np.sqrt(self.variance)
+        return np.nan
+
+    @property
+    def std_error(self):
+        """
+        Computes and returns the standard error of the mean.
+        """
+        return self.std / np.sqrt(self.n)
+
+    @property
+    def half_width(self):
+        """
+        Computes and returns the half-width of the confidence interval.
+        """
+        dof = self.n - 1
+        t_value = t.ppf(1 - (self.alpha / 2), dof)
+        return t_value * self.std_error
+
+    @property
+    def lci(self):
+        """
+        Computes and returns the lower confidence interval bound, or NaN if
+        not enough data.
+        """
+        if self.n > 2:
+            return self.mean - self.half_width
+        return np.nan
+
+    @property
+    def uci(self):
+        """
+        Computes and returns the upper confidence interval bound, or NaN if
+        not enough data.
+        """
+        if self.n > 2:
+            return self.mean + self.half_width
+        return np.nan
+
+    @property
+    def deviation(self):
+        """
+        Computes and returns the precision of the confidence interval
+        expressed as the percentage deviation of the half width from the mean.
+        """
+        if self.n > 2:
+            return self.half_width / self.mean
+        return np.nan
+
 
 class ReplicationTabulizer:
     """
-    """
+    Observes and records results from OnlineStatistics, updating each time new
+    data is processed.
 
+    Attributes:
+        n (int):
+            Number of data points processed.
+        x_i (list):
+            List containing each data point.
+        cumulative_mean (list):
+            List of the running mean.
+        stdev (list):
+            List of the standard deviation.
+        lower (list):
+            List of the lower confidence interval bound.
+        upper (list):
+            List of the upper confidence interval bound.
+        dev (list):
+            List of the percentage deviation of the confidence interval
+            half width from the mean.
+    """
     def __init__(self):
+        """
+        Initialises empty lists for storing statistics, and n is set to zero.
+        """
+        self.n = 0
+        self.x_i = []
+        self.cumulative_mean = []
         self.stdev = []
         self.lower = []
         self.upper = []
         self.dev = []
-        self.cumulative_mean = []
-        self.x_i = []
-        self.n = 0
 
     def update(self, results):
         """
+        Add new results from OnlineStatistics to the appropriate lists.
+
+        Arguments:
+            results (OnlineStatistics):
+                An instance of OnlineStatistics containing updated statistical
+                measures like the mean, standard deviation and confidence
+                intervals.
         """
         self.x_i.append(results.x_i)
         self.cumulative_mean.append(results.mean)
@@ -151,34 +232,70 @@ class ReplicationTabulizer:
 
     def summary_table(self):
         """
+        Create a results table from the stored lists.
+
+        Returns:
+             results (pd.DataFrame):
+                Dataframe summarising the replication statistics.
         """
         results = pd.DataFrame(
-            [
-                self.x_i,
-                self.cumulative_mean,
-                self.stdev,
-                self.lower,
-                self.upper,
-                self.dev,
-            ]
-        ).T
-        results.columns = [
-            "Mean",
-            "Cumulative Mean",
-            "Standard Deviation",
-            "Lower Interval",
-            "Upper Interval",
-            "% deviation",
-        ]
+            {
+                'data': self.x_i,
+                'cumulative_mean': self.cumulative_mean,
+                'stdev': self.stdev,
+                'lower_ci': self.lower,
+                'upper_ci': self.upper,
+                'deviation': self.dev
+            }
+        )
         results.index = np.arange(1, self.n + 1)
-        results.index.name = "replications"
-
+        results.index.name = 'replications'
         return results
 
 
+# pylint: disable=too-many-instance-attributes,too-few-public-methods
 class ReplicationsAlgorithm:
     """
+    Implements an adaptive replication algorithm for selecting the
+    appropriate number of simulation replications based on statistical
+    precision.
+
+    Uses the "Replications Algorithm" from Hoad, Robinson, & Davies (2010).
+    Given a model's performance measure and a user-set confidence interval
+    half width prevision, automatically select the number of replications.
+    Combines the "confidence intervals" method with a sequential look-ahead
+    procedure to determine if a desired precision in the confidence interval
+    is maintained.
+
+    Attributes:
+        alpha (float):
+            Significance level for confidence interval calculations.
+        half_width_precision (float):
+            The target half width precision for the algorithm (i.e. percentage
+            deviation of the confidence interval from the mean).
+        initial_replications (int):
+            Number of initial replications to perform.
+        look_ahead (int):
+            Additional replications to look ahead to assess stability of
+            precision. When the number of replications is <= 100, the value of
+            look_ahead is used. When they are > 100, then
+            look_ahead / 100 * max(n, 100) is used.
+        replication_budget (int):
+            Maximum allowed replications. Use for larger models where
+            replication runtime is a constraint.
+        verbose (bool):
+            Whether to print progress information.
+        n (int):
+            Current number of replications performed.
+        _n_solution (int):
+            Final determined number of replications required for maintained
+            precision.
+        observer (object):
+            Observer to notify on updates.
+        stats (OnlineStatistics):
+            Instance of OnlineStatistics, set in the select() method.
     """
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(
         self,
         alpha=0.05,
@@ -190,36 +307,52 @@ class ReplicationsAlgorithm:
         observer=None,
     ):
         """
+        Initialise an instance of the ReplicationsAlgorithm.
+
+        Arguments are described in the class docstring.
         """
         self.alpha = alpha
         self.half_width_precision = half_width_precision
         self.initial_replications = initial_replications
-
         self.look_ahead = look_ahead
-
         self.replication_budget = replication_budget
-
         self.verbose = verbose
-
         self.n = self.initial_replications
-
         self._n_solution = self.replication_budget
-
         self.observer = observer
+        self.stats = None
 
-    def _klimit(self) -> int:
+    def _klimit(self):
         """
-        Get the current look ahead. This is lookahead if n<=100, or lookahead
-        as a fraction of n if n>100.
+        Determines the number of additional replications to check after
+        precision is reached, scaling with total replications if they are
+        greater than 100.
+
+        Returns:
+            int:
+                Number of additional replications to verify stability.
         """
         return int((self.look_ahead / 100) * max(self.n, 100))
 
     def select(self, runner, metric):
+        """
+        Executes the replication algorithm, determining the necessary number
+        of replications to achieve and maintain the desired precision.
+
+        Arguments:
+            runner (Runner):
+                An instance of Runner which executes the model replications.
+            metric (str):
+                Name of the performance measure being tracked.
+
+        Returns:
+            int:
+                The determined number of replications needed for precision.
+        """
 
         converged = False
 
-        # Run initial replications of the model and get the run results for
-        # the specified metric
+        # Run initial replications and collect results for the specified metric
         x_i = [runner.run_single(rep)['run'][metric]
                for rep in range(self.initial_replications)]
 
@@ -292,25 +425,60 @@ def confidence_interval_method(
     decimal_places=2,
 ):
     """
+    The confidence interval method for selecting the number of replications.
+
+    This method accepts the results from having already run a model for a
+    number of replications. It then calculates the cumulative  mean and
+    confidence intervals with each of those replications. It then checks the
+    results to find when the precision is first achieved. It does not check if
+    this precision is maintained.
+
+    Arguments:
+        replications (np.ndarray):
+            Array with results from replications of a performance metric.
+        alpha (float, optional):
+            Significance level for confidence interval calculations.
+        desired_precision (float, optional):
+            The target half width precision for the algorithm (i.e. percentage
+            deviation of the confidence interval from the mean).
+        min_rep (int, optional):
+            Minimum number of replications before checking precision. Useful
+            when the number of replications returned does not provide a stable
+            precision below target.
+        decimal_places (int, optional):
+            Number of decimal places to round the results table to.
+
+    Returns:
+        tuple[int, pd.DataFrame]:
+            - The minimum number of replications required to meet the
+              precision. Returns -1 if precision is not achieved.
+            - DataFrame containing cumulative statistics for each replication.
+
+    Warnings:
+        Issues a warning if the desired precision is not met within the
+        provided replications.
     """
+    # Set up method for calculating statistics and saving them as a table
     observer = ReplicationTabulizer()
     stats = OnlineStatistics(
         alpha=alpha, data=replications[:2], observer=observer)
 
+    # Calculate statistics with each replication, and get summary table
     for i in range(2, len(replications)):
         stats.update(replications[i])
-
     results = observer.summary_table()
 
+    # Find the smallest number of replications where deviation meets target
     try:
         n_reps = (
             results.iloc[min_rep:]
-            .loc[results["% deviation"] <= desired_precision]
+            .loc[results['deviation'] <= desired_precision]
             .iloc[0]
             .name
         )
+    # Return warning if there are no replications with the desired precision
     except IndexError:
-        message = "WARNING: the replications do not reach desired precision"
+        message = 'WARNING: the replications do not reach desired precision'
         warnings.warn(message)
         n_reps = -1
 
@@ -321,29 +489,43 @@ def plotly_confidence_interval_method(
     n_reps, conf_ints, metric_name, figsize=(1200, 400)
 ):
     """
+    Generates an interactive Plotly visualisation of confidence intervals
+    with increasing simulation replications.
+
+    Arguments:
+        n_reps (int):
+            The number of replications required to meet the desired precision.
+        conf_ints (pd.DataFrame):
+            A DataFrame containing confidence interval statistics, including
+            cumulative mean, upper/lower bounds, and deviations. As returned
+            by ReplicationTabulizer summary_table() method.
+        metric_name (str):
+            Name of metric being analysed.
+        figsize (tuple, optional):
+            Plot dimensions in pixels (width, height).
     """
     fig = go.Figure()
 
     # Calculate relative deviations [1][4]
     deviation_pct = (
-        (conf_ints["Upper Interval"] - conf_ints["Cumulative Mean"])
-        / conf_ints["Cumulative Mean"]
+        (conf_ints['upper_ci'] - conf_ints['cumulative_mean'])
+        / conf_ints['cumulative_mean']
         * 100
     ).round(2)
 
     # Confidence interval bands with hover info
     for col, color, dash in zip(
-        ["Lower Interval", "Upper Interval"],
-        ["lightblue", "lightblue"], ["dot", "dot"]
+        ['lower_ci', 'upper_ci'],
+        ['lightblue', 'lightblue'], ['dot', 'dot']
     ):
         fig.add_trace(
             go.Scatter(
                 x=conf_ints.index,
                 y=conf_ints[col],
-                line=dict(color=color, dash=dash),
+                line={'color': color, 'dash': dash},
                 name=col,
-                text=[f"Deviation: {d}%" for d in deviation_pct],
-                hoverinfo="x+y+name+text",
+                text=['Deviation: {d}%' for d in deviation_pct],
+                hoverinfo='x+y+name+text',
             )
         )
 
@@ -351,30 +533,30 @@ def plotly_confidence_interval_method(
     fig.add_trace(
         go.Scatter(
             x=conf_ints.index,
-            y=conf_ints["Cumulative Mean"],
-            line=dict(color="blue", width=2),
-            name="Cumulative Mean",
-            hoverinfo="x+y+name",
+            y=conf_ints['cumulative_mean'],
+            line={'color': 'blue', 'width': 2},
+            name='Cumulative Mean',
+            hoverinfo='x+y+name',
         )
     )
 
     # Vertical threshold line
     fig.add_shape(
-        type="line",
+        type='line',
         x0=n_reps,
         x1=n_reps,
         y0=0,
         y1=1,
-        yref="paper",
-        line=dict(color="red", dash="dash"),
+        yref='paper',
+        line={'color': 'red', 'dash': 'dash'},
     )
 
     # Configure layout
     fig.update_layout(
         width=figsize[0],
         height=figsize[1],
-        yaxis_title=f"Cumulative Mean: {metric_name}",
-        hovermode="x unified",
+        yaxis_title=f'Cumulative Mean: {metric_name}',
+        hovermode='x unified',
         showlegend=True,
     )
 
