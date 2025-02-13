@@ -21,6 +21,9 @@ import numpy as np
 import pandas as pd
 from scipy.stats import t
 
+from simulation.model import Param, Runner
+from simulation.helper import summary_stats
+
 
 class OnlineStatistics:
     """
@@ -419,6 +422,7 @@ class ReplicationsAlgorithm:
 
 def confidence_interval_method(
     replications,
+    metric,
     alpha=0.05,
     desired_precision=0.05,
     min_rep=5,
@@ -427,20 +431,22 @@ def confidence_interval_method(
     """
     The confidence interval method for selecting the number of replications.
 
-    This method accepts the results from having already run a model for a
-    number of replications. It then calculates the cumulative  mean and
-    confidence intervals with each of those replications. It then checks the
-    results to find when the precision is first achieved. It does not check if
-    this precision is maintained.
+    This method will run the model for the specified number of replications.
+    It then calculates the cumulative  mean and confidence intervals with
+    each of those replications. It then checks the results to find when the
+    precision is first achieved. It does not check if this precision is
+    maintained.
 
     Arguments:
-        replications (np.ndarray):
-            Array with results from replications of a performance metric.
+        replications (int):
+            Number of times to run the model.
+        metric (str):
+            Name of performance metric to assess.
         alpha (float, optional):
             Significance level for confidence interval calculations.
         desired_precision (float, optional):
-            The target half width precision for the algorithm (i.e. percentage
-            deviation of the confidence interval from the mean).
+            The target half width precision (i.e. percentage deviation of the
+            confidence interval from the mean).
         min_rep (int, optional):
             Minimum number of replications before checking precision. Useful
             when the number of replications returned does not provide a stable
@@ -458,17 +464,24 @@ def confidence_interval_method(
         Issues a warning if the desired precision is not met within the
         provided replications.
     """
+    # Run model for specified number of replications
+    param = Param(number_of_runs=replications)
+    choose_rep = Runner(param)
+    choose_rep.run_reps()
+
+    # Extract replication results for the specified metric
+    rep_res = choose_rep.run_results_df[metric]
+
     # Set up method for calculating statistics and saving them as a table
     observer = ReplicationTabulizer()
-    stats = OnlineStatistics(
-        alpha=alpha, data=replications[:2], observer=observer)
+    stats = OnlineStatistics(alpha=alpha, data=rep_res[:2], observer=observer)
 
     # Calculate statistics with each replication, and get summary table
-    for i in range(2, len(replications)):
-        stats.update(replications[i])
+    for i in range(2, len(rep_res)):
+        stats.update(rep_res[i])
     results = observer.summary_table()
 
-    # Find the smallest number of replications where deviation meets target
+    # Get minimum number of replications where deviation is less than target
     try:
         n_reps = (
             results.iloc[min_rep:]
@@ -476,6 +489,8 @@ def confidence_interval_method(
             .iloc[0]
             .name
         )
+        print(f'Reached desired precision ({desired_precision}) in ' +
+              f'{n_reps} replications.')
     # Return warning if there are no replications with the desired precision
     except IndexError:
         message = 'WARNING: the replications do not reach desired precision'
@@ -485,8 +500,90 @@ def confidence_interval_method(
     return n_reps, results.round(decimal_places)
 
 
+def confidence_interval_method_simple(
+    replications, metric, desired_precision=0.05, min_rep=5, decimal_places=2
+):
+    """
+    Simple implementation using the confidence interval method to select the
+    number of replications.
+
+    This will produce the same results as confidence_interval_method(),
+    but that depends on ReplicationTabulizer and OnlineStatistics, whilst
+    this method using summary_stats(). These are both provided to give you
+    a few options of possible ways to do this!
+
+    Arguments:
+        replications (int):
+            Number of times to run the model.
+        metric (string):
+            Name of performance metric to assess.
+        desired_precision (float, optional):
+            The target half width precision (i.e. percentage deviation of the
+            confidence interval from the mean).
+        min_rep (int, optional):
+            Minimum number of replications before checking precision. Useful
+            when the number of replications returned does not provide a stable
+            precision below target.
+        decimal_places (int, optional):
+            Number of decimal places to round the results table to.
+
+    Returns:
+        tuple[int, pd.DataFrame]:
+            - The minimum number of replications required to meet precision.
+            - DataFrame containing cumulative statistics for each replication.
+
+     Warnings:
+        Issues a warning if the desired precision is not met within the
+        provided replications.
+    """
+    # Run model for specified number of replications
+    param = Param(number_of_runs=replications)
+    choose_rep = Runner(param)
+    choose_rep.run_reps()
+
+    # If mean of metric is less than 1, multiply by 100
+    df = choose_rep.run_results_df
+    if df[metric].mean() < 1:
+        df[f'adj_{metric}'] = df[metric] * 100
+        metric = f'adj_{metric}'
+
+    # Compute cumulative statistics
+    cumulative = pd.DataFrame([
+        {
+            'replications': i,
+            'cumulative_mean': stats[0],
+            'stdev': stats[1],
+            'lower_ci': stats[2],
+            'upper_ci': stats[3],
+            'deviation': ((stats[3] - stats[0]) / stats[0]) * 100
+        }
+        for i, stats in enumerate(
+            (summary_stats(df[metric].iloc[:i])
+             for i in range(1, replications + 1))
+        )
+    ])
+
+    # Get minimum number of replications where deviation is less than target
+    try:
+        n_reps = (
+            cumulative.iloc[min_rep:]
+            .loc[cumulative['deviation'] <= desired_precision*100]
+            .iloc[0]
+            .name
+        ) + 1
+        print(f'Reached desired precision ({desired_precision}) in ' +
+              f'{n_reps} replications.')
+    # Return warning if there are no replications with the desired precision
+    except IndexError:
+        warnings.warn(f'Running {replications} replications did not reach' +
+                      f'desired precision ({desired_precision}).')
+        n_reps = -1
+
+    return n_reps, cumulative
+
+
 def plotly_confidence_interval_method(
-    n_reps, conf_ints, metric_name, figsize=(1200, 400)
+    n_reps, conf_ints, metric_name, figsize=(1200, 400), file_path=None
 ):
     """
     Generates an interactive Plotly visualisation of confidence intervals
@@ -503,6 +600,8 @@ def plotly_confidence_interval_method(
             Name of metric being analysed.
         figsize (tuple, optional):
             Plot dimensions in pixels (width, height).
+        file_path (str):
+            Path and filename to save the plot to.
     """
     fig = go.Figure()
 
@@ -559,5 +658,9 @@ def plotly_confidence_interval_method(
         hovermode='x unified',
         showlegend=True,
     )
+
+    # Save figure
+    if file_path is not None:
+        fig.write_image(file_path)
 
     return fig
