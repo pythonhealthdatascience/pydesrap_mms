@@ -390,7 +390,7 @@ class ReplicationsAlgorithm:
         while (
             sum(1 for v in solutions.values()
                 if v['solved']) < len(metrics)
-            and self.n <= self.replication_budget + self._klimit()
+            and self.n < self.replication_budget + self._klimit()
         ):
 
             # Run another replication
@@ -447,6 +447,8 @@ class ReplicationsAlgorithm:
         return nreps, summary_frame
 
 
+# pylint: disable=too-many-arguments,too-many-positional-arguments
+# pylint: disable=too-many-locals
 def confidence_interval_method(
     replications,
     metrics,
