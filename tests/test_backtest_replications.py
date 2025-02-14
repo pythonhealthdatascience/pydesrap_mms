@@ -20,7 +20,7 @@ import pytest
 from simulation.model import Runner, Param
 from simulation.replications import (
     confidence_interval_method, confidence_interval_method_simple,
-    ReplicationTabulizer, ReplicationsAlgorithm)
+    ReplicationsAlgorithm)
 
 
 @pytest.mark.parametrize('ci_function', [
@@ -53,21 +53,17 @@ def test_algorithm():
     Check that the ReplicationsAlgorithm produces results consistent with those
     previously generated.
     """
-    # Run the algorithm
-    observer = ReplicationTabulizer()
-    analyser = ReplicationsAlgorithm(
-        verbose=False,
-        observer=observer,
-        initial_replications=20,
-        replication_budget=20)
-    _ = analyser.select(runner=Runner(Param()), metric='mean_time_with_nurse')
-    # Get first 20 rows (may have more if met precision and went into
-    # look ahead period beyond budget)
-    cumulative_df = observer.summary_table().head(20)
-
     # Import the expected results
     exp_df = pd.read_csv(
         Path(__file__).parent.joinpath('exp_results/replications.csv'))
 
-    # Compare them
-    pd.testing.assert_frame_equal(cumulative_df, exp_df)
+    # Run the algorithm
+    analyser = ReplicationsAlgorithm(initial_replications=20,
+                                     replication_budget=20)
+    _, summary_table = analyser.select(
+        runner=Runner(Param()), metrics=['mean_time_with_nurse'])
+
+    # Get first 20 rows (may have more if met precision and went into
+    # look ahead period beyond budget), and compare dataframes
+    pd.testing.assert_frame_equal(
+        summary_table.drop(['metric'], axis=1).head(20), exp_df)

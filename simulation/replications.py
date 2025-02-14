@@ -241,7 +241,6 @@ class ReplicationTabulizer:
         return results
 
 
-# pylint: disable=too-many-instance-attributes,too-few-public-methods
 class ReplicationsAlgorithm:
     """
     Implements an adaptive replication algorithm for selecting the
@@ -271,17 +270,8 @@ class ReplicationsAlgorithm:
         replication_budget (int):
             Maximum allowed replications. Use for larger models where
             replication runtime is a constraint.
-        verbose (bool):
-            Whether to print progress information.
         n (int):
             Current number of replications performed.
-        _n_solution (int):
-            Final determined number of replications required for maintained
-            precision.
-        observer (object):
-            Observer to notify on updates.
-        stats (OnlineStatistics):
-            Instance of OnlineStatistics, set in the select() method.
     """
     # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(
@@ -290,9 +280,7 @@ class ReplicationsAlgorithm:
         half_width_precision=0.05,
         initial_replications=3,
         look_ahead=5,
-        replication_budget=1000,
-        verbose=False,
-        observer=None,
+        replication_budget=1000
     ):
         """
         Initialise an instance of the ReplicationsAlgorithm.
@@ -304,11 +292,9 @@ class ReplicationsAlgorithm:
         self.initial_replications = initial_replications
         self.look_ahead = look_ahead
         self.replication_budget = replication_budget
-        self.verbose = verbose
+
+        # Initially set n to number of initial replications
         self.n = self.initial_replications
-        self._n_solution = self.replication_budget
-        self.observer = observer
-        self.stats = None
 
         # Check validity of provided parameters
         self.valid_inputs()
@@ -340,7 +326,7 @@ class ReplicationsAlgorithm:
         """
         return int((self.look_ahead / 100) * max(self.n, 100))
 
-    def select(self, runner, metric):
+    def select(self, runner, metrics):
         """
         Executes the replication algorithm, determining the necessary number
         of replications to achieve and maintain the desired precision.
@@ -348,79 +334,109 @@ class ReplicationsAlgorithm:
         Arguments:
             runner (Runner):
                 An instance of Runner which executes the model replications.
-            metric (str):
-                Name of the performance measure being tracked.
+            metrics (list):
+                List of performance measure to track (should correspond to
+                column names from the run results dataframe).
 
         Returns:
             int:
                 The determined number of replications needed for precision.
         """
+        # Create instances of observers and stats for each metric
+        observers = {
+            metric: ReplicationTabulizer()
+            for metric in metrics}
+        stats = {
+            metric: OnlineStatistics(
+                alpha=self.alpha, observer=observers[metric])
+            for metric in metrics
+        }
 
-        converged = False
+        # Empty dictionary to store record for each metric of:
+        # - nreps (the solution - replications required for precision)
+        # - target_met (record of how many times in a row the target has
+        #   has been met, used to check if lookahead period has been passed)
+        # - solved (whether it has maintained precision for lookahead)
+        solutions = {
+            metric: {'nreps': None,
+                     'target_met': 0,
+                     'solved': False} for metric in metrics}
 
-        # Run initial replications and collect results for the specified metric
-        x_i = [runner.run_single(rep)['run'][metric]
-               for rep in range(self.initial_replications)]
+        # Run initial replications and get results for each metric
+        for rep in range(self.initial_replications):
+            results = runner.run_single(rep)['run']
+            for metric in metrics:
+                stats[metric].update(results[metric])
 
-        # Using those results, initialise running mean and std dev
-        self.stats = OnlineStatistics(
-            data=np.array(x_i), alpha=self.alpha, observer=self.observer
-        )
+                # If any have met precision, add solution and update count
+                if stats[metric].deviation <= self.half_width_precision:
+                    solutions[metric]['nreps'] = self.n
+                    solutions[metric]['target_met'] = 1
 
-        while not converged and self.n <= self.replication_budget:
+                    # If there is no lookahead, mark as solved
+                    if self._klimit() == 0:
+                        solutions[metric]['solved'] = True
 
-            # If after initial replications, update running mean and std dev
-            if self.n > self.initial_replications:
-                self.stats.update(x_i)
+        # Whilst under replication budget + lookahead, and have not yet
+        # got all metrics marked as solved = TRUE...
+        while (
+            sum(1 for v in solutions.values()
+                if v['solved']) < len(metrics)
+            and self.n <= self.replication_budget + self._klimit()
+        ):
 
-            # If precision has been achieved...
-            if self.stats.deviation <= self.half_width_precision:
+            # Run another replication
+            results = runner.run_single(self.n)['run']
 
-                # Store current solution
-                self._n_solution = self.n
-                converged = True
-
-                # If the lookahead period is greater than 0
-                if self._klimit() > 0:
-
-                    # Start a new counter
-                    k = 1
-
-                    # Whilst the precision is achieved and k is less than
-                    # lookahead...
-                    while converged and k <= self._klimit():
-                        if self.verbose:
-                            print(f'{self.n+k}', end=', ')
-
-                        # Run another replication and update the statistics
-                        x_i = runner.run_single(run=self.n+k-1)['run'][metric]
-                        self.stats.update(x_i)
-
-                        # If precision lost, set converged to false and update
-                        # the main counter (n)
-                        if self.stats.deviation > self.half_width_precision:
-                            converged = False
-                            self.n += k
-                        # If precision is maintained, update k.
-                        else:
-                            k += 1
-
-                # If past lookahead and still converged, return _n_solution.
-                if converged:
-                    return self._n_solution
-
-            # Precision not achieved/maintained, so run another replication
+            # Increment counter
             self.n += 1
-            if self.verbose:
-                print(f'{self.n}', end=', ')
-            x_i = runner.run_single(run=self.n-1)['run'][metric]
 
-        # If not converged and pass replication_budget, end with warning
-        warnings.warn(
-            f'''Algorithm did not converge for metric '{metric}'. '''
-            + 'Returning replication budget as solution'
+            # Loop through the metrics...
+            for metric in metrics:
+
+                # If it is not yet solved...
+                if not solutions[metric]['solved']:
+
+                    # Update the running mean and stdev for that metric
+                    stats[metric].update(results[metric])
+
+                    # If precision has been achieved...
+                    if stats[metric].deviation <= self.half_width_precision:
+
+                        # Check if target met the time prior - if not, record
+                        # the solution.
+                        if solutions[metric]['target_met'] == 0:
+                            solutions[metric]['nreps'] = self.n
+
+                        # Update how many times precision has been met in a row
+                        solutions[metric]['target_met'] += 1
+
+                        # Mark as solved if have finished lookahead period
+                        if solutions[metric]['target_met'] > self._klimit():
+                            solutions[metric]['solved'] = True
+
+                    # If precision was not achieved, ensure nreps is None
+                    # (e.g. in cases where precision is lost after a success)
+                    else:
+                        solutions[metric]['nreps'] = None
+
+        # Extract minimum replications for each metric
+        nreps = {metric: value['nreps'] for metric, value in solutions.items()}
+
+        # Combine observer summary frames into a single table
+        summary_frame = pd.concat(
+            [observer.summary_table().assign(metric=metric)
+             for metric, observer in observers.items()]
         )
-        return self._n_solution
+
+        # Extract any metrics that were not solved and return warning
+        if None in nreps.values():
+            unsolved = [k for k, v in nreps.items() if v is None]
+            warnings.warn(
+                'WARNING: the replications did not reach the desired ' +
+                f'precision for the following metrics: {unsolved}.')
+
+        return nreps, summary_frame
 
 
 def confidence_interval_method(
@@ -654,7 +670,7 @@ def plotly_confidence_interval_method(
     fig.update_layout(
         width=figsize[0],
         height=figsize[1],
-        yaxis_title=f'Cumulative Mean: {metric_name}',
+        yaxis_title=f'Cumulative Mean:\n{metric_name}',
         hovermode='x unified',
         showlegend=True,
     )

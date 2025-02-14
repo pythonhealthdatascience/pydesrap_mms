@@ -18,7 +18,7 @@ import pytest
 from simulation.model import Param, Runner
 from simulation.replications import (
     confidence_interval_method, confidence_interval_method_simple,
-    ReplicationTabulizer, ReplicationsAlgorithm)
+    ReplicationsAlgorithm)
 
 
 @pytest.mark.parametrize('ci_function', [
@@ -95,16 +95,11 @@ def test_consistent_outputs(ci_function):
         replications=reps, metric='mean_time_with_nurse')
 
     # Run the algorithm
-    observer = ReplicationTabulizer()
-    analyser = ReplicationsAlgorithm(
-        verbose=False,
-        observer=observer,
-        initial_replications=reps,
-        replication_budget=reps)
-    _ = analyser.select(runner=Runner(Param()), metric='mean_time_with_nurse')
+    analyser = ReplicationsAlgorithm(initial_replications=reps,
+                                     replication_budget=reps)
+    _, summary_table = analyser.select(runner=Runner(Param()),
+                                       metrics=['mean_time_with_nurse'])
     # Get first 20 rows (may have more if met precision and went into
-    # look ahead period beyond budget)
-    auto_df = observer.summary_table().head(20)
-
-    # Compare the dataframes
-    pd.testing.assert_frame_equal(man_df, auto_df)
+    # look ahead period beyond budget) and compare dataframes
+    pd.testing.assert_frame_equal(
+        man_df, summary_table.drop(['metric'], axis=1).head(20))
