@@ -38,14 +38,14 @@ def test_cimethods(ci_function):
     """
     # Run the confidence interval method
     _, cumulative_df = ci_function(
-        replications=20, metric='mean_time_with_nurse')
+        replications=20, metrics=['mean_time_with_nurse'])
 
     # Import the expected results
     exp_df = pd.read_csv(
         Path(__file__).parent.joinpath('exp_results/replications.csv'))
 
     # Compare them
-    pd.testing.assert_frame_equal(cumulative_df, exp_df)
+    pd.testing.assert_frame_equal(cumulative_df.drop(['metric'], axis=1), exp_df)
 
 
 def test_algorithm():

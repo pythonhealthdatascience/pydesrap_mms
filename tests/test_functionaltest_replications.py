@@ -43,7 +43,7 @@ def test_ci_method_output(ci_function):
 
     # Run the confidence interval method
     min_reps, cumulative_df = ci_function(
-        replications=reps, metric='mean_time_with_nurse')
+        replications=reps, metrics=['mean_time_with_nurse'])
 
     # Check that the results dataframe contains the right number of rows
     if not len(cumulative_df) == reps:
@@ -64,11 +64,11 @@ def test_ci_method_output(ci_function):
             f'{max(cumulative_df['replications'])}.')
 
     # Check that min_reps is no more than the number run
-    if not min_reps <= reps:
+    if not min_reps['mean_time_with_nurse'] <= reps:
         errors.append(
             'The minimum number of replications required as returned by the ' +
             'confidence_interval_method should be less than the number we ' +
-            f'ran ({reps}) but it returned {min_reps}.')
+            f'ran ({reps}) but it was {min_reps['mean_time_with_nurse']}.')
 
     # Check if there were any errors
     assert not errors, 'Errors occurred:\n{}'.format('\n'.join(errors))
@@ -92,7 +92,7 @@ def test_consistent_outputs(ci_function):
 
     # Run the manual confidence interval method
     _, man_df = ci_function(
-        replications=reps, metric='mean_time_with_nurse')
+        replications=reps, metrics=['mean_time_with_nurse'])
 
     # Run the algorithm
     analyser = ReplicationsAlgorithm(initial_replications=reps,
@@ -102,4 +102,4 @@ def test_consistent_outputs(ci_function):
     # Get first 20 rows (may have more if met precision and went into
     # look ahead period beyond budget) and compare dataframes
     pd.testing.assert_frame_equal(
-        man_df, summary_table.drop(['metric'], axis=1).head(20))
+        man_df, summary_table.head(20))
