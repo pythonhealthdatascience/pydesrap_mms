@@ -38,14 +38,17 @@ def test_cimethods(ci_function):
     """
     # Run the confidence interval method
     _, cumulative_df = ci_function(
-        replications=20, metrics=['mean_time_with_nurse'])
+        replications=40, metrics=['mean_time_with_nurse',
+                                  'mean_q_time_nurse',
+                                  'mean_nurse_utilisation'])
 
     # Import the expected results
     exp_df = pd.read_csv(
         Path(__file__).parent.joinpath('exp_results/replications.csv'))
 
     # Compare them
-    pd.testing.assert_frame_equal(cumulative_df.drop(['metric'], axis=1), exp_df)
+    pd.testing.assert_frame_equal(cumulative_df.reset_index(drop=True),
+                                  exp_df.reset_index(drop=True))
 
 
 def test_algorithm():
@@ -57,13 +60,15 @@ def test_algorithm():
     exp_df = pd.read_csv(
         Path(__file__).parent.joinpath('exp_results/replications.csv'))
 
-    # Run the algorithm
-    analyser = ReplicationsAlgorithm(initial_replications=20,
-                                     replication_budget=20)
+    # Run the algorithm, forcing only 40 replications
+    analyser = ReplicationsAlgorithm(initial_replications=40,
+                                     replication_budget=40,
+                                     look_ahead=0)
     _, summary_table = analyser.select(
-        runner=Runner(Param()), metrics=['mean_time_with_nurse'])
+        runner=Runner(Param()), metrics=['mean_time_with_nurse',
+                                         'mean_q_time_nurse',
+                                         'mean_nurse_utilisation'])
 
-    # Get first 20 rows (may have more if met precision and went into
-    # look ahead period beyond budget), and compare dataframes
-    pd.testing.assert_frame_equal(
-        summary_table.drop(['metric'], axis=1).head(20), exp_df)
+    # Compare dataframes
+    pd.testing.assert_frame_equal(summary_table.reset_index(drop=True),
+                                  exp_df.reset_index(drop=True))
