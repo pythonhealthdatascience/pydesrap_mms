@@ -231,7 +231,8 @@ class MonitoredResource(simpy.Resource):
                 Keyword arguments to be passed to the parent class.
 
         Returns:
-            simpy.events.Event: Event representing the request.
+            simpy.events.Event:
+                Event representing the request.
         """
         # Update time-weighted statistics
         self.update_time_weighted_stats()
@@ -250,7 +251,8 @@ class MonitoredResource(simpy.Resource):
                 Keyword arguments to be passed to the parent class.#
 
         Returns:
-            simpy.events.Event: Event representing the request.
+            simpy.events.Event:
+                Event representing the request.
         """
         # Update time-weighted statistics
         self.update_time_weighted_stats()

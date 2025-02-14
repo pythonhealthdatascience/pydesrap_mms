@@ -10,7 +10,6 @@ Licence:
 Typical usage example:
 
     pytest
-
 """
 
 from pathlib import Path

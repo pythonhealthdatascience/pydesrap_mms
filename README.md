@@ -32,8 +32,6 @@ Table of contents:
 
 ## 📌  Introduction
 
-<!--TODO: Add links to STARS, relevant publication, and https://github.com/pythonhealthdatascience/rap_des/ -->
-
 This repository provides a template for building discrete-event simulation (DES) models in Python.
 
 😊 **Simple:** Easy-to-follow code structure using [SimPy](https://simpy.readthedocs.io/en/latest/). Implements a simple M/M/s queueing model in which patients arrive, wait to see a nurse, have a consultation with the nurse and then leave. Follows a modular structure: uses object-oriented programming, with the simulation implemented through classes.
@@ -43,7 +41,7 @@ This repository provides a template for building discrete-event simulation (DES)
 * ["Levels of RAP" framework](https://nhsdigital.github.io/rap-community-of-practice/introduction_to_RAP/levels_of_RAP/) from the NHS RAP Community of Practice (`docs/nhs_rap.md`).
 * Recommendations from [Heather et al. 2025](https://doi.org/10.48550/arXiv.2501.13137) "*On the reproducibility of discrete-event simulation studies in health research: an empirical study using open models*" (`docs/heather_2025.md`).
 
-🚀 **Extendable:** This template adapts from Sammi Rosser and Dan Chalk (2024) ["HSMA - the little book of DES"](https://github.com/hsma-programme/hsma6_des_book). The book includes additional advanced features that can be used to extend the model in this template, including:
+🚀 **Extendable:** This template is partly adapted from Sammi Rosser and Dan Chalk (2024) ["HSMA - the little book of DES"](https://github.com/hsma-programme/hsma6_des_book). The book includes additional advanced features that can be used to extend the model in this template, including:
 
 * Multiple activities
 * Branching paths
@@ -247,10 +245,12 @@ repo/
 The overall run time will vary depending on how the template model is used. A few example implementations are provided in `notebooks/` and the run times for these were:
 
 * `analysis.ipynb` - 23s
-* `choosing_parameters.ipynb` - 22s
+* `choosing_cores.ipynb` - 21s
+* `choosing_replications.ipynb` - 11s
+* `choosing_warmup.ipynb` - 2s
 * `generate_exp_results.ipynb` - 0s
 
-<!--TODO: Add test times -->
+<!--TODO: Update run times -->
 
 These times were obtained on an Intel Core i7-12700H with 32GB RAM running Ubuntu 24.04.1 Linux. 
 
@@ -268,10 +268,10 @@ You can also cite the GitHub repository:
 
 Researcher details:
 
-| Contributor | Role | ORCID | GitHub |
-| --- | --- | --- | --- |
-| Amy Heather | Author | [![ORCID: Heather](https://img.shields.io/badge/ORCID-0000--0002--6596--3479-brightgreen)](https://orcid.org/0000-0002-6596-3479) | https://github.com/amyheather |
-| Tom Monks | Code review | [![ORCID: Monks](https://img.shields.io/badge/ORCID-0000--0003--2631--4481-brightgreen)](https://orcid.org/0000-0003-2631-4481) | https://github.com/TomMonks |
+| Contributor | ORCID | GitHub |
+| --- | --- | --- |
+| Amy Heather | [![ORCID: Heather](https://img.shields.io/badge/ORCID-0000--0002--6596--3479-brightgreen)](https://orcid.org/0000-0002-6596-3479) | https://github.com/amyheather |
+| Tom Monks | [![ORCID: Monks](https://img.shields.io/badge/ORCID-0000--0003--2631--4481-brightgreen)](https://orcid.org/0000-0003-2631-4481) | https://github.com/TomMonks |
 
 <br>
 

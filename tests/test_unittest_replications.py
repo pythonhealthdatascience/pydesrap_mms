@@ -13,11 +13,12 @@ Typical usage example:
     pytest
 """
 
+from unittest.mock import MagicMock
+
 import numpy as np
 import pandas as pd
 import pytest
 import scipy.stats as st
-from unittest.mock import MagicMock
 
 from simulation.replications import (
     ReplicationsAlgorithm, OnlineStatistics, ReplicationTabulizer)
@@ -104,7 +105,7 @@ def test_onlinestat_computations():
         loc=np.mean(values),
         scale=st.sem(values)
     )
-    expected_dev = ((expected_uci - expected_mean) / expected_mean)
+    expected_dev = (expected_uci - expected_mean) / expected_mean
 
     # Assertions
     assert np.isclose(stats.mean, expected_mean), (
@@ -125,12 +126,13 @@ def test_tabulizer_initial_state():
     """
     tab = ReplicationTabulizer()
     assert tab.n == 0
-    assert tab.x_i == []
-    assert tab.cumulative_mean == []
-    assert tab.stdev == []
-    assert tab.lower == []
-    assert tab.upper == []
-    assert tab.dev == []
+    # Checks for empty lists (equivalent to len(tab.x_i)==0)
+    assert not tab.x_i
+    assert not tab.cumulative_mean
+    assert not tab.stdev
+    assert not tab.lower
+    assert not tab.upper
+    assert not tab.dev
 
 
 def test_tabulizer_update():
