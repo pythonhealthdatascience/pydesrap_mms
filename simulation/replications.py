@@ -262,7 +262,11 @@ class ReplicationsAlgorithm:
             The target half width precision for the algorithm (i.e. percentage
             deviation of the confidence interval from the mean).
         initial_replications (int):
-            Number of initial replications to perform.
+            Number of initial replications to perform. Note that the minimum
+            solution will be the value of initial_replications (i.e. if require
+            20 initial replications but was resolved in 3, solution output
+            will still be 20). Recommend this is set to at least 3, as the
+            statistics cannot be calculated with less than 3.
         look_ahead (int):
             Minimum additional replications to look ahead to assess stability
             of precision. When the number of replications is <= 100, the value
@@ -350,17 +354,12 @@ class ReplicationsAlgorithm:
             Issues a warning if the desired precision is not met for any
             metrics before the replication limit is met.
         """
-        # Create instances of observers and stats for each metric
+        # Create instances of observers for each metric
         observers = {
             metric: ReplicationTabulizer()
             for metric in metrics}
-        stats = {
-            metric: OnlineStatistics(
-                alpha=self.alpha, observer=observers[metric])
-            for metric in metrics
-        }
 
-        # Empty dictionary to store record for each metric of:
+        # Create dictionary to store record for each metric of:
         # - nreps (the solution - replications required for precision)
         # - target_met (record of how many times in a row the target has
         #   has been met, used to check if lookahead period has been passed)
@@ -370,20 +369,36 @@ class ReplicationsAlgorithm:
                      'target_met': 0,
                      'solved': False} for metric in metrics}
 
-        # Run initial replications and get results for each metric
-        for rep in range(self.initial_replications):
-            results = runner.run_single(rep)['run']
+        # If there are no initial replications, create empty instances of stats
+        # for each metric...
+        if self.initial_replications == 0:
+            stats = {
+                metric: OnlineStatistics(
+                    alpha=self.alpha, observer=observers[metric])
+                for metric in metrics
+            }
+        # If there are, run the replications, then create instances of stats
+        # pre-loaded with data from the initial replications...
+        # (we use run_reps() which allows for parallel processing if desired)
+        else:
+            stats = {}
+            runner.param.number_of_runs = self.initial_replications
+            runner.run_reps()
             for metric in metrics:
-                stats[metric].update(results[metric])
+                stats[metric] = OnlineStatistics(
+                    alpha=self.alpha,
+                    observer=observers[metric],
+                    data=np.array(runner.run_results_df[metric]))
 
-                # If any have met precision, add solution and update count
-                if stats[metric].deviation <= self.half_width_precision:
-                    solutions[metric]['nreps'] = self.n
-                    solutions[metric]['target_met'] = 1
-
-                    # If there is no lookahead, mark as solved
-                    if self._klimit() == 0:
-                        solutions[metric]['solved'] = True
+        # After completing all replications, check if any have met precision,
+        # add solution and update count
+        for metric in metrics:
+            if stats[metric].deviation <= self.half_width_precision:
+                solutions[metric]['nreps'] = self.n
+                solutions[metric]['target_met'] = 1
+                # If there is no lookahead, mark as solved
+                if self._klimit() == 0:
+                    solutions[metric]['solved'] = True
 
         # Whilst under replication budget + lookahead, and have not yet
         # got all metrics marked as solved = TRUE...
@@ -435,7 +450,7 @@ class ReplicationsAlgorithm:
         summary_frame = pd.concat(
             [observer.summary_table().assign(metric=metric)
              for metric, observer in observers.items()]
-        )
+        ).reset_index(drop=True)
 
         # Extract any metrics that were not solved and return warning
         if None in nreps.values():
