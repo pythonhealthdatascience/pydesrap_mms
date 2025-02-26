@@ -103,3 +103,37 @@ def test_consistent_outputs(ci_function):
     # look ahead period beyond budget) and compare dataframes
     pd.testing.assert_frame_equal(
         man_df, summary_table.head(20))
+
+
+def test_algorithm_initial():
+    """
+    Check that the solution from the ReplicationsAlgorithm is as expected when
+    there is a high number of initial replications specified.
+    """
+    # Set parameters - inc. high number of initial replications & no look-ahead
+    # As model is currently designed, all would be solved before 200 reps
+    initial_replications = 200
+    look_ahead = 0
+    metrics = ['mean_time_with_nurse',
+               'mean_q_time_nurse',
+               'mean_nurse_utilisation']
+
+    # Set up algorithm class
+    analyser = ReplicationsAlgorithm(
+        initial_replications=initial_replications,
+        look_ahead=look_ahead)
+
+    # Run the algorithm
+    nreps, summary_table = analyser.select(
+        runner=Runner(Param()),
+        metrics=metrics)
+
+    # For each metric...
+    for metric in metrics:
+
+        # Check that nrow for each metric in summary table equals initial reps
+        nrows = len(summary_table[summary_table['metric'] == metric])
+        assert nrows == initial_replications
+
+        # Check that solution is equal to the initial replications
+        assert nreps[metric] == initial_replications
