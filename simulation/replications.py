@@ -264,9 +264,10 @@ class ReplicationsAlgorithm:
         initial_replications (int):
             Number of initial replications to perform. Note that the minimum
             solution will be the value of initial_replications (i.e. if require
-            20 initial replications but was resolved in 3, solution output
-            will still be 20). Recommend this is set to at least 3, as the
-            statistics cannot be calculated with less than 3.
+            20 initial replications but was resolved in 5, solution output
+            will still be 20). Although, if initial_replications < 3, solution
+            will still be at least 3, as that is the minimum required to
+            calculate the confidence intervals.
         look_ahead (int):
             Minimum additional replications to look ahead to assess stability
             of precision. When the number of replications is <= 100, the value

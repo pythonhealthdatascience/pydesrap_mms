@@ -1,6 +1,6 @@
 # Changes from the HSMA model
 
-This template model is adapted from Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (https://github.com/hsma-programme/hsma6_des_book) (MIT Licence). It also uses an exponentional distribution class from Monks (2021) sim-tools: fundamental tools to support the simulation process in python (https://github.com/TomMonks/sim-tools) (MIT Licence).
+This template model is based on a few sources - including: Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (https://github.com/hsma-programme/hsma6_des_book) (MIT Licence).
 
 This page explains some of the differences between the models in the HSMA book, and this template.
 
