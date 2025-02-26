@@ -137,3 +137,24 @@ def test_algorithm_initial():
 
         # Check that solution is equal to the initial replications
         assert nreps[metric] == initial_replications
+
+
+def test_algorithm_nosolution():
+    """
+    Check that running for less than 3 replications in total will result
+    in no solution, and that a warning message is then created.
+    """
+    # Set up algorithm to run max of 2 replications
+    analyser = ReplicationsAlgorithm(
+        initial_replications=0, replication_budget=2, look_ahead=0)
+
+    # Run algorithm, checking that it produces a warning
+    with pytest.warns(UserWarning):
+        solutions, summary_table = analyser.select(
+            runner=Runner(Param()), metrics=['mean_time_with_nurse'])
+
+    # Check that there is no solution
+    assert solutions['mean_time_with_nurse'] is None
+
+    # Check that the summary tables has no more than 2 rows
+    assert len(summary_table) < 3
