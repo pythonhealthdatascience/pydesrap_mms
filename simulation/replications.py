@@ -332,6 +332,7 @@ class ReplicationsAlgorithm:
         """
         return int((self.look_ahead / 100) * max(self.n, 100))
 
+    # pylint: disable=too-many-branches
     def select(self, runner, metrics):
         """
         Executes the replication algorithm, determining the necessary number
