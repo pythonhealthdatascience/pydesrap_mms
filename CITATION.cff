@@ -26,5 +26,5 @@ abstract: >-
   within a reproducible analytical pipeline (RAP).
 license: MIT
 # TODO: Manually update with each GitHub release
-version: '0.1.0'
-date-released: '2025-01-09'
+version: '1.0.0'
+date-released: '2025-02-27'
