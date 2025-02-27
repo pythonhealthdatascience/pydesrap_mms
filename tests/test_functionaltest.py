@@ -473,7 +473,34 @@ def test_extreme_interarrival():
     results = experiment.run_single(run=0)
 
     assert results['run']['arrivals'] < 1, (
-        "Expect no arrivals due to extreme interarrival time."
+        'Expect no arrivals due to extreme interarrival time.'
+    )
+
+
+def test_extreme_nurses():
+    """
+    Check that extremely high number of nurses results in no wait times and all
+    patients being seen.
+    """
+    # Run model with extremely large number of nurses
+    param = Param(number_of_nurses=10_000_000)
+    experiment = Runner(param)
+    results = experiment.run_single(run=0)
+
+    # Check that no patients wait
+    assert results['run']['mean_q_time_nurse'] == 0, (
+        'Expect no patients to wait but mean wait time is ' +
+        f'{results['run']['mean_q_time_nurse']:.2f}.'
+    )
+
+    # Check that all patients are seen
+    assert results['run']['count_unseen'] == 0, (
+        'Expect all patients to be seen, but ' +
+        f'{results['run']['count_unseen']} were not seen by a nurse.'
+    )
+    assert np.isnan(results['run']['mean_q_time_unseen']), (
+        'Expect all patients to be seen, and so have no mean wait time for ' +
+        f'unseen patients, but was {results['run']['mean_q_time_unseen']:.2f}.'
     )
 
 
