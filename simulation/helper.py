@@ -34,8 +34,8 @@ def summary_stats(data):
     # If there are no observations, then set all to NaN
     if count == 0:
         mean, std_dev, ci_lower, ci_upper = np.nan, np.nan, np.nan, np.nan
-    # If there is only one observation, can do mean but not others
-    elif count == 1:
+    # If there is only one or two observations, can do mean but not others
+    elif count < 3:
         mean = data.mean()
         std_dev, ci_lower, ci_upper = np.nan, np.nan, np.nan
     # With more than one observation, can calculate all...

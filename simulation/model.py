@@ -231,7 +231,8 @@ class MonitoredResource(simpy.Resource):
                 Keyword arguments to be passed to the parent class.
 
         Returns:
-            simpy.events.Event: Event representing the request.
+            simpy.events.Event:
+                Event representing the request.
         """
         # Update time-weighted statistics
         self.update_time_weighted_stats()
@@ -250,7 +251,8 @@ class MonitoredResource(simpy.Resource):
                 Keyword arguments to be passed to the parent class.#
 
         Returns:
-            simpy.events.Event: Event representing the request.
+            simpy.events.Event:
+                Event representing the request.
         """
         # Update time-weighted statistics
         self.update_time_weighted_stats()
@@ -309,6 +311,9 @@ class Exponential:
             random_seed (int|None):
                 Random seed to reproduce samples.
         """
+        if mean <= 0:
+            raise ValueError('Exponential mean must be greater than 0.')
+
         self.mean = mean
         self.rand = np.random.default_rng(random_seed)
 
@@ -422,7 +427,8 @@ class Model:
         # Doesn't include number_of_nurses as this is tested by simpy.Resource
         validation_rules = {
             'positive': ['patient_inter', 'mean_n_consult_time',
-                         'number_of_runs', 'audit_interval'],
+                         'number_of_runs', 'audit_interval',
+                         'number_of_nurses'],
             'non_negative': ['warm_up_period', 'data_collection_period']
         }
         # Iterate over the validation rules
@@ -676,37 +682,67 @@ class Runner:
         model = Model(param=self.param, run_number=run)
         model.run()
 
+        # PATIENT RESULTS
         # Convert patient-level results to a dataframe and add column with run
         patient_results = pd.DataFrame(model.results_list)
         patient_results['run'] = run
+        # If there was at least one patient...
+        if len(patient_results) > 0:
+            # Add a column with the wait time of patients who remained unseen
+            # at the end of the simulation
+            patient_results['q_time_unseen'] = np.where(
+                patient_results['time_with_nurse'].isna(),
+                model.env.now - patient_results['arrival_time'], np.nan
+            )
+        else:
+            # Set to NaN if no patients
+            patient_results['q_time_unseen'] = np.nan
 
-        # Add a column with the wait time of patients who remained unseen
-        # at the end of the simulation
-        patient_results['q_time_unseen'] = np.where(
-            patient_results['time_with_nurse'].isna(),
-            model.env.now - patient_results['arrival_time'], np.nan
-        )
-
-        # Create dictionary recording the run results
-        # Currently has two alternative methods of measuring utilisation
+        # RUN RESULTS
+        # The run, scenario and arrivals are handled the same regardless of
+        # whether there were any patients
         run_results = {
             'run_number': run,
             'scenario': self.param.scenario_name,
-            'arrivals': len(patient_results),
-            'mean_q_time_nurse': patient_results['q_time_nurse'].mean(),
-            'mean_time_with_nurse': patient_results['time_with_nurse'].mean(),
-            'mean_nurse_utilisation': (model.nurse_time_used /
-                                       (self.param.number_of_nurses *
-                                        self.param.data_collection_period)),
-            'mean_nurse_utilisation_tw': (sum(model.nurse.area_resource_busy) /
-                                          (self.param.number_of_nurses *
-                                           self.param.data_collection_period)),
-            'mean_nurse_q_length': (sum(model.nurse.area_n_in_queue) /
-                                    self.param.data_collection_period),
-            'count_unseen': patient_results['time_with_nurse'].isna().sum(),
-            'mean_q_time_unseen': patient_results['q_time_unseen'].mean()
+            'arrivals': len(patient_results)
         }
+        # If there was at least one patient...
+        if len(patient_results) > 0:
+            # Create dictionary recording the run results
+            # Currently has two alternative methods of measuring utilisation
+            run_results = {
+                **run_results,
+                'mean_q_time_nurse': patient_results['q_time_nurse'].mean(),
+                'mean_time_with_nurse': (
+                    patient_results['time_with_nurse'].mean()),
+                'mean_nurse_utilisation': (
+                    model.nurse_time_used / (
+                        self.param.number_of_nurses *
+                        self.param.data_collection_period)),
+                'mean_nurse_utilisation_tw': (
+                    sum(model.nurse.area_resource_busy) / (
+                        self.param.number_of_nurses *
+                        self.param.data_collection_period)),
+                'mean_nurse_q_length': (sum(model.nurse.area_n_in_queue) /
+                                        self.param.data_collection_period),
+                'count_unseen': (
+                    patient_results['time_with_nurse'].isna().sum()),
+                'mean_q_time_unseen': patient_results['q_time_unseen'].mean()
+            }
+        else:
+            # Set results to NaN if no patients
+            run_results = {
+                **run_results,
+                'mean_q_time_nurse': np.nan,
+                'mean_time_with_nurse': np.nan,
+                'mean_nurse_utilisation': np.nan,
+                'mean_nurse_utilisation_tw': np.nan,
+                'mean_nurse_q_length': np.nan,
+                'count_unseen': np.nan,
+                'mean_q_time_unseen': np.nan
+            }
 
+        # INTERVAL AUDIT RESULTS
         # Convert interval audit results to a dataframe and add run column
         interval_audit_df = pd.DataFrame(model.audit_list)
         interval_audit_df['run'] = run
