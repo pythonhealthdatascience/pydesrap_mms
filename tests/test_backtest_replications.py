@@ -36,11 +36,27 @@ def test_cimethods(ci_function):
         ci_function (function):
             Function to run the manual confidence interval method.
     """
+    # Specify the parameters for this back test (so remains consistent even if
+    # defaults used are changed)
+    param = Param(
+        patient_inter=4,
+        mean_n_consult_time=10,
+        number_of_nurses=5,
+        warm_up_period=1440*13,
+        data_collection_period=1440*30,
+        number_of_runs=31,
+        audit_interval=120,
+        scenario_name=0,
+        cores=1
+    )
+
     # Run the confidence interval method
     _, cumulative_df = ci_function(
-        replications=40, metrics=['mean_time_with_nurse',
-                                  'mean_q_time_nurse',
-                                  'mean_nurse_utilisation'])
+        replications=40,
+        metrics=['mean_time_with_nurse',
+                 'mean_q_time_nurse',
+                 'mean_nurse_utilisation'],
+        param=param)
 
     # Import the expected results
     exp_df = pd.read_csv(
@@ -56,18 +72,32 @@ def test_algorithm():
     Check that the ReplicationsAlgorithm produces results consistent with those
     previously generated.
     """
-    # Import the expected results
-    exp_df = pd.read_csv(
-        Path(__file__).parent.joinpath('exp_results/replications.csv'))
+    # Specify the parameters for this back test (so remains consistent even if
+    # defaults used are changed)
+    param = Param(
+        patient_inter=4,
+        mean_n_consult_time=10,
+        number_of_nurses=5,
+        warm_up_period=1440*13,
+        data_collection_period=1440*30,
+        number_of_runs=31,
+        audit_interval=120,
+        scenario_name=0,
+        cores=1
+    )
 
     # Run the algorithm, forcing only 40 replications
     analyser = ReplicationsAlgorithm(initial_replications=40,
                                      replication_budget=40,
                                      look_ahead=0)
     _, summary_table = analyser.select(
-        runner=Runner(Param()), metrics=['mean_time_with_nurse',
-                                         'mean_q_time_nurse',
-                                         'mean_nurse_utilisation'])
+        runner=Runner(param), metrics=['mean_time_with_nurse',
+                                       'mean_q_time_nurse',
+                                       'mean_nurse_utilisation'])
+
+    # Import the expected results
+    exp_df = pd.read_csv(
+        Path(__file__).parent.joinpath('exp_results/replications.csv'))
 
     # Compare dataframes
     pd.testing.assert_frame_equal(summary_table.reset_index(drop=True),

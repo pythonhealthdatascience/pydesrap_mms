@@ -469,6 +469,7 @@ class ReplicationsAlgorithm:
 def confidence_interval_method(
     replications,
     metrics,
+    param=Param(),
     alpha=0.05,
     desired_precision=0.05,
     min_rep=5,
@@ -489,6 +490,9 @@ def confidence_interval_method(
         metrics (list):
             List of performance metrics to assess (should correspond to
             column names from the run results dataframe).
+        param (Param):
+            Instance of the parameter class with parameters to use (will use
+            default parameters if not provided).
         alpha (float, optional):
             Significance level for confidence interval calculations.
         desired_precision (float, optional):
@@ -512,8 +516,10 @@ def confidence_interval_method(
         Issues a warning if the desired precision is not met within the
         provided replications.
     """
-    # Run model for specified number of replications
-    param = Param(number_of_runs=replications)
+    # Replace runs in param with the specified number of replications
+    param.number_of_runs = replications
+
+    # Run the model
     choose_rep = Runner(param)
     choose_rep.run_reps()
 
@@ -565,7 +571,8 @@ def confidence_interval_method(
 
 
 def confidence_interval_method_simple(
-    replications, metrics, desired_precision=0.05, min_rep=5, verbose=False
+    replications, metrics, param=Param(), desired_precision=0.05, min_rep=5,
+    verbose=False
 ):
     """
     Simple implementation using the confidence interval method to select the
@@ -581,6 +588,9 @@ def confidence_interval_method_simple(
             Number of times to run the model.
         metrics (list):
             List of performance metrics to assess.
+        param (Param):
+            Instance of the parameter class with parameters to use (will use
+            default parameters if not provided).
         desired_precision (float, optional):
             The target half width precision (i.e. percentage deviation of the
             confidence interval from the mean).
@@ -602,8 +612,10 @@ def confidence_interval_method_simple(
         Issues a warning if the desired precision is not met within the
         provided replications.
     """
-    # Run model for specified number of replications
-    param = Param(number_of_runs=replications)
+    # Replace runs in param with the specified number of replications
+    param.number_of_runs = replications
+
+    # Run the model
     choose_rep = Runner(param)
     choose_rep.run_reps()
     df = choose_rep.run_results_df
