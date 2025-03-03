@@ -264,10 +264,12 @@ def test_waiting_time_utilisation(param_name, initial_value, adjusted_value):
         # Create a default parameter, but set some specific values
         # (which will ensure sufficient arrivals/capacity/etc. that we will
         # see variation in wait time, and not just no wait time with all
-        # different parameters tried), then modify chosen parameter for test.
+        # different parameters tried, or no patients seen as waiting for
+        # backlog from warm-up), then modify chosen parameter for test.
         param = Param(number_of_nurses=4,
                       patient_inter=3,
-                      mean_n_consult_time=15)
+                      mean_n_consult_time=15,
+                      warm_up_period=1440*10)
         setattr(param, param_name, value)
 
         # Run a single replication and return the results for that run
