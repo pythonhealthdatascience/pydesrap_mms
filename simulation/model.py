@@ -57,7 +57,7 @@ class Param:
         patient_inter=4,
         mean_n_consult_time=10,
         number_of_nurses=5,
-        warm_up_period=1440*13,  # 13 days
+        warm_up_period=1440*27,  # 27 days
         data_collection_period=1440*30,  # 30 days
         number_of_runs=31,
         audit_interval=120,  # every 2 hours
