@@ -63,6 +63,12 @@ def test_klimit(look_ahead, n, exp):
 def test_algorithm_invalid(arg, value):
     """
     Ensure that ReplicationsAlgorithm responds appropriately to invalid inputs.
+
+    Arguments:
+        arg (string):
+            Name of input for ReplicationsAlgorithm.
+        value (float):
+            Value of input to ReplicationsAlgorithm.
     """
     with pytest.raises(ValueError):
         ReplicationsAlgorithm(**{arg: value})
