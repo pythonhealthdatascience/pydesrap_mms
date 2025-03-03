@@ -139,6 +139,14 @@ As an alternative, a `requirements.txt` file is provided which can be used to se
 
 🔎 Complete the Strengthening The Reporting of Empirical Simulation Studies (STRESS) checklist (`stress_des.md`) and use this to support writing publication/report, and attach as an appendice to report.
 
+📔 **Notebooks**
+
+Several notebooks are provided which provide examples running the models, choosing parameters, and explaining how things work. If you wish to execute all notebooks from the command line, you can use the providing bash script by running:
+
+```
+bash run_notebooks.sh
+```
+
 🔎 **Tests**
 
 To run tests, ensure environment is active and located in main directory (i.e. parent of `tests/`) and then run the following command. The tests may take around one minute to run. As they run, you will see '.' if the test passes and 'F' if it fails (e.g. `tests/test_backtest.py ..F..`). When it finishes, you will see the final result (e.g. `==== 1 failed, 4 passed in 51s ====`)
