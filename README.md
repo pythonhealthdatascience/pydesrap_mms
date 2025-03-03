@@ -26,6 +26,7 @@ Table of contents:
 * [📝 Citation](#-citation)
 * [📜 Licence](#-licence)
 * [💰 Funding](#-funding)
+* [👨‍👨‍👧 Acknowledgements](#-acknowledgements)
 * [📄 Template README for your project](#-template-readme-for-your-project)
 
 <br>
@@ -34,12 +35,14 @@ Table of contents:
 
 This repository provides a template for building discrete-event simulation (DES) models in Python.
 
-😊 **Simple:** Easy-to-follow code structure using [SimPy](https://simpy.readthedocs.io/en/latest/). Implements a simple M/M/s queueing model in which patients arrive, wait to see a nurse, have a consultation with the nurse and then leave. Follows a modular structure: uses object-oriented programming, with the simulation implemented through classes.
-
 ♻️ **Reproducible:** This template is designed to function as a RAP. It adheres to reproducibility recommendations from:
 
-* ["Levels of RAP" framework](https://nhsdigital.github.io/rap-community-of-practice/introduction_to_RAP/levels_of_RAP/) from the NHS RAP Community of Practice (`docs/nhs_rap.md`).
 * Recommendations from [Heather et al. 2025](https://doi.org/10.48550/arXiv.2501.13137) "*On the reproducibility of discrete-event simulation studies in health research: an empirical study using open models*" (`docs/heather_2025.md`).
+* The ["Levels of RAP" framework](https://nhsdigital.github.io/rap-community-of-practice/introduction_to_RAP/levels_of_RAP/) from the NHS RAP Community of Practice (`docs/nhs_rap.md`).
+
+😊 **Simple:** Easy-to-follow code structure using [SimPy](https://simpy.readthedocs.io/en/latest/). Implements a simple M/M/s queueing model in which patients arrive, wait to see a nurse, have a consultation with the nurse and then leave. Follows a modular structure: uses object-oriented programming, with the simulation implemented through classes.
+
+🧱 **Package structure:** In Python, a package can simply be defined as a directory with an `__init__.py` file in it. In this repository, the scripts for model (within `simulation/`) are treated as a little local package. This keeps the code model code isolated from our experiments and analysis. It is installed as an editable (`-e`) local import - with `-e` meaning it will update with changes to the local files in `simulation/`. As it is installed in our environment, it can then easily be used anywhere else in the directory - here, in `notebooks/` and `tests/` - without needing any additional code (e.g. no need to modify `sys.path`, or have additional `__init__.py` files).
 
 🚀 **Extendable:** This template is partly adapted from Sammi Rosser and Dan Chalk (2024) ["HSMA - the little book of DES"](https://github.com/hsma-programme/hsma6_des_book). The book includes additional advanced features that can be used to extend the model in this template, including:
 
@@ -53,8 +56,6 @@ This repository provides a template for building discrete-event simulation (DES)
 For clarity, changes from the DES book in this template are explained in `docs/hsma_changes.md`.
 
 ✨ **Style:** The coding style is based on the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html). Linting is implemented using `pylint` (with `nbqa` to enable it to run on jupyter notebooks).
-
-🧱 **Package structure:** In Python, a package can simply be defined as a directory with an `__init__.py` file in it. In this repository, the scripts for model (within `simulation/`) are treated as a little local package. This keeps the code model code isolated from our experiments and analysis. It is installed as an editable (`-e`) local import - with `-e` meaning it will update with changes to the local files in `simulation/`. As it is installed in our environment, it can then easily be used anywhere else in the directory - here, in `notebooks/` and `tests/` - without needing any additional code (e.g. no need to modify `sys.path`, or have additional `__init__.py` files).
 
 <br>
 
@@ -250,7 +251,7 @@ repo/
 
 ## ⏰ Run time and machine specification
 
-The overall run time will vary depending on how the template model is used. A few example implementations are provided in `notebooks/` and the run times for these were:
+The overall run time will vary depending on how the template model is used. The run times for the files in `notebooks/`:
 
 * `analysis.ipynb` - 37s
 * `choosing_cores.ipynb` - 25s
@@ -312,6 +313,20 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## 👨‍👨‍👧 Acknowledgements
+
+This repository was developed with thanks to several others sources. These are acknowledged throughout in the relevant notebooks/modules/functions, and also summarised here:
+
+| Source | Find out more about how it was used... |
+| - | - |
+| Amy Heather, Thomas Monks, Alison Harper, Navonil Mustafee, Andrew Mayne (2025) On the reproducibility of discrete-event simulation studies in health research: an empirical study using open models (https://doi.org/10.48550/arXiv.2501.13137). | `docs/heather_2025.md` |
+| NHS Digital (2024) RAP repository template (https://github.com/NHSDigital/rap-package-template) (MIT Licence) | `simulation/logging.py`<br>`docs/nhs_rap.md` |
+| Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (https://github.com/hsma-programme/hsma6_des_book) (MIT Licence) | `simulation/model.py`<br>`notebooks/choosing_cores.ipynb` |
+| Tom Monks (2025) sim-tools: tools to support the Discrete-Event Simulation process in python (https://github.com/TomMonks/sim-tools) (MIT Licence)<br>Who themselves cite Hoad, Robinson, & Davies (2010). Automated selection of the number of replications for a discrete-event simulation (https://www.jstor.org/stable/40926090). | `simulation/model.py`<br>`simulation/replications.py`<br>`notebooks/choosing_replications.ipynb` |
+| Tom Monks, Alison Harper and Amy Heather (2025) An introduction to Discrete-Event Simulation (DES) using Free and Open Source Software (https://github.com/pythonhealthdatascience/intro-open-sim/tree/main). (MIT Licence) - who themselves also cite Law. Simulation Modeling and Analysis 4th Ed. Pages 14 - 17. | `simulation/model.py` |
+| Tom Monks (2024) [HPDM097 - Making a difference with health data](https://github.com/health-data-science-OR/stochastic_systems) (MIT Licence). | `notebooks/analysis.ipynb`<br>`notebooks/choosing_replications.ipynb`<br>`notebooks/choosing_warmup.ipynb` |
+| Monks T and Harper A. Improving the usability of open health service delivery simulation models using Python and web apps (https://doi.org/10.3310/nihropenres.13467.2) [version 2; peer review: 3 approved]. NIHR Open Res 2023, 3:48.<br>Who themselves cite a [Stack Overflow](https://stackoverflow.com/questions/59406167/plotly-how-to-filter-a-pandas-dataframe-using-a-dropdown-menu) post. | `notebooks/analysis.ipynb` |
 
 <br>
 

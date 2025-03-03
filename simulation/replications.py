@@ -47,6 +47,9 @@ class OnlineStatistics:
             Significance level for confidence interval calculations.
         observer (list):
             object to notify on updates.
+
+    Acknowledgements:
+        - Class adapted from Monks 2021.
     """
     def __init__(self, data=None, alpha=0.1, observer=None):
         """
@@ -189,6 +192,9 @@ class ReplicationTabulizer:
         dev (list):
             List of the percentage deviation of the confidence interval
             half width from the mean.
+
+    Acknowledgements:
+        - Class adapted from Monks 2021.
     """
     def __init__(self):
         """
@@ -278,6 +284,10 @@ class ReplicationsAlgorithm:
             replication runtime is a constraint.
         n (int):
             Current number of replications performed.
+
+    Acknowledgements:
+        - Class adapted from Monks 2021.
+        - Implements algorithm from Hoad et al. 2010.
     """
     # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(
@@ -515,6 +525,9 @@ def confidence_interval_method(
     Warnings:
         Issues a warning if the desired precision is not met within the
         provided replications.
+
+    Acknowledgements:
+        - Class adapted from Monks 2021.
     """
     # Replace runs in param with the specified number of replications
     param.number_of_runs = replications
@@ -692,6 +705,9 @@ def plotly_confidence_interval_method(
             Plot dimensions in pixels (width, height).
         file_path (str):
             Path and filename to save the plot to.
+
+    Acknowledgements:
+        - Function adapted from Monks 2021.
     """
     fig = go.Figure()
 

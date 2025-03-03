@@ -194,6 +194,9 @@ class MonitoredResource(simpy.Resource):
             Time that resources have been in use during the simulation
             (i.e. sum of the times each individual resource was busy). Used
             to calculated utilisation.
+
+    Acknowledgements:
+        - Class adapted from Monks, Harper and Heather 2025.
     """
     def __init__(self, *args, **kwargs):
         """
@@ -300,6 +303,9 @@ class Exponential:
             Mean of the exponential distribution.
         rand (numpy.random.Generator):
             Random number generator for producing samples.
+
+    Acknowledgement:
+        - Class adapted from Monks 2021.
     """
     def __init__(self, mean, random_seed):
         """
@@ -370,6 +376,9 @@ class Model:
             Distribution for sampling patient inter-arrival times.
         nurse_consult_time_dist (Exponential):
             Distribution for sampling nurse consultation times.
+
+    Acknowledgements:
+        - Class adapted from Rosser and Chalk 2024.
     """
     def __init__(self, param, run_number):
         """
@@ -648,6 +657,9 @@ class Runner:
             Dataframe to store interval audit results.
         overall_results_df (pandas.DataFrame):
             Dataframe to store average results from across the runs.
+
+    Acknowledgements:
+        - Class adapted from Rosser and Chalk 2024.
     """
     def __init__(self, param):
         '''
@@ -837,6 +849,9 @@ def run_scenarios(scenarios, base_param=None):
     Returns:
         pandas.dataframe:
             Dataframe with results from each run of each scenario.
+
+    Acknowledgements:
+        - Function adapted from Rosser and Chalk 2024.
     """
     # Find every possible permutation of the scenarios
     all_scenarios_tuples = list(itertools.product(*scenarios.values()))
