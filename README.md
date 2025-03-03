@@ -252,11 +252,13 @@ repo/
 
 The overall run time will vary depending on how the template model is used. A few example implementations are provided in `notebooks/` and the run times for these were:
 
-* `analysis.ipynb` - 23s
-* `choosing_cores.ipynb` - 21s
+* `analysis.ipynb` - 37s
+* `choosing_cores.ipynb` - 25s
 * `choosing_replications.ipynb` - 11s
-* `choosing_warmup.ipynb` - 2s
-* `generate_exp_results.ipynb` - 0s
+* `choosing_warmup.ipynb` - 3s
+* `generate_exp_results.ipynb` - 2s
+* `logs.ipynb` - 0s
+* `time_weighted_averages.ipynb` - 0s
 
 <!--TODO: Update run times -->
 
