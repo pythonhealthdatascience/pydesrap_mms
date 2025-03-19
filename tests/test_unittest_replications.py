@@ -45,9 +45,9 @@ def test_klimit(look_ahead, n, exp):
     """
     # Calculate additional replications that would be required
     calc = ReplicationsAlgorithm(
-        look_ahead=100, initial_replications=100)._klimit()
+        look_ahead=look_ahead, initial_replications=n)._klimit()
     # Check that this meets our expected value
-    assert calc == 100, (
+    assert calc == exp, (
         f'With look_ahead {look_ahead} and n={n}, the additional ' +
         f'replications required should be {exp} but _klimit() returned {calc}.'
     )
