@@ -268,12 +268,7 @@ class ReplicationsAlgorithm:
             The target half width precision for the algorithm (i.e. percentage
             deviation of the confidence interval from the mean).
         initial_replications (int):
-            Number of initial replications to perform. Note that the minimum
-            solution will be the value of initial_replications (i.e. if require
-            20 initial replications but was resolved in 5, solution output
-            will still be 20). Although, if initial_replications < 3, solution
-            will still be at least 3, as that is the minimum required to
-            calculate the confidence intervals.
+            Number of initial replications to perform.
         look_ahead (int):
             Minimum additional replications to look ahead to assess stability
             of precision. When the number of replications is <= 100, the value
@@ -343,6 +338,33 @@ class ReplicationsAlgorithm:
                 Number of additional replications to verify stability.
         """
         return int((self.look_ahead / 100) * max(self.n, 100))
+
+    def find_position(self, lst):
+        """
+        Find the first position where element is below deviation, and this is
+        maintained through the lookahead period.
+
+        This is used to correct the ReplicationsAlgorithm, which cannot return
+        a solution below the initial_replications.
+
+        Returns:
+            int:
+                Minimum replications required to meet and maintain precision.
+        """
+        # Find the first non-None value in the list
+        start_index = next(
+            (i for i, v in enumerate(lst) if v is not None), len(lst))
+
+        # Iterate through the list, stopping when at last point where we still
+        # have enough elements to look ahead
+        for i in range(start_index, len(lst) - self.look_ahead + 1):
+            # Create slice of list with current value + lookahead
+            # Check if all fall below the desired deviation
+            if all(value < self.half_width_precision
+                   for value in lst[i:i+self.look_ahead]):
+                # Add one, so it is the number of reps, as is zero-indexed
+                return i + 1
+        return None
 
     # pylint: disable=too-many-branches
     def select(self, runner, metrics):
@@ -456,6 +478,15 @@ class ReplicationsAlgorithm:
                     # (e.g. in cases where precision is lost after a success)
                     else:
                         solutions[metric]['nreps'] = None
+
+        # Correction to result...
+        for metric, dictionary in solutions.items():
+            # Use find_position() to check for solution in initial replications
+            adj_nreps = self.find_position(observers[metric].dev)
+            # If there was a maintained solution, replace in solutions
+            if adj_nreps is not None and dictionary['nreps'] is not None:
+                if adj_nreps < dictionary['nreps']:
+                    solutions[metric]['nreps'] = 3
 
         # Extract minimum replications for each metric
         nreps = {metric: value['nreps'] for metric, value in solutions.items()}
@@ -688,21 +719,21 @@ def confidence_interval_method_simple(
 
 
 def plotly_confidence_interval_method(
-    n_reps, conf_ints, metric_name, figsize=(1200, 400), file_path=None
+    conf_ints, metric_name, n_reps=None, figsize=(1200, 400), file_path=None
 ):
     """
     Generates an interactive Plotly visualisation of confidence intervals
     with increasing simulation replications.
 
     Arguments:
-        n_reps (int):
-            The number of replications required to meet the desired precision.
         conf_ints (pd.DataFrame):
             A DataFrame containing confidence interval statistics, including
             cumulative mean, upper/lower bounds, and deviations. As returned
             by ReplicationTabulizer summary_table() method.
         metric_name (str):
             Name of metric being analysed.
+        n_reps (int, optional):
+            The number of replications required to meet the desired precision.
         figsize (tuple, optional):
             Plot dimensions in pixels (width, height).
         file_path (str):
@@ -748,15 +779,16 @@ def plotly_confidence_interval_method(
     )
 
     # Vertical threshold line
-    fig.add_shape(
-        type='line',
-        x0=n_reps,
-        x1=n_reps,
-        y0=0,
-        y1=1,
-        yref='paper',
-        line={'color': 'red', 'dash': 'dash'},
-    )
+    if n_reps is not None:
+        fig.add_shape(
+            type='line',
+            x0=n_reps,
+            x1=n_reps,
+            y0=0,
+            y1=1,
+            yref='paper',
+            line={'color': 'red', 'dash': 'dash'},
+        )
 
     # Configure layout
     fig.update_layout(
