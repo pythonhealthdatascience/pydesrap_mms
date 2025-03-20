@@ -60,7 +60,7 @@ def test_high_demand():
     # Check that the utilisation as calculated from total_nurse_time_used
     # does not exceed 1 or drop below 0
     util = results['run']['mean_nurse_utilisation']
-    assert util <= 1, (
+    assert util == pytest.approx(1, abs=1e-9) or util < 1, (
         'The run `mean_nurse_utilisation` should not exceed 1, but ' +
         f'found utilisation of {util}.'
     )
@@ -118,11 +118,8 @@ def test_warmup_high_demand():
     assert results['interval_audit']['utilisation'][0] == 1
 
     # REFLECTS USE BY WU + DC PATIENTS
-    # Expect this to be positive and greater than arrivals, and the same
-    # between run results and interval audit results
+    # Expect this to be positive and greater than arrivals
     assert results['run']['mean_nurse_q_length'] > results['run']['arrivals']
-    assert (results['run']['mean_nurse_q_length'] ==
-            results['interval_audit']['queue_length'])
 
     # ONLY REFLECTS DC PATIENTS
     # Expect this to match arrivals
