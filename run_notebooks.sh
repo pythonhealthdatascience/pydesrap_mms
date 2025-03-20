@@ -8,8 +8,8 @@ for nb in notebooks/*.ipynb; do
     # With some processing to remove metadata created by nbconvert
     if python -m jupyter nbconvert --to notebook --inplace --execute \
         --ClearMetadataPreprocessor.enabled=True \
-        --ClearMetadataPreprocessor.preserve_nb_metadata_mask="language_info" \
-        --ClearMetadataPreprocessor.preserve_nb_metadata_mask="kernelspec" \
+        --ClearMetadataPreprocessor.clear_notebook_metadata=False \
+        --ClearMetadataPreprocessor.preserve_cell_metadata_mask="kernelspec" \
         "$nb"; then
         echo "✅ Successfully processed: $nb"
     else
