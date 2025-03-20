@@ -319,9 +319,11 @@ class ReplicationsAlgorithm:
         """
         Checks validity of provided parameters.
         """
-        for p in [self.initial_replications, self.look_ahead]:
-            if not isinstance(p, int) or p < 0:
-                raise ValueError(f'{p} must be a non-negative integer.')
+        for param_name in ['initial_replications', 'look_ahead']:
+            param_value = getattr(self, param_name)
+            if not isinstance(param_value, int) or param_value < 0:
+                raise ValueError(f'{param_name} must be a non-negative ',
+                                 f'integer, but provided {param_value}.')
 
         if self.half_width_precision <= 0:
             raise ValueError('half_width_precision must be greater than 0.')
@@ -334,7 +336,7 @@ class ReplicationsAlgorithm:
         """
         Determines the number of additional replications to check after
         precision is reached, scaling with total replications if they are
-        greater than 100.
+        greater than 100. Rounded down to nearest integer.
 
         Returns:
             int:
@@ -412,8 +414,8 @@ class ReplicationsAlgorithm:
                 if self._klimit() == 0:
                     solutions[metric]['solved'] = True
 
-        # Whilst under replication budget + lookahead, and have not yet
-        # got all metrics marked as solved = TRUE...
+        # Whilst have not yet got all metrics marked as solved = TRUE, and
+        # still under replication budget + lookahead...
         while (
             sum(1 for v in solutions.values()
                 if v['solved']) < len(metrics)
@@ -432,7 +434,7 @@ class ReplicationsAlgorithm:
                 # If it is not yet solved...
                 if not solutions[metric]['solved']:
 
-                    # Update the running mean and stdev for that metric
+                    # Update the running statistics for that metric
                     stats[metric].update(results[metric])
 
                     # If precision has been achieved...
