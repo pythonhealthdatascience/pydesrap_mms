@@ -16,7 +16,7 @@ As part of the project STARS (Sharing Tools and Artefacts for Reproducible Simul
 | Control randomness | ✅ | - |
 | **Outputs** |
 | Include code to calculate all required model outputs (⭐) | ✅ | - |
-| Include code to generate the tables, figures, and other reported results (⭐) | N/A | No publication. |
+| Include code to generate the tables, figures, and other reported results (⭐) | ✅ | Includes some examples (in `analysis.ipynb`) where these are generated. |
 
 ## Recommendations to support troubleshooting and reuse
 
@@ -30,7 +30,7 @@ As part of the project STARS (Sharing Tools and Artefacts for Reproducible Simul
 | Comment sufficiently | ✅ | - |
 | Ensure clarity and consistency in the model results tables | ✅ | - |
 | Include run instructions | ✅ | - |
-| State run times and machine specifications | ✅ | In `REAME.md` and `.ipynb` files |
+| State run times and machine specifications | ✅ | In `README.md` and `.ipynb` files. |
 | **Functionality** |
 | Optimise model run time | ✅ | Provides option of parallel processing. |
 | Save outputs to a file | ✅ | Includes some examples (in `analysis.ipynb`) where outputs are saved. |
