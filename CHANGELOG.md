@@ -27,7 +27,7 @@ Add a bash script for executing notebooks and new tests for warm-up patients and
 ### Fixed
 
 * Correct `choosing_warmup.ipynb` to use multiple replications and run length at least 5-10x actual.
-* Fix `test_waiting_time_utilisation()` **TODO:** DROP THIS?
+* Fix `test_waiting_time_utilisation()`
 * Correct `test_klimit()` to actually use the parametrize inputs.
 * Add correction to `nurse_time_used` for when patients span the warm-up and data collection period.
 * Allow `None` for the dashed line in `plotly_confidence_interval_method()`.
