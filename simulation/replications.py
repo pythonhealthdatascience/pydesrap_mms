@@ -51,7 +51,7 @@ class OnlineStatistics:
     Acknowledgements:
         - Class adapted from Monks 2021.
     """
-    def __init__(self, data=None, alpha=0.1, observer=None):
+    def __init__(self, data=None, alpha=0.05, observer=None):
         """
         Initialises the OnlineStatistics instance.
 
@@ -59,7 +59,8 @@ class OnlineStatistics:
             data (np.ndarray, optional):
                 Array containing an initial data sample.
             alpha (float, optional):
-                Significance level for confidence interval calculations.
+                Significance level for confidence interval calculations. For
+                example, if alpha is 0.05, then the confidence level is 95%.
             observer (object, optional):
                 Observer to notify on updates.
         """

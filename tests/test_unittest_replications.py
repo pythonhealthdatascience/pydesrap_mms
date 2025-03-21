@@ -126,6 +126,28 @@ def test_onlinestat_computations():
         f'Expected deviation {expected_dev}, got {stats.deviation}')
 
 
+def test_onlinestat_small():
+    """
+    Test that OnlineStatistics doesn't return some calculations for small
+    samples.
+    """
+    # Set up with two values
+    values = [10, 20]
+    stats = OnlineStatistics(data=np.array(values), alpha=0.05, observer=None)
+
+    # Check that statistics meet our expectations
+    # (expected results based on online calculators)
+    assert stats.mean == 15
+    assert stats._sq == 50
+    assert stats.variance == 50
+    assert np.isnan(stats.std)
+    assert np.isnan(stats.std_error)
+    assert np.isnan(stats.half_width)
+    assert np.isnan(stats.lci)
+    assert np.isnan(stats.uci)
+    assert np.isnan(stats.deviation)
+
+
 def test_tabulizer_initial_state():
     """
     Test that ReplicationTabulizer initializes with empty lists and n = 0.
