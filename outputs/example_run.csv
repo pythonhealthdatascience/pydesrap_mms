@@ -1,4 +1,4 @@
-run_number,scenario,arrivals,mean_q_time_nurse,mean_time_with_nurse,mean_nurse_utilisation,mean_nurse_utilisation_tw,mean_nurse_q_length,count_unseen,mean_q_time_unseen
+run_number,scenario,arrivals,mean_q_time_nurse,mean_time_with_nurse,mean_nurse_utilisation,mean_nurse_utilisation_tw,mean_nurse_q_length,count_nurse_unseen,mean_q_time_nurse_unseen
 0,0,10790,0.5185321805418852,10.038295078961,0.5014374222243866,0.501437422224387,0.12951301453812364,0,
 1,0,10787,0.49626891151454416,10.224439362484883,0.5106553500497839,0.5106553500497837,0.12391788769693028,0,
 2,0,10827,0.49710092951617946,9.901036511215478,0.4962939811036566,0.4962939811036556,0.12458592045999248,0,

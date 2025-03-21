@@ -740,13 +740,13 @@ class Runner:
         if len(patient_results) > 0:
             # Add a column with the wait time of patients who remained unseen
             # at the end of the simulation
-            patient_results['q_time_unseen'] = np.where(
+            patient_results['q_time_unseen_nurse'] = np.where(
                 patient_results['time_with_nurse'].isna(),
                 model.env.now - patient_results['arrival_time'], np.nan
             )
         else:
             # Set to NaN if no patients
-            patient_results['q_time_unseen'] = np.nan
+            patient_results['q_time_unseen_nurse'] = np.nan
 
         # RUN RESULTS
         # The run, scenario and arrivals are handled the same regardless of
@@ -775,9 +775,10 @@ class Runner:
                         self.param.data_collection_period)),
                 'mean_nurse_q_length': (sum(model.nurse.area_n_in_queue) /
                                         self.param.data_collection_period),
-                'count_unseen': (
+                'count_nurse_unseen': (
                     patient_results['time_with_nurse'].isna().sum()),
-                'mean_q_time_unseen': patient_results['q_time_unseen'].mean()
+                'mean_q_time_nurse_unseen': (
+                    patient_results['q_time_unseen_nurse'].mean())
             }
         else:
             # Set results to NaN if no patients
@@ -788,8 +789,8 @@ class Runner:
                 'mean_nurse_utilisation': np.nan,
                 'mean_nurse_utilisation_tw': np.nan,
                 'mean_nurse_q_length': np.nan,
-                'count_unseen': np.nan,
-                'mean_q_time_unseen': np.nan
+                'count_nurse_unseen': np.nan,
+                'mean_q_time_nurse_unseen': np.nan
             }
 
         # INTERVAL AUDIT RESULTS

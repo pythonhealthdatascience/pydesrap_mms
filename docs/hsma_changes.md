@@ -73,7 +73,7 @@ class Patient:
         self.time_with_nurse = np.nan
 ```
 
-This enables metrics like `count_unseen` and `mean_q_time_unseen`, which can show backlog in the system at the end of the simulation.
+This enables metrics like `count_nurse_unseen` and `mean_q_time_nurse_unseen`, which can show backlog in the system at the end of the simulation.
 
 ## Seeds
 
