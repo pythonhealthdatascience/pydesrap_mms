@@ -60,7 +60,7 @@ def test_high_demand():
     # Check that the utilisation as calculated from total_nurse_time_used
     # does not exceed 1 or drop below 0
     util = results['run']['mean_nurse_utilisation']
-    assert util <= 1, (
+    assert util == pytest.approx(1, abs=1e-9) or util < 1, (
         'The run `mean_nurse_utilisation` should not exceed 1, but ' +
         f'found utilisation of {util}.'
     )
@@ -90,6 +90,45 @@ def test_high_demand():
         'Expect last patient in high demand scenario to have NaN for time' +
         'with nurse.'
     )
+
+
+def test_warmup_high_demand():
+    """
+    Test that utilisation is 1 due to high demand from warm-up (WU), even if
+    none of that resource usage actually reflects use by patients from the data
+    collection (DC) period.
+    """
+    param = Param(number_of_nurses=1,
+                  patient_inter=0.1,
+                  warm_up_period=100,
+                  data_collection_period=10)
+    experiment = Runner(param)
+    results = experiment.run_single(run=0)
+
+    # ONLY REFLECTS DC PATIENTS
+    # Expect these to be NaN, as no patients in data collection period seen,
+    # and we're not interested in the wait times of the warm-up patients
+    assert np.isnan(results['run']['mean_q_time_nurse'])
+    assert np.isnan(results['run']['mean_time_with_nurse'])
+
+    # REFLECTS USE BY WU + DC PATIENTS
+    # Expect these to be 1, as nurses busy for whole time
+    assert results['run']['mean_nurse_utilisation'] == 1
+    assert results['run']['mean_nurse_utilisation_tw'] == 1
+    assert results['interval_audit']['utilisation'][0] == 1
+
+    # REFLECTS USE BY WU + DC PATIENTS
+    # Expect this to be positive and greater than arrivals
+    assert results['run']['mean_nurse_q_length'] > results['run']['arrivals']
+
+    # ONLY REFLECTS DC PATIENTS
+    # Expect this to match arrivals
+    assert results['run']['count_unseen'] == results['run']['arrivals']
+
+    # ONLY REFLECTS DC PATIENTS
+    # Expect this to be positive and close to 5 (as mean of arrivals in 10 min)
+    assert results['run']['mean_q_time_unseen'] > 0
+    assert pytest.approx(results['run']['mean_q_time_unseen'], 0.1) == 5
 
 
 def test_warmup_only():

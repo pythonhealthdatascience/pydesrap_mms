@@ -6,6 +6,7 @@
     'nurse_consult_count': 0,
     'nurse_consult_time_dist': '<simulation.model.Exponential>',
     'nurse_time_used': 0,
+    'nurse_time_used_correction': 0,
     'param': '<simulation.model.Param>',
     'patient_inter_arrival_dist': '<simulation.model.Exponential>',
     'patients': [],
@@ -34,6 +35,7 @@
 23.023: 🔸 WU Patient 5 arrives at: 23.023.
 25.025: 🔶 WU Patient 3 is seen by nurse after 3.789. Consultation length: 3.642.
 28.667: 🔶 WU Patient 4 is seen by nurse after 6.527. Consultation length: 5.295.
+28.667: 🛠 Patient 4 starts consultation with 1.333 left of warm-up (which is 30.000). As their consultation is for 5.295, they will exceed warmup by 3.962, so we correct for this.
 30.000: ──────────
 30.000: Warm up complete.
 30.000: ──────────

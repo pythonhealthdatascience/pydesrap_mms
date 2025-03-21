@@ -361,6 +361,12 @@ class Model:
             List containing the generated patient objects.
         nurse_time_used (float):
             Total time the nurse resources have been used in minutes.
+        nurse_time_used_correction (float):
+            Correction for nurse time used with a warm-up period. Without
+            correction, it will be underestimated, as patients who start their
+            time with the nurse during the warm-up period and finish it during
+            the data collection period will not be included in the recorded
+            time.
         nurse_consult_count (int):
             Count of patients seen by nurse, using to calculate running mean
             wait time.
@@ -406,6 +412,7 @@ class Model:
         # Initialise attributes to store results
         self.patients = []
         self.nurse_time_used = 0
+        self.nurse_time_used_correction = 0
         self.nurse_consult_count = 0
         self.running_mean_nurse_wait = 0
         self.audit_list = []
@@ -536,6 +543,31 @@ class Model:
             self.nurse_time_used += min(
                 patient.time_with_nurse, remaining_time)
 
+            # If still in the warm-up period, find if the patient time with
+            # nurse will go beyond end (if time_exceeding_warmup is positive) -
+            # and, in which case, save that to nurse_time_used_correction
+            # (ensuring to correct it if would exceed end of simulation).
+            remaining_warmup = self.param.warm_up_period - self.env.now
+            if remaining_warmup > 0:
+                time_exceeding_warmup = (patient.time_with_nurse -
+                                         remaining_warmup)
+                if time_exceeding_warmup > 0:
+                    self.nurse_time_used_correction += min(
+                        time_exceeding_warmup,
+                        self.param.data_collection_period)
+                    # Logging message
+                    self.param.logger.log(
+                        sim_time=self.env.now,
+                        msg=(f'\U0001F6E0 Patient {patient.patient_id} ' +
+                             'starts consultation with ' +
+                             f'{remaining_warmup:.3f} left of warm-up (which' +
+                             f' is {self.param.warm_up_period:.3f}). As ' +
+                             'their consultation is for ' +
+                             f'{patient.time_with_nurse:.3f}, they will ' +
+                             f'exceed warmup by {time_exceeding_warmup:.3f},' +
+                             ' so we correct for this.')
+                    )
+
             # Pass time spent with nurse
             yield self.env.timeout(patient.time_with_nurse)
 
@@ -590,6 +622,12 @@ class Model:
             # Reset results collection variables
             self.init_results_variables()
 
+            # Correct nurse_time_used, adding the remaining time of patients
+            # who were partway through their consultation during the warm-up
+            # period (i.e. patients still in consultation as enter the
+            # data collection period).
+            self.nurse_time_used += self.nurse_time_used_correction
+
             # If there was a warm-up period, log that this time has passed so
             # can distinguish between patients before and after warm-up in logs
             if self.param.warm_up_period > 0:
@@ -609,7 +647,7 @@ class Model:
                       self.param.data_collection_period)
 
         # Schedule process which will reset results when warm-up period ends
-        # (or does nothing if these is no warm-up)
+        # (or does nothing if there is no warm-up)
         self.env.process(self.warm_up_complete())
 
         # Schedule patient generator to run during simulation

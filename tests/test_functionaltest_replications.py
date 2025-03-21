@@ -91,18 +91,23 @@ def test_consistent_outputs(ci_function):
     reps = 20
 
     # Run the manual confidence interval method
-    _, man_df = ci_function(
+    man_nreps, man_df = ci_function(
         replications=reps, metrics=['mean_time_with_nurse'])
 
     # Run the algorithm
     analyser = ReplicationsAlgorithm(initial_replications=reps,
+                                     look_ahead=0,
                                      replication_budget=reps)
-    _, summary_table = analyser.select(runner=Runner(Param()),
-                                       metrics=['mean_time_with_nurse'])
+    alg_nreps, alg_df = analyser.select(runner=Runner(Param()),
+                                        metrics=['mean_time_with_nurse'])
+
+    # Check that nreps are the same
+    assert man_nreps == alg_nreps
+
     # Get first 20 rows (may have more if met precision and went into
     # look ahead period beyond budget) and compare dataframes
     pd.testing.assert_frame_equal(
-        man_df, summary_table.head(20))
+        man_df, alg_df.head(20))
 
 
 def test_algorithm_initial():
@@ -135,8 +140,8 @@ def test_algorithm_initial():
         nrows = len(summary_table[summary_table['metric'] == metric])
         assert nrows == initial_replications
 
-        # Check that solution is equal to the initial replications
-        assert nreps[metric] == initial_replications
+        # Check that all were solved before initial_replications
+        assert nreps[metric] < initial_replications
 
 
 def test_algorithm_nosolution():

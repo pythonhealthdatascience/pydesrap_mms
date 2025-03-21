@@ -6,6 +6,8 @@
 [![licence](https://img.shields.io/badge/Licence-MIT-green.svg?labelColor=gray)](https://github.com/pythonhealthdatascience/rap_template_python_des/blob/main/LICENSE)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14622466.svg)](https://doi.org/10.5281/zenodo.14622466)
 [![Tests](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/tests.yaml/badge.svg)](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/tests.yaml)
+[![Linting](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/lint.yaml/badge.svg)](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/lint.yaml)
+[![ORCID: Heather](https://img.shields.io/badge/ORCID_Amy_Heather-0000--0002--6596--3479-brightgreen)](https://orcid.org/0000-0002-6596-3479)
 
 <br>A template for creating **discrete-event simulation (DES)** models in Python within a **reproducible analytical pipeline (RAP)**. <br><br>
 Click on <kbd>Use this template</kbd> to initialise new repository.<br>
@@ -244,7 +246,8 @@ repo/
 ├── lint.sh               # Bash script to lint all .py and .ipynb files at once
 ├── pyproject.toml        # Metadata for local `simulation/` package
 ├── README.md             # This file! Describes the repository
-└── requirements.txt      # Virtual environment (used by GitHub actions)
+├── requirements.txt      # Virtual environment (used by GitHub actions)
+└── run_notebooks.sh      # Bash script to run all .ipynb from the command line
 ```
 
 <br>
@@ -323,7 +326,7 @@ This repository was developed with thanks to several others sources. These are a
 | Amy Heather, Thomas Monks, Alison Harper, Navonil Mustafee, Andrew Mayne (2025) On the reproducibility of discrete-event simulation studies in health research: an empirical study using open models (https://doi.org/10.48550/arXiv.2501.13137). | `docs/heather_2025.md` |
 | NHS Digital (2024) RAP repository template (https://github.com/NHSDigital/rap-package-template) (MIT Licence) | `simulation/logging.py`<br>`docs/nhs_rap.md` |
 | Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (https://github.com/hsma-programme/hsma6_des_book) (MIT Licence) | `simulation/model.py`<br>`notebooks/choosing_cores.ipynb` |
-| Tom Monks (2025) sim-tools: tools to support the Discrete-Event Simulation process in python (https://github.com/TomMonks/sim-tools) (MIT Licence)<br>Who themselves cite Hoad, Robinson, & Davies (2010). Automated selection of the number of replications for a discrete-event simulation (https://www.jstor.org/stable/40926090). | `simulation/model.py`<br>`simulation/replications.py`<br>`notebooks/choosing_replications.ipynb` |
+| Tom Monks (2025) sim-tools: tools to support the Discrete-Event Simulation process in python (https://github.com/TomMonks/sim-tools) (MIT Licence)<br>Who themselves cite Hoad, Robinson, & Davies (2010). Automated selection of the number of replications for a discrete-event simulation (https://www.jstor.org/stable/40926090), and Knuth. D "The Art of Computer Programming" Vol 2. 2nd ed. Page 216. | `simulation/model.py`<br>`simulation/replications.py`<br>`notebooks/choosing_replications.ipynb` |
 | Tom Monks, Alison Harper and Amy Heather (2025) An introduction to Discrete-Event Simulation (DES) using Free and Open Source Software (https://github.com/pythonhealthdatascience/intro-open-sim/tree/main). (MIT Licence) - who themselves also cite Law. Simulation Modeling and Analysis 4th Ed. Pages 14 - 17. | `simulation/model.py` |
 | Tom Monks (2024) [HPDM097 - Making a difference with health data](https://github.com/health-data-science-OR/stochastic_systems) (MIT Licence). | `notebooks/analysis.ipynb`<br>`notebooks/choosing_replications.ipynb`<br>`notebooks/choosing_warmup.ipynb` |
 | Monks T and Harper A. Improving the usability of open health service delivery simulation models using Python and web apps (https://doi.org/10.3310/nihropenres.13467.2) [version 2; peer review: 3 approved]. NIHR Open Res 2023, 3:48.<br>Who themselves cite a [Stack Overflow](https://stackoverflow.com/questions/59406167/plotly-how-to-filter-a-pandas-dataframe-using-a-dropdown-menu) post. | `notebooks/analysis.ipynb` |

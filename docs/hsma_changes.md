@@ -233,6 +233,38 @@ if self.env.now > g.warm_up_period:
     )
 ```
 
+## Corrections to the time with the resource
+
+In the HSMA model, `time_with_nurse` is used for tracking resource utilisation. We include this approach, but with two corrections.
+
+**Correction #1**: Towards the end of the simulation, simply recording the sampled time with the nurse will overestimate utilisation, if this would go beyond the simulation end. In which case, we save either the time with the nurse, or the time remaining in the simulation - whichever is smallest.
+
+```
+remaining_time = (
+    self.param.warm_up_period +
+    self.param.data_collection_period) - self.env.now
+self.nurse_time_used += min(
+    patient.time_with_nurse, remaining_time)
+```
+
+**Correction #2**: If a warm-up period is included, the utilisation will be underestimated, as it won't include patients who start their consultation with the nurse in the warm-up and finish it in the data collection period. In these cases, we use an attribute `nurse_time_used_correction` to record the time that would fall in the data collection period, and add this to the `time_with_nurse`.
+
+```
+remaining_warmup = self.param.warm_up_period - self.env.now
+if remaining_warmup > 0:
+    time_exceeding_warmup = (patient.time_with_nurse -
+                                remaining_warmup)
+    if time_exceeding_warmup > 0:
+        self.nurse_time_used_correction += min(
+            time_exceeding_warmup,
+            self.param.data_collection_period)
+
+...
+
+# When resetting values after warm-up end...
+self.nurse_time_used += self.nurse_time_used_correction
+```
+
 ## Extra features
 
 ### Prevent addition of new attributes to the parameter class
@@ -306,6 +338,14 @@ It can also be applied to other results dataframes if desired.
 ### Logger
 
 The `SimLogger` class will generate logs which can be saved to a file or printed to a console. This includes information on when patients arrive and are seen. This can be helpful for understanding the simulation or when debugging.
+
+### Selecting the length of the warm-up period
+
+The `choosing_warmup.ipynb` notebook includes a function which can be used to help choose an appropriate length for the warm-up period.
+
+### Selecting the number of replications to use
+
+The `replications.py` contains various functions and classes which can be used to help choose an appropriate number of replications to run, as explored in `choosing_replications.ipynb`.
 
 ### Other minor changes
 
