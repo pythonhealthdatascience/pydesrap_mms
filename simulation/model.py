@@ -873,7 +873,7 @@ class Runner:
         self.overall_results_df = pd.DataFrame(uncertainty_metrics)
 
 
-def run_scenarios(scenarios, base_param=None):
+def run_scenarios(scenarios, param=None):
     """
     Execute a set of scenarios and return the results from each run.
 
@@ -881,9 +881,9 @@ def run_scenarios(scenarios, base_param=None):
         scenarios (dict):
             Dictionary where key is name of parameter and value is a list
             with different values to run in scenarios.
-        base_param (dict):
-            Dictionary with parameters for base case. Optional, defaults to
-            use those as set in Param.
+        param (dict):
+            Instance of Param with parameters for the base case. Optional,
+            defaults to use those as set in Param.
 
     Returns:
         pandas.dataframe:
@@ -905,12 +905,9 @@ def run_scenarios(scenarios, base_param=None):
     for index, scenario_to_run in enumerate(all_scenarios_dicts):
         print(scenario_to_run)
 
-        # Create instance of parameter class with any specified base case
-        # parameters
-        if base_param is None:
+        # Create instance of parameter class, if not provided
+        if param is None:
             param = Param()
-        else:
-            param = Param(**base_param)
 
         # Update parameter list with the scenario parameters
         param.scenario_name = index
