@@ -96,6 +96,7 @@ def test_consistent_outputs(ci_function):
 
     # Run the algorithm
     analyser = ReplicationsAlgorithm(initial_replications=reps,
+                                     look_ahead=0,
                                      replication_budget=reps)
     alg_nreps, alg_df = analyser.select(runner=Runner(Param()),
                                         metrics=['mean_time_with_nurse'])

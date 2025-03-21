@@ -352,18 +352,18 @@ class ReplicationsAlgorithm:
                 Minimum replications required to meet and maintain precision.
         """
         # Find the first non-None value in the list
-        start_index = next(
-            (i for i, v in enumerate(lst) if v is not None), len(lst))
+        start_index = pd.Series(lst).first_valid_index()
 
         # Iterate through the list, stopping when at last point where we still
         # have enough elements to look ahead
-        for i in range(start_index, len(lst) - self.look_ahead + 1):
-            # Create slice of list with current value + lookahead
-            # Check if all fall below the desired deviation
-            if all(value < self.half_width_precision
-                   for value in lst[i:i+self.look_ahead]):
-                # Add one, so it is the number of reps, as is zero-indexed
-                return i + 1
+        if start_index is not None:
+            for i in range(start_index, len(lst) - self.look_ahead + 1):
+                # Create slice of list with current value + lookahead
+                # Check if all fall below the desired deviation
+                if all(value < self.half_width_precision
+                       for value in lst[i:i+self.look_ahead]):
+                    # Add one, so it is the number of reps, as is zero-indexed
+                    return i + 1
         return None
 
     # pylint: disable=too-many-branches
@@ -477,6 +477,7 @@ class ReplicationsAlgorithm:
                     # If precision was not achieved, ensure nreps is None
                     # (e.g. in cases where precision is lost after a success)
                     else:
+                        solutions[metric]['target_met'] = 0
                         solutions[metric]['nreps'] = None
 
         # Correction to result...
@@ -486,7 +487,7 @@ class ReplicationsAlgorithm:
             # If there was a maintained solution, replace in solutions
             if adj_nreps is not None and dictionary['nreps'] is not None:
                 if adj_nreps < dictionary['nreps']:
-                    solutions[metric]['nreps'] = 3
+                    solutions[metric]['nreps'] = adj_nreps
 
         # Extract minimum replications for each metric
         nreps = {metric: value['nreps'] for metric, value in solutions.items()}
@@ -515,7 +516,7 @@ def confidence_interval_method(
     param=Param(),
     alpha=0.05,
     desired_precision=0.05,
-    min_rep=5,
+    min_rep=3,
     verbose=False
 ):
     """
@@ -589,10 +590,11 @@ def confidence_interval_method(
         # Get minimum number of replications where deviation is below target
         try:
             nreps = (
-                results.iloc[min_rep:]
-                .loc[results['deviation'] <= desired_precision]
-                .iloc[0]
-                .name
+                (results
+                 .loc[results['replications'] >= min_rep]
+                 .loc[results['deviation'] <= desired_precision]
+                 .iloc[0]
+                 .replications)
             )
             if verbose:
                 print(f'{metric}: Reached desired precision in {nreps} ' +
@@ -617,7 +619,7 @@ def confidence_interval_method(
 
 
 def confidence_interval_method_simple(
-    replications, metrics, param=Param(), desired_precision=0.05, min_rep=5,
+    replications, metrics, param=Param(), desired_precision=0.05, min_rep=3,
     verbose=False
 ):
     """
@@ -690,11 +692,12 @@ def confidence_interval_method_simple(
         # Get minimum number of replications where deviation is below target
         try:
             nreps = (
-                cumulative.iloc[min_rep:]
-                .loc[cumulative['deviation'] <= desired_precision]
-                .iloc[0]
-                .name
-            ) + 1
+                (cumulative
+                 .loc[cumulative['replications'] >= min_rep]
+                 .loc[cumulative['deviation'] <= desired_precision]
+                 .iloc[0]
+                 .replications)
+            )
             if verbose:
                 print(f'{metric}: Reached desired precision in {nreps} ' +
                       'replications.')
