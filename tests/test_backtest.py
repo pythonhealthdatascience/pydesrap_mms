@@ -14,7 +14,7 @@ Typical usage example:
 
 from pathlib import Path
 import pandas as pd
-from simulation.model import Param, Runner
+from simulation.model import Param, Runner, run_scenarios
 
 
 def test_reproduction():
@@ -58,3 +58,32 @@ def test_reproduction():
     exp_overall = pd.read_csv(
         Path(__file__).parent.joinpath('exp_results/overall.csv'), index_col=0)
     pd.testing.assert_frame_equal(experiment.overall_results_df, exp_overall)
+
+
+def test_scenarios():
+    """
+    Check that results from run with scenarios are consistent with those
+    previously generated.
+    """
+    # Run scenarios
+    param = Param(
+        patient_inter=4,
+        mean_n_consult_time=10,
+        number_of_nurses=5,
+        warm_up_period=2000,
+        data_collection_period=6000,
+        number_of_runs=3,
+        audit_interval=120,
+        cores=1
+    )
+    results = run_scenarios(
+        scenarios={'patient_inter': [3, 4],
+                   'number_of_nurses': [6, 7]},
+        param=param
+    )
+
+    # Compare to expected results
+    exp_results = pd.read_csv(
+        Path(__file__).parent.joinpath('exp_results/scenario.csv'),
+        index_col=0)
+    pd.testing.assert_frame_equal(results, exp_results)
