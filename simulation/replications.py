@@ -352,17 +352,22 @@ class ReplicationsAlgorithm:
             int:
                 Minimum replications required to meet and maintain precision.
         """
+        # Check if the list is empty or if no value is below the threshold
+        if not lst or all(x is None or x >= self.half_width_precision
+                          for x in lst):
+            return None
+
         # Find the first non-None value in the list
         start_index = pd.Series(lst).first_valid_index()
 
         # Iterate through the list, stopping when at last point where we still
         # have enough elements to look ahead
         if start_index is not None:
-            for i in range(start_index, len(lst) - self.look_ahead + 1):
+            for i in range(start_index, len(lst) - self.look_ahead):
                 # Create slice of list with current value + lookahead
                 # Check if all fall below the desired deviation
                 if all(value < self.half_width_precision
-                       for value in lst[i:i+self.look_ahead]):
+                       for value in lst[i:i+self.look_ahead+1]):
                     # Add one, so it is the number of reps, as is zero-indexed
                     return i + 1
         return None
