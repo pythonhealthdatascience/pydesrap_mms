@@ -123,12 +123,12 @@ def test_warmup_high_demand():
 
     # ONLY REFLECTS DC PATIENTS
     # Expect this to match arrivals
-    assert results['run']['count_unseen'] == results['run']['arrivals']
+    assert results['run']['count_nurse_unseen'] == results['run']['arrivals']
 
     # ONLY REFLECTS DC PATIENTS
     # Expect this to be positive and close to 5 (as mean of arrivals in 10 min)
-    assert results['run']['mean_q_time_unseen'] > 0
-    assert pytest.approx(results['run']['mean_q_time_unseen'], 0.1) == 5
+    assert results['run']['mean_q_time_nurse_unseen'] > 0
+    assert pytest.approx(results['run']['mean_q_time_nurse_unseen'], 0.1) == 5
 
 
 def test_warmup_only():
@@ -535,13 +535,14 @@ def test_extreme_nurses():
     )
 
     # Check that all patients are seen
-    assert results['run']['count_unseen'] == 0, (
+    assert results['run']['count_nurse_unseen'] == 0, (
         'Expect all patients to be seen, but ' +
-        f'{results['run']['count_unseen']} were not seen by a nurse.'
+        f'{results['run']['count_nurse_unseen']} were not seen by a nurse.'
     )
-    assert np.isnan(results['run']['mean_q_time_unseen']), (
+    assert np.isnan(results['run']['mean_q_time_nurse_unseen']), (
         'Expect all patients to be seen, and so have no mean wait time for ' +
-        f'unseen patients, but was {results['run']['mean_q_time_unseen']:.2f}.'
+        'unseen patients, but was ' +
+        f'{results['run']['mean_q_time_nurse_unseen']:.2f}.'
     )
 
 
@@ -559,7 +560,7 @@ def test_no_missing_values():
     req_run = ['run_number', 'scenario', 'arrivals', 'mean_q_time_nurse',
                'mean_time_with_nurse', 'mean_nurse_utilisation',
                'mean_nurse_utilisation_tw', 'mean_nurse_q_length',
-               'count_unseen']
+               'count_nurse_unseen']
 
     # Check for missing values
     res_patient = experiment.patient_results_df[req_patient].isnull().any()

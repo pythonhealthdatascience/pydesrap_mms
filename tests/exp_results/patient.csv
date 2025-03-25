@@ -1,4 +1,4 @@
-patient_id,arrival_time,q_time_nurse,time_with_nurse,run,q_time_unseen
+patient_id,arrival_time,q_time_nurse,time_with_nurse,run,q_time_unseen_nurse
 1,504.51344428446833,0.0,1.6648958649577223,0,
 2,507.230909157429,0.0,29.462507817526664,0,
 3,508.3943739037057,0.0,7.345594141189309,0,

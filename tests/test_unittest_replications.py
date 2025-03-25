@@ -126,6 +126,28 @@ def test_onlinestat_computations():
         f'Expected deviation {expected_dev}, got {stats.deviation}')
 
 
+def test_onlinestat_small():
+    """
+    Test that OnlineStatistics doesn't return some calculations for small
+    samples.
+    """
+    # Set up with two values
+    values = [10, 20]
+    stats = OnlineStatistics(data=np.array(values), alpha=0.05, observer=None)
+
+    # Check that statistics meet our expectations
+    # (expected results based on online calculators)
+    assert stats.mean == 15
+    assert stats._sq == 50
+    assert stats.variance == 50
+    assert np.isnan(stats.std)
+    assert np.isnan(stats.std_error)
+    assert np.isnan(stats.half_width)
+    assert np.isnan(stats.lci)
+    assert np.isnan(stats.uci)
+    assert np.isnan(stats.deviation)
+
+
 def test_tabulizer_initial_state():
     """
     Test that ReplicationTabulizer initializes with empty lists and n = 0.
@@ -188,3 +210,37 @@ def test_tabulizer_summary_table():
     assert df['lower_ci'].tolist() == [3, 8, 13]
     assert df['upper_ci'].tolist() == [7, 12, 17]
     assert df['deviation'].tolist() == [0.1, 0.2, 0.3]
+
+
+@pytest.mark.parametrize('lst, exp, look_ahead', [
+    ([None, None, 0.8, 0.4, 0.3], 4, 0),  # Normal case
+    ([0.4, 0.3, 0.2, 0.1], 1, 0),  # No None values
+    ([0.8, 0.9, 0.8, 0.7], None, 0),  # No values below threshold
+    ([None, None, None, None], None, 0),  # No values
+    ([], None, 0),  # Empty list
+    ([None, None, 0.8, 0.8, 0.3, 0.3, 0.3], None, 3),  # Not full lookahead
+    ([None, None, 0.8, 0.8, 0.3, 0.3, 0.3, 0.3], 5, 3)  # Meets lookahead
+])
+def test_find_position(lst, exp, look_ahead):
+    """
+    Test the find_position() method from ReplicationsAlgorithm.
+
+    Arguments:
+        lst (list)
+            List of values to input to find_position().
+        exp (float)
+            Expected result from find_position().
+        look_ahead (int)
+            Number of extra positions to check that they also fall under the
+            threshold.
+    """
+    # Set threshold to 0.5, with provided look_ahead
+    alg = ReplicationsAlgorithm(half_width_precision=0.5,
+                                look_ahead=look_ahead)
+
+    # Get result from algorithm and compare to expected
+    result = alg.find_position(lst)
+    assert result == exp, (
+        f'Ran find_position on: {lst} (threshold 0.5, look-ahead ' +
+        f'{look_ahead}). Expected {exp}, but got {result}.'
+    )

@@ -740,13 +740,13 @@ class Runner:
         if len(patient_results) > 0:
             # Add a column with the wait time of patients who remained unseen
             # at the end of the simulation
-            patient_results['q_time_unseen'] = np.where(
+            patient_results['q_time_unseen_nurse'] = np.where(
                 patient_results['time_with_nurse'].isna(),
                 model.env.now - patient_results['arrival_time'], np.nan
             )
         else:
             # Set to NaN if no patients
-            patient_results['q_time_unseen'] = np.nan
+            patient_results['q_time_unseen_nurse'] = np.nan
 
         # RUN RESULTS
         # The run, scenario and arrivals are handled the same regardless of
@@ -775,9 +775,10 @@ class Runner:
                         self.param.data_collection_period)),
                 'mean_nurse_q_length': (sum(model.nurse.area_n_in_queue) /
                                         self.param.data_collection_period),
-                'count_unseen': (
+                'count_nurse_unseen': (
                     patient_results['time_with_nurse'].isna().sum()),
-                'mean_q_time_unseen': patient_results['q_time_unseen'].mean()
+                'mean_q_time_nurse_unseen': (
+                    patient_results['q_time_unseen_nurse'].mean())
             }
         else:
             # Set results to NaN if no patients
@@ -788,8 +789,8 @@ class Runner:
                 'mean_nurse_utilisation': np.nan,
                 'mean_nurse_utilisation_tw': np.nan,
                 'mean_nurse_q_length': np.nan,
-                'count_unseen': np.nan,
-                'mean_q_time_unseen': np.nan
+                'count_nurse_unseen': np.nan,
+                'mean_q_time_nurse_unseen': np.nan
             }
 
         # INTERVAL AUDIT RESULTS
@@ -872,7 +873,7 @@ class Runner:
         self.overall_results_df = pd.DataFrame(uncertainty_metrics)
 
 
-def run_scenarios(scenarios, base_param=None):
+def run_scenarios(scenarios, param=None):
     """
     Execute a set of scenarios and return the results from each run.
 
@@ -880,9 +881,9 @@ def run_scenarios(scenarios, base_param=None):
         scenarios (dict):
             Dictionary where key is name of parameter and value is a list
             with different values to run in scenarios.
-        base_param (dict):
-            Dictionary with parameters for base case. Optional, defaults to
-            use those as set in Param.
+        param (dict):
+            Instance of Param with parameters for the base case. Optional,
+            defaults to use those as set in Param.
 
     Returns:
         pandas.dataframe:
@@ -904,12 +905,9 @@ def run_scenarios(scenarios, base_param=None):
     for index, scenario_to_run in enumerate(all_scenarios_dicts):
         print(scenario_to_run)
 
-        # Create instance of parameter class with any specified base case
-        # parameters
-        if base_param is None:
+        # Create instance of parameter class, if not provided
+        if param is None:
             param = Param()
-        else:
-            param = Param(**base_param)
 
         # Update parameter list with the scenario parameters
         param.scenario_name = index
