@@ -25,6 +25,5 @@ abstract: >-
   A template for creating discrete-event simulation (DES) models in Python
   within a reproducible analytical pipeline (RAP).
 license: MIT
-# TODO: Manually update with each GitHub release
-version: '1.1.0'
-date-released: '2025-03-21'
+version: '1.2.0'
+date-released: '2025-03-26'

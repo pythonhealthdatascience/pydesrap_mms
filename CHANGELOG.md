@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Dates formatted as YYYY-MM-DD as per [ISO standard](https://www.iso.org/iso-8601-date-and-time-format.html).
 
+## v1.2.0 - 2025-03-26
+
+Add tests, change from default inputs, rename some variables, and add a method which allows the solution of `ReplicationsAlgorithm` to be less than the `initial_replications` set.
+
+### Added
+
+* Add unit tests for `ReplicationsAlgorithm` when only 2 replications are run, and for the new `find_position()` method.
+* Add back test for scenario analysis.
+
+### Changed
+
+* Linting GitHub action no longer triggers on pull requests.
+* Renamed `count_unseen` and `q_time_unseen` to be resource-specific (i.e.g `count_unseen_nurse`).
+* Set default alpha to 0.05 for `OnlineStatistics`.
+* Accept instance of `Param` class as input for `run_scenarios()` rather than a dictionary.
+
+### Fixed
+
+* Add `find_position()` method to `ReplicationsAlgorithm`, allowing us to correct results if the solution was below the `initial_replications` set.
+
 ## v1.1.0 - 2025-03-21
 
 Add a bash script for executing notebooks and new tests for warm-up patients and replication consistency. Fixes were made to correct notebook configurations, adjust test parameters, refine the replication algorithm, and ensure accurate calculations, such as correcting nurse time usage and setting appropriate values in the replication algorithm. Other changes include updates to default parameters and documentation.
