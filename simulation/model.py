@@ -9,13 +9,6 @@ Credit:
     > This code is adapted from Sammi Rosser and Dan Chalk (2024) HSMA - the
     little book of DES (https://github.com/hsma-programme/hsma6_des_book)
     (MIT Licence).
-    > The Exponential class is based on Tom Monks (2021) sim-tools:
-    fundamental tools to support the simulation process in python
-    (https://github.com/TomMonks/sim-tools) (MIT Licence). For other
-    distributions (bernoulli, lognormal, normal, uniform, triangular, fixed,
-    combination, continuous empirical, erlang, weibull, gamma, beta, discrete,
-    truncated, raw empirical, pearsonV, pearsonVI, erlangK, poisson), check
-    out the sim-tools package.
     > The MonitoredResource class is based on Tom Monks, Alison Harper and Amy
     Heather (2025) An introduction to Discrete-Event Simulation (DES) using
     Free and Open Source Software
@@ -39,6 +32,7 @@ from joblib import Parallel, delayed, cpu_count
 import numpy as np
 import pandas as pd
 import simpy
+from sim_tools.distributions import Exponential
 
 from simulation.logging import SimLogger
 from simulation.helper import summary_stats
@@ -91,7 +85,7 @@ class Param:
             cores (int):
                 Number of CPU cores to use for parallel execution. Set to
                 desired number, or to -1 to use all available cores. For
-                sequential execution, set to 1 (default).
+                sequential execution, set to 1.
             logger (logging.Logger):
                 The logging instance used for logging messages.
         """
@@ -292,52 +286,6 @@ class MonitoredResource(simpy.Resource):
         # Add "area under curve" of resources in use
         # self.count is the number of resources in use
         self.area_resource_busy.append(self.count * time_since_last_event)
-
-
-class Exponential:
-    """
-    Generate samples from an exponential distribution.
-
-    Attributes:
-        mean (float):
-            Mean of the exponential distribution.
-        rand (numpy.random.Generator):
-            Random number generator for producing samples.
-
-    Acknowledgement:
-        - Class adapted from Monks 2021.
-    """
-    def __init__(self, mean, random_seed):
-        """
-        Initialises a new distribution.
-
-        Arguments:
-            mean (float):
-                Mean of the exponential distribution.
-            random_seed (int|None):
-                Random seed to reproduce samples.
-        """
-        if mean <= 0:
-            raise ValueError('Exponential mean must be greater than 0.')
-
-        self.mean = mean
-        self.rand = np.random.default_rng(random_seed)
-
-    def sample(self, size=None):
-        """
-        Generate sample.
-
-        Arguments:
-            size (int|None):
-                Number of samples to return. If set to none, then returns a
-                single sample.
-
-        Returns:
-            float or numpy.ndarray:
-                A single sample if size is None, or an array of samples if
-                size is specified.
-        """
-        return self.rand.exponential(self.mean, size=size)
 
 
 class Model:
@@ -700,13 +648,13 @@ class Runner:
         - Class adapted from Rosser and Chalk 2024.
     """
     def __init__(self, param):
-        '''
+        """
         Initialise a new instance of the Runner class.
 
         Arguments:
             param (Param):
                 Simulation parameters.
-        '''
+        """
         # Store model parameters
         self.param = param
         # Initialise empty dataframes to store results

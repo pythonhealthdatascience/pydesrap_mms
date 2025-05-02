@@ -26,7 +26,7 @@ import numpy as np
 import pytest
 
 from simulation.logging import SimLogger
-from simulation.model import Param, Model, Exponential
+from simulation.model import Param, Model
 
 
 def test_new_attribute():
@@ -77,57 +77,6 @@ def test_negative_inputs(param_name, value, rule):
     # Verify that initialising the model raises the correct error
     with pytest.raises(ValueError, match=expected_message):
         Model(param=param, run_number=0)
-
-
-def test_exponentional():
-    """
-    Test that the Exponentional class behaves as expected.
-    """
-    # Initialise distribution
-    d = Exponential(mean=10, random_seed=42)
-
-    # Check that sample is a float
-    assert isinstance(d.sample(), float), (
-        f'Expected sample() to return a float - instead: {type(d.sample())}'
-    )
-
-    # Check that correct number of values are returned
-    count = len(d.sample(size=10))
-    assert count == 10, (
-        f'Expected 10 samples - instead got {count} samples.'
-    )
-
-    bigsample = d.sample(size=100000)
-    assert all(x > 0 for x in bigsample), (
-        'Sample contains non-positive values.'
-    )
-
-    # Using the big sample, check that mean is close to expected (allowing
-    # some tolerance)
-    assert np.isclose(np.mean(bigsample), 10, atol=0.1), (
-        'Mean of samples differs beyond tolerance - sample mean ' +
-        f'{np.mean(bigsample)}, expected mean 10.'
-    )
-
-    # Check that different seeds return different samples
-    sample1 = Exponential(mean=10, random_seed=2).sample(size=5)
-    sample2 = Exponential(mean=10, random_seed=3).sample(size=5)
-    assert not np.array_equal(sample1, sample2), (
-        'Samples with different random seeds should not be equal.'
-    )
-
-
-def test_invalid_exponential():
-    """
-    Ensure that Exponential distribution cannot be created with a negative
-    or zero mean.
-    """
-    # Negative mean
-    with pytest.raises(ValueError):
-        Exponential(mean=-5, random_seed=42)
-    # Zero mean
-    with pytest.raises(ValueError):
-        Exponential(mean=0, random_seed=42)
 
 
 def test_log_to_console():
