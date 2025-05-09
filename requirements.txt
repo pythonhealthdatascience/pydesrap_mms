@@ -1,4 +1,4 @@
-fitter==1.7.1
+distfit==1.8.6
 ipykernel==6.29.5
 jinja2==3.1.5
 joblib==1.4.2

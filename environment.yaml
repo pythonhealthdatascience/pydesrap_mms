@@ -19,7 +19,7 @@ dependencies:
   - rich=13.9.4
   - simpy=4.1.1
   - pip:
-    - fitter==1.7.1
+    - distfit==1.8.6
     - kaleido==0.2.1
     - sim-tools==0.9.0
     - -e .[dev]
