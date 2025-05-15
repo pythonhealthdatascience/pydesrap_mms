@@ -60,7 +60,7 @@ class Param:
         logger=SimLogger(log_to_console=False, log_to_file=False)
     ):
         """
-        Initalise instance of parameters class.
+        Initialise instance of parameters class.
 
         Arguments:
             patient_inter (float):

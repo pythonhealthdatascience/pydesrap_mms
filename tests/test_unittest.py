@@ -22,7 +22,6 @@ import logging
 import os
 from unittest.mock import patch, MagicMock
 
-import numpy as np
 import pytest
 
 from simulation.logging import SimLogger
