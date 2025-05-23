@@ -4,4 +4,4 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "simulation"
-dynamic = ["version", "description"]
+dynamic = ["version", "description", "author"]
