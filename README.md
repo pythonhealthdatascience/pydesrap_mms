@@ -3,10 +3,10 @@
 # Python DES RAP Template
 
 [![python](https://img.shields.io/badge/-Python_3.13-306998?logo=python&logoColor=white)](https://www.python.org/)
-[![licence](https://img.shields.io/badge/Licence-MIT-green.svg?labelColor=gray)](https://github.com/pythonhealthdatascience/rap_template_python_des/blob/main/LICENSE)
+[![licence](https://img.shields.io/badge/Licence-MIT-green.svg?labelColor=gray)](https://github.com/pythonhealthdatascience/pydesrap_mms/blob/main/LICENSE)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14622466.svg)](https://doi.org/10.5281/zenodo.14622466)
-[![Tests](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/tests.yaml/badge.svg)](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/tests.yaml)
-[![Linting](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/lint.yaml/badge.svg)](https://github.com/pythonhealthdatascience/rap_template_python_des/actions/workflows/lint.yaml)
+[![Tests](https://github.com/pythonhealthdatascience/pydesrap_mms/actions/workflows/tests.yaml/badge.svg)](https://github.com/pythonhealthdatascience/pydesrap_mms/actions/workflows/tests.yaml)
+[![Linting](https://github.com/pythonhealthdatascience/pydesrap_mms/actions/workflows/lint.yaml/badge.svg)](https://github.com/pythonhealthdatascience/pydesrap_mms/actions/workflows/lint.yaml)
 [![ORCID: Heather](https://img.shields.io/badge/ORCID_Amy_Heather-0000--0002--6596--3479-brightgreen)](https://orcid.org/0000-0002-6596-3479)
 
 <br>A template for creating **discrete-event simulation (DES)** models in Python within a **reproducible analytical pipeline (RAP)**. <br><br>
@@ -278,7 +278,7 @@ If you use this template, please cite the archived repository:
 
 You can also cite the GitHub repository:
 
-> Heather, A. Monks, T. (2025). Python DES RAP Template. GitHub. https://github.com/pythonhealthdatascience/rap_template_python_des.
+> Heather, A. Monks, T. (2025). Python DES RAP Template. GitHub. https://github.com/pythonhealthdatascience/pydesrap_mms.
 
 Researcher details:
 
