@@ -1,3 +1,4 @@
+distfit==1.8.6
 ipykernel==6.29.5
 jinja2==3.1.5
 joblib==1.4.2
@@ -14,4 +15,5 @@ pytest==8.3.4
 pytest-xdist==3.6.1
 rich==13.9.4
 simpy==4.1.1
+sim-tools==0.9.0
 -e .[dev]

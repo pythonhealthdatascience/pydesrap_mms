@@ -760,21 +760,29 @@ def plotly_confidence_interval_method(
         * 100
     ).round(2)
 
-    # Confidence interval bands with hover info
-    for col, color, dash in zip(
-        ['lower_ci', 'upper_ci'],
-        ['lightblue', 'lightblue'], ['dot', 'dot']
-    ):
-        fig.add_trace(
-            go.Scatter(
-                x=conf_ints['replications'],
-                y=conf_ints[col],
-                line={'color': color, 'dash': dash},
-                name=col,
-                text=['Deviation: {d}%' for d in deviation_pct],
-                hoverinfo='x+y+name+text',
-            )
+    # Confidence interval as a shaded region
+    fig.add_trace(
+        go.Scatter(
+            x=conf_ints['replications'],
+            y=conf_ints['upper_ci'],
+            mode='lines',
+            line={'width': 0},
+            showlegend=False,
+            name='Upper CI',
+            text=[f'Deviation: {d}%' for d in deviation_pct]
         )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=conf_ints['replications'],
+            y=conf_ints['lower_ci'],
+            mode='lines',
+            line={'width': 0},
+            fill='tonexty',  # Fill to previous y trace
+            fillcolor='rgba(0, 176, 185, 0.2)',  # Semi-transparent fill
+            name='Confidence interval'
+        )
+    )
 
     # Cumulative mean line with enhanced hover
     fig.add_trace(

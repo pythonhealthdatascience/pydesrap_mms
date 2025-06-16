@@ -20,7 +20,7 @@ authors:
     affiliation: University of Exeter
     orcid: 'https://orcid.org/0000-0003-2631-4481'
 repository-code: >-
-  https://github.com/pythonhealthdatascience/rap_template_python_des
+  https://github.com/pythonhealthdatascience/pydesrap_mms
 abstract: >-
   A template for creating discrete-event simulation (DES) models in Python
   within a reproducible analytical pipeline (RAP).
