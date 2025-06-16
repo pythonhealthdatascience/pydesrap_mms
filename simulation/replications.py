@@ -766,7 +766,7 @@ def plotly_confidence_interval_method(
             x=conf_ints['replications'],
             y=conf_ints['upper_ci'],
             mode='lines',
-            line=dict(width=0),
+            line={'width': 0},
             showlegend=False,
             name='Upper CI',
             text=[f'Deviation: {d}%' for d in deviation_pct]
@@ -777,7 +777,7 @@ def plotly_confidence_interval_method(
             x=conf_ints['replications'],
             y=conf_ints['lower_ci'],
             mode='lines',
-            line=dict(width=0),
+            line={'width': 0},
             fill='tonexty',  # Fill to previous y trace
             fillcolor='rgba(0, 176, 185, 0.2)',  # Semi-transparent fill
             name='Confidence interval'
