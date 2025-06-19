@@ -6,7 +6,8 @@ from joblib import Parallel, delayed, cpu_count
 import pandas as pd
 import numpy as np
 
-from simulation import Model, summary_stats
+from .model import Model
+from .summary_stats import summary_stats
 
 
 class Runner:

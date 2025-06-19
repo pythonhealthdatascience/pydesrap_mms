@@ -8,7 +8,10 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from simulation import Param, Runner, ReplicationTabulizer, OnlineStatistics
+from .param import Param
+from .runner import Runner
+from .replicationtabulizer import ReplicationTabulizer
+from .onlinestatistics import OnlineStatistics
 
 
 # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals

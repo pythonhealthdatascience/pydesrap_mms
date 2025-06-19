@@ -12,7 +12,8 @@ import numpy as np
 import simpy
 from sim_tools.distributions import Exponential
 
-from simulation import MonitoredResource, Patient
+from .monitoredresource import MonitoredResource
+from .patient import Patient
 
 
 # pylint: disable=too-many-instance-attributes

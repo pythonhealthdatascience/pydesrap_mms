@@ -2,7 +2,7 @@
 Param.
 """
 
-from simulation import SimLogger
+from .simlogger import SimLogger
 
 
 # pylint: disable=too-many-instance-attributes,too-few-public-methods

@@ -7,7 +7,9 @@ import warnings
 
 import pandas as pd
 
-from simulation import Param, Runner, summary_stats
+from .param import Param
+from .runner import Runner
+from .summary_stats import summary_stats
 
 
 # pylint: disable=too-many-arguments,too-many-positional-arguments

@@ -5,7 +5,8 @@ run_scenarios.
 import itertools
 import pandas as pd
 
-from simulation import Param, Runner
+from .param import Param
+from .runner import Runner
 
 
 def run_scenarios(scenarios, param=None):

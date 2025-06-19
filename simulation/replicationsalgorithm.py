@@ -6,7 +6,8 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from simulation import OnlineStatistics, ReplicationTabulizer
+from .onlinestatistics import OnlineStatistics
+from .replicationtabulizer import ReplicationTabulizer
 
 
 class ReplicationsAlgorithm:
