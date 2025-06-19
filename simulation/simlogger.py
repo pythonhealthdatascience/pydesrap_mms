@@ -1,22 +1,11 @@
-"""Logging.
+"""
+SimLogger.
 
-Logs track events as the code runs - similar to print statements, but keeping a
-more permanent record.
-
-Credit:
-    > Use of the logging module was initially inspired and adapted from NHS
-    Digital (2024) RAP repository template
-    (https://github.com/NHSDigital/rap-package-template) (MIT Licence).
-
-Licence:
-    This project is licensed under the MIT Licence. See the LICENSE file for
-    more details.
-
-Typical usage example:
-    logger = SimLogger(log_to_console=True,
-                       log_to_file=True,
-                       file_path='../outputs/logs/log.log')
-    logger.log('Log message')
+Acknowledgements
+----------------
+Use of the logging module was initially inspired and adapted from NHS Digital
+(2024) RAP repository template
+(https://github.com/NHSDigital/rap-package-template) (MIT Licence).
 """
 
 import logging
