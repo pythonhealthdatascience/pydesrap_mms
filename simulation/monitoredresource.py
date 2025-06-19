@@ -19,34 +19,36 @@ class MonitoredResource(Resource):
     Subclass of simpy.Resource used to monitor resource usage during the run.
 
     Calculates resource utilisation and the queue length during the model run.
-    As it is a subclass, it inherits the attributes and methods from
-    simpy.Resource, which is referred to as the superclass or parent class.
 
-    Attributes:
-        time_last_event (list):
-            Time of last resource request or release.
-        area_n_in_queue (list):
-            Time that patients have spent queueing for the resource
-            (i.e. sum of the times each patient spent waiting). Used to
-            calculate the average queue length.
-        area_resource_busy (list):
-            Time that resources have been in use during the simulation
-            (i.e. sum of the times each individual resource was busy). Used
-            to calculated utilisation.
+    Attributes
+    ----------
+    time_last_event : list
+        Time of last resource request or release.
+    area_n_in_queue : list
+        Time that patients have spent queueing for the resource
+        (i.e. sum of the times each patient spent waiting). Used to
+        calculate the average queue length.
+    area_resource_busy : list
+        Time that resources have been in use during the simulation
+        (i.e. sum of the times each individual resource was busy). Used
+        to calculated utilisation.
 
-    Acknowledgements:
-        - Class adapted from Monks, Harper and Heather 2025.
+    Notes
+    -----
+    Class adapted from Monks, Harper and Heather 2025.
     """
+
     def __init__(self, *args, **kwargs):
         """
         Initialises a MonitoredResource - which involves initialising a SimPy
         resource and resetting monitoring attributes.
 
-        Arguments:
-            *args:
-                Positional arguments to be passed to the parent class.
-            **kwargs:
-                Keyword arguments to be passed to the parent class.
+        Parameters
+        ----------
+        *args :
+            Positional arguments to be passed to the parent class.
+        **kwargs :
+            Keyword arguments to be passed to the parent class.
         """
         # Initialise a SimPy Resource
         super().__init__(*args, **kwargs)
@@ -66,15 +68,17 @@ class MonitoredResource(Resource):
         Requests a resource, but updates time-weighted statistics BEFORE
         making the request.
 
-        Arguments:
-            *args:
-                Positional arguments to be passed to the parent class.
-            **kwargs:
-                Keyword arguments to be passed to the parent class.
+        Parameters
+        ----------
+        *args :
+            Positional arguments to be passed to the parent class.
+        **kwargs :
+            Keyword arguments to be passed to the parent class.
 
-        Returns:
-            simpy.events.Event:
-                Event representing the request.
+        Returns
+        -------
+        simpy.events.Event
+            Event representing the request.
         """
         # Update time-weighted statistics
         self.update_time_weighted_stats()
@@ -86,15 +90,17 @@ class MonitoredResource(Resource):
         Releases a resource, but updates time-weighted statistics BEFORE
         releasing it.
 
-        Arguments:
-            *args:
-                Positional arguments to be passed to the parent class.
-            **kwargs:
-                Keyword arguments to be passed to the parent class.#
+        Parameters
+        ----------
+        *args :
+            Positional arguments to be passed to the parent class.
+        **kwargs :
+            Keyword arguments to be passed to the parent class.
 
-        Returns:
-            simpy.events.Event:
-                Event representing the request.
+        Returns
+        -------
+        simpy.events.Event
+            Event representing the request.
         """
         # Update time-weighted statistics
         self.update_time_weighted_stats()
@@ -109,14 +115,15 @@ class MonitoredResource(Resource):
         relevant statistics - e.g.:
         - Total queue time (number of requests in queue * time)
         - Total resource use (number of resources in use * time)
-        These are summed to return the totals from across the whole simulation.
-        In Runner.run_single(), these are then used to calculate utilisation.
 
-        Further details:
+        These are summed to return the totals from across the whole simulation.
+
+        Notes
+        -----
         - These sums can be referred to as "the area under the curve".
         - They are called "time-weighted" statistics as they account for how
-        long certain events or states (such as resource use or queue length)
-        persist over time.
+          long certain events or states (such as resource use or queue length)
+          persist over time.
         """
         # Calculate time since last event
         time_since_last_event = self._env.now - self.time_last_event[-1]

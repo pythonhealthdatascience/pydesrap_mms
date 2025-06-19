@@ -11,9 +11,11 @@ little book of DES (https://github.com/hsma-programme/hsma6_des_book)
 import numpy as np
 import simpy
 from sim_tools.distributions import Exponential
+
 from simulation import MonitoredResource, Patient
 
 
+# pylint: disable=too-many-instance-attributes
 class Model:
     """
     Simulation model for a clinic.
@@ -21,55 +23,58 @@ class Model:
     In this model, patients arrive at the clinic, wait for an available
     nurse, have a consultation with the nurse, and then leave.
 
-    Attributes:
-        param (Param):
-            Simulation parameters.
-        run_number (int):
-            Run number for random seed generation.
-        env (simpy.Environment):
-            The SimPy environment for the simulation.
-        nurse (MonitoredResource):
-            Subclass of SimPy resource representing nurses (whilst monitoring
-            the resource during the simulation run).
-        patients (list):
-            List containing the generated patient objects.
-        nurse_time_used (float):
-            Total time the nurse resources have been used in minutes.
-        nurse_time_used_correction (float):
-            Correction for nurse time used with a warm-up period. Without
-            correction, it will be underestimated, as patients who start their
-            time with the nurse during the warm-up period and finish it during
-            the data collection period will not be included in the recorded
-            time.
-        nurse_consult_count (int):
-            Count of patients seen by nurse, using to calculate running mean
-            wait time.
-        running_mean_nurse_wait (float):
-            Running mean wait time for nurse during simulation in minutes,
-            calculated using Welford's Running Average.
-        audit_list (list):
-            List to store metrics recorded at regular intervals.
-        results_list (list):
-            List of dictionaries with the results for each patient (as defined
-            by their patient object attributes).
-        patient_inter_arrival_dist (Exponential):
-            Distribution for sampling patient inter-arrival times.
-        nurse_consult_time_dist (Exponential):
-            Distribution for sampling nurse consultation times.
+    Attributes
+    ----------
+    param : Param
+        Simulation parameters.
+    run_number : int
+        Run number for random seed generation.
+    env : simpy.Environment
+        The SimPy environment for the simulation.
+    nurse : MonitoredResource
+        Subclass of SimPy resource representing nurses (whilst monitoring
+        the resource during the simulation run).
+    patients : list
+        List containing the generated patient objects.
+    nurse_time_used : float
+        Total time the nurse resources have been used in minutes.
+    nurse_time_used_correction : float
+        Correction for nurse time used with a warm-up period. Without
+        correction, it will be underestimated, as patients who start their
+        time with the nurse during the warm-up period and finish it during
+        the data collection period will not be included in the recorded
+        time.
+    nurse_consult_count : int
+        Count of patients seen by nurse, using to calculate running mean
+        wait time.
+    running_mean_nurse_wait : float
+        Running mean wait time for nurse during simulation in minutes,
+        calculated using Welford's Running Average.
+    audit_list : list
+        List to store metrics recorded at regular intervals.
+    results_list : list
+        List of dictionaries with the results for each patient (as defined
+        by their patient object attributes).
+    patient_inter_arrival_dist : Exponential
+        Distribution for sampling patient inter-arrival times.
+    nurse_consult_time_dist : Exponential
+        Distribution for sampling nurse consultation times.
 
-    Acknowledgements:
-        - Class adapted from Rosser and Chalk 2024.
+    Notes
+    -----
+    Class adapted from Rosser and Chalk 2024.
     """
+
     def __init__(self, param, run_number):
         """
-        Initalise a new model.
+        Initialise a new model.
 
-        Arguments:
-            param (Param, optional):
-                Simulation parameters. Defaults to new instance of the
-                Param() class.
-            run_number (int):
-                Run number for random seed generation.
+        Parameters
+        ----------
+        param : Param
+            Simulation parameters.
+        run_number : int
+            Run number for random seed generation.
         """
         # Set parameters and run number
         self.param = param
@@ -80,8 +85,9 @@ class Model:
 
         # Create simpy environment and resource
         self.env = simpy.Environment()
-        self.nurse = MonitoredResource(self.env,
-                                       capacity=self.param.number_of_nurses)
+        self.nurse = MonitoredResource(
+            self.env, capacity=self.param.number_of_nurses
+        )
 
         # Initialise attributes to store results
         self.patients = []
@@ -104,9 +110,9 @@ class Model:
             mean=self.param.mean_n_consult_time, random_seed=seeds[1])
 
         # Log model initialisation
-        self.param.logger.log(sim_time=self.env.now, msg='Initialise model:\n')
+        self.param.logger.log(sim_time=self.env.now, msg="Initialise model:\n")
         self.param.logger.log(vars(self))
-        self.param.logger.log(sim_time=self.env.now, msg='Parameters:\n ')
+        self.param.logger.log(sim_time=self.env.now, msg="Parameters:\n ")
         self.param.logger.log(vars(self.param))
 
     def valid_inputs(self):
@@ -116,10 +122,11 @@ class Model:
         # Define validation rules for attributes
         # Doesn't include number_of_nurses as this is tested by simpy.Resource
         validation_rules = {
-            'positive': ['patient_inter', 'mean_n_consult_time',
-                         'number_of_runs', 'audit_interval',
-                         'number_of_nurses'],
-            'non_negative': ['warm_up_period', 'data_collection_period']
+            "positive": [
+                "patient_inter", "mean_n_consult_time", "number_of_runs",
+                "audit_interval", "number_of_nurses"
+            ],
+            "non_negative": ["warm_up_period", "data_collection_period"]
         }
         # Iterate over the validation rules
         for rule, param_names in validation_rules.items():
@@ -127,14 +134,13 @@ class Model:
                 # Get the value of the parameter by its name
                 param_value = getattr(self.param, param_name)
                 # Check if it meets the rules for that parameter
-                if rule == 'positive' and param_value <= 0:
+                if rule == "positive" and param_value <= 0:
                     raise ValueError(
-                        f'Parameter "{param_name}" must be greater than 0.'
-                    )
-                if rule == 'non_negative' and param_value < 0:
+                        f'Parameter "{param_name}" must be greater than 0.')
+                if rule == "non_negative" and param_value < 0:
                     raise ValueError(
-                        f'Parameter "{param_name}" must be greater than or ' +
-                        'equal to 0.'
+                        f"Parameter '{param_name}' must be greater than or " +
+                        "equal to 0."
                     )
 
     def generate_patient_arrivals(self):
@@ -157,13 +163,13 @@ class Model:
 
             # Log arrival time
             if p.arrival_time < self.param.warm_up_period:
-                arrive_pre = '\U0001F538 WU'
+                arrive_pre = "\U0001F538 WU"
             else:
-                arrive_pre = '\U0001F539 DC'
+                arrive_pre = "\U0001F539 DC"
             self.param.logger.log(
                 sim_time=self.env.now,
-                msg=(f'{arrive_pre} Patient {p.patient_id} arrives at: ' +
-                     f'{p.arrival_time:.3f}.')
+                msg=(f"{arrive_pre} Patient {p.patient_id} arrives at: " +
+                     f"{p.arrival_time:.3f}.")
             )
 
             # Start process of attending clinic
@@ -173,9 +179,10 @@ class Model:
         """
         Simulates the patient's journey through the clinic.
 
-        Arguments:
-            patient (Patient):
-                Instance of the Patient() class representing a single patient.
+        Parameters
+        ----------
+        patient : Patient
+            Instance of the Patient() class representing a single patient.
         """
         # Start queueing and request nurse resource
         start_q_nurse = self.env.now
@@ -188,8 +195,8 @@ class Model:
             # Update running mean of wait time for the nurse
             self.nurse_consult_count += 1
             self.running_mean_nurse_wait += (
-               (patient.q_time_nurse - self.running_mean_nurse_wait) /
-               self.nurse_consult_count
+                (patient.q_time_nurse - self.running_mean_nurse_wait) /
+                self.nurse_consult_count
             )
 
             # Sample time spent with nurse
@@ -197,14 +204,14 @@ class Model:
 
             # Log wait time and time spent with nurse
             if patient.arrival_time < self.param.warm_up_period:
-                nurse_pre = '\U0001F536 WU'
+                nurse_pre = "\U0001F536 WU"
             else:
-                nurse_pre = '\U0001F537 DC'
+                nurse_pre = "\U0001F537 DC"
             self.param.logger.log(
                 sim_time=self.env.now,
-                msg=(f'{nurse_pre} Patient {patient.patient_id} is seen ' +
-                     f'by nurse after {patient.q_time_nurse:.3f}. ' +
-                     f'Consultation length: {patient.time_with_nurse:.3f}.')
+                msg=(f"{nurse_pre} Patient {patient.patient_id} is seen by " +
+                     f"nurse after {patient.q_time_nurse:.3f}. Consultation " +
+                     f"length: {patient.time_with_nurse:.3f}.")
             )
 
             # Update the total nurse time used.
@@ -232,14 +239,14 @@ class Model:
                     # Logging message
                     self.param.logger.log(
                         sim_time=self.env.now,
-                        msg=(f'\U0001F6E0 Patient {patient.patient_id} ' +
-                             'starts consultation with ' +
-                             f'{remaining_warmup:.3f} left of warm-up (which' +
-                             f' is {self.param.warm_up_period:.3f}). As ' +
-                             'their consultation is for ' +
-                             f'{patient.time_with_nurse:.3f}, they will ' +
-                             f'exceed warmup by {time_exceeding_warmup:.3f},' +
-                             ' so we correct for this.')
+                        msg=(f"\U0001F6E0 Patient {patient.patient_id} " +
+                             "starts consultation with " +
+                             f"{remaining_warmup:.3f} left of warm-up (which" +
+                             f" is {self.param.warm_up_period:.3f}). " +
+                             "As their consultation is for " +
+                             f"{patient.time_with_nurse:.3f}, they will " +
+                             f"exceed warmup by {time_exceeding_warmup:.3f}," +
+                             "so we correct for this.")
                     )
 
             # Pass time spent with nurse
@@ -255,9 +262,10 @@ class Model:
         times to compute the average. The running mean reflects the main wait
         time for all patients seen by nurse up to that point in the simulation.
 
-        Arguments:
-            interval (int, optional):
-                Time between audits in minutes.
+        Parameters
+        ----------
+        interval : int
+            Time between audits in minutes.
         """
         # Wait until warm-up period has passed
         yield self.env.timeout(self.param.warm_up_period)
@@ -265,11 +273,11 @@ class Model:
         # Begin interval auditor
         while True:
             self.audit_list.append({
-                'resource_name': 'nurse',
-                'simulation_time': self.env.now,
-                'utilisation': self.nurse.count / self.nurse.capacity,
-                'queue_length': len(self.nurse.queue),
-                'running_mean_wait_time': self.running_mean_nurse_wait
+                "resource_name": "nurse",
+                "simulation_time": self.env.now,
+                "utilisation": self.nurse.count / self.nurse.capacity,
+                "queue_length": len(self.nurse.queue),
+                "running_mean_wait_time": self.running_mean_nurse_wait
             })
 
             # Trigger next audit after desired interval has passed
@@ -304,13 +312,11 @@ class Model:
 
             # If there was a warm-up period, log that this time has passed so
             # can distinguish between patients before and after warm-up in logs
-            if self.param.warm_up_period > 0:
-                self.param.logger.log(sim_time=self.env.now,
-                                      msg='─' * 10)
-                self.param.logger.log(sim_time=self.env.now,
-                                      msg='Warm up complete.')
-                self.param.logger.log(sim_time=self.env.now,
-                                      msg='─' * 10)
+            self.param.logger.log(sim_time=self.env.now, msg="──────────")
+            self.param.logger.log(
+                sim_time=self.env.now, msg="Warm up complete."
+            )
+            self.param.logger.log(sim_time=self.env.now, msg="──────────")
 
     def run(self):
         """

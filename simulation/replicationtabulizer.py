@@ -2,32 +2,38 @@
 ReplicationTabulizer.
 """
 
+import numpy as np
+import pandas as pd
+
 
 class ReplicationTabulizer:
     """
     Observes and records results from OnlineStatistics, updating each time new
     data is processed.
 
-    Attributes:
-        n (int):
-            Number of data points processed.
-        x_i (list):
-            List containing each data point.
-        cumulative_mean (list):
-            List of the running mean.
-        stdev (list):
-            List of the standard deviation.
-        lower (list):
-            List of the lower confidence interval bound.
-        upper (list):
-            List of the upper confidence interval bound.
-        dev (list):
-            List of the percentage deviation of the confidence interval
-            half width from the mean.
+    Attributes
+    ----------
+    n : int
+        Number of data points processed.
+    x_i : list
+        List containing each data point.
+    cumulative_mean : list
+        List of the running mean.
+    stdev : list
+        List of the standard deviation.
+    lower : list
+        List of the lower confidence interval bound.
+    upper : list
+        List of the upper confidence interval bound.
+    dev : list
+        List of the percentage deviation of the confidence interval
+        half width from the mean.
 
-    Acknowledgements:
-        - Class adapted from Monks 2021.
+    Notes
+    -----
+    Class adapted from Monks 2021.
     """
+
     def __init__(self):
         """
         Initialises empty lists for storing statistics, and n is set to zero.
@@ -44,11 +50,12 @@ class ReplicationTabulizer:
         """
         Add new results from OnlineStatistics to the appropriate lists.
 
-        Arguments:
-            results (OnlineStatistics):
-                An instance of OnlineStatistics containing updated statistical
-                measures like the mean, standard deviation and confidence
-                intervals.
+        Parameters
+        ----------
+        results : OnlineStatistics
+            An instance of OnlineStatistics containing updated statistical
+            measures like the mean, standard deviation and confidence
+            intervals.
         """
         self.x_i.append(results.x_i)
         self.cumulative_mean.append(results.mean)
@@ -62,19 +69,18 @@ class ReplicationTabulizer:
         """
         Create a results table from the stored lists.
 
-        Returns:
-             results (pd.DataFrame):
-                Dataframe summarising the replication statistics.
+        Returns
+        -------
+        pd.DataFrame
+            Dataframe summarising the replication statistics.
         """
-        results = pd.DataFrame(
-            {
-                'replications': np.arange(1, self.n + 1),
-                'data': self.x_i,
-                'cumulative_mean': self.cumulative_mean,
-                'stdev': self.stdev,
-                'lower_ci': self.lower,
-                'upper_ci': self.upper,
-                'deviation': self.dev
-            }
-        )
+        results = pd.DataFrame({
+            "replications": np.arange(1, self.n + 1),
+            "data": self.x_i,
+            "cumulative_mean": self.cumulative_mean,
+            "stdev": self.stdev,
+            "lower_ci": self.lower,
+            "upper_ci": self.upper,
+            "deviation": self.dev
+        })
         return results

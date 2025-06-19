@@ -12,28 +12,32 @@ def run_scenarios(scenarios, param=None):
     """
     Execute a set of scenarios and return the results from each run.
 
-    Arguments:
-        scenarios (dict):
-            Dictionary where key is name of parameter and value is a list
-            with different values to run in scenarios.
-        param (dict):
-            Instance of Param with parameters for the base case. Optional,
-            defaults to use those as set in Param.
+    Parameters
+    ----------
+    scenarios : dict
+        Dictionary where key is name of parameter and value is a list with
+        different values to run in scenarios.
+    param : Param, optional
+        Instance of Param with parameters for the base case. Optional, defaults
+        to use those as set in Param.
 
-    Returns:
-        pandas.dataframe:
-            Dataframe with results from each run of each scenario.
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with results from each run of each scenario.
 
-    Acknowledgements:
-        - Function adapted from Rosser and Chalk 2024.
+    Notes
+    -----
+    Function adapted from Rosser and Chalk 2024.
     """
     # Find every possible permutation of the scenarios
     all_scenarios_tuples = list(itertools.product(*scenarios.values()))
     # Convert back into dictionaries
     all_scenarios_dicts = [
-        dict(zip(scenarios.keys(), p)) for p in all_scenarios_tuples]
+        dict(zip(scenarios.keys(), p)) for p in all_scenarios_tuples
+    ]
     # Preview some of the scenarios
-    print(f'There are {len(all_scenarios_dicts)} scenarios. Running:')
+    print(f"There are {len(all_scenarios_dicts)} scenarios. Running:")
 
     # Run the scenarios...
     results = []

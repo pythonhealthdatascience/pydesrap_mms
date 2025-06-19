@@ -12,38 +12,41 @@ class OnlineStatistics:
     which then allows computation of confidence intervals (CIs).
 
     The statistics are referred to as "online" as they are computed via updates
-    to it's value, rather than storing lots of data and repeatedly taking the
+    to its value, rather than storing lots of data and repeatedly taking the
     mean after new values have been added.
 
-    Attributes:
-        n (int):
-            Number of data points processed.
-        x_i (float):
-            Most recent data point.
-        mean (float):
-            Running mean.
-        _sq (float):
-            Sum of squared differences from the mean.
-        alpha (float):
-            Significance level for confidence interval calculations.
-        observer (list):
-            object to notify on updates.
+    Attributes
+    ----------
+    n : int
+        Number of data points processed.
+    x_i : float
+        Most recent data point.
+    mean : float
+        Running mean.
+    _sq : float
+        Sum of squared differences from the mean.
+    alpha : float
+        Significance level for confidence interval calculations.
+    observer : list
+        Object to notify on updates.
 
-    Acknowledgements:
-        - Class adapted from Monks 2021.
+    Notes
+    -----
+    Class adapted from Monks 2021.
     """
+
     def __init__(self, data=None, alpha=0.05, observer=None):
         """
         Initialises the OnlineStatistics instance.
 
-        Arguments:
-            data (np.ndarray, optional):
-                Array containing an initial data sample.
-            alpha (float, optional):
-                Significance level for confidence interval calculations. For
-                example, if alpha is 0.05, then the confidence level is 95%.
-            observer (object, optional):
-                Observer to notify on updates.
+        Parameters
+        ----------
+        data : np.ndarray, optional
+            Array containing an initial data sample.
+        alpha : float, optional
+            Significance level for confidence interval calculations.
+        observer : object, optional
+            Observer to notify on updates.
         """
         self.n = 0
         self.x_i = None
@@ -61,7 +64,7 @@ class OnlineStatistics:
             # proceed and won't notice it hasn't done this
             else:
                 raise ValueError(
-                    f'data must be np.ndarray but is type {type(data)}')
+                    f"data must be np.ndarray but is type {type(data)}")
 
     def update(self, x):
         """
@@ -70,13 +73,13 @@ class OnlineStatistics:
 
         See Knuth. D `The Art of Computer Programming` Vol 2. 2nd ed. Page 216.
 
-        Arguments:
-            x (float):
-                A new data point.
+        Parameters
+        ----------
+        x : float
+            A new data point.
         """
         self.n += 1
         self.x_i = x
-
         if self.n == 1:
             self.mean = x
             self._sq = 0
@@ -93,6 +96,11 @@ class OnlineStatistics:
     def variance(self):
         """
         Computes and returns the variance of the data points.
+
+        Returns
+        -------
+        float
+            Sample variance.
         """
         # Sum of squares of differences from the current mean divided by n - 1
         return self._sq / (self.n - 1)
@@ -101,6 +109,11 @@ class OnlineStatistics:
     def std(self):
         """
         Computes and returns the standard deviation, or NaN if not enough data.
+
+        Returns
+        -------
+        float
+            Standard deviation.
         """
         if self.n > 2:
             return np.sqrt(self.variance)
@@ -110,6 +123,11 @@ class OnlineStatistics:
     def std_error(self):
         """
         Computes and returns the standard error of the mean.
+
+        Returns
+        -------
+        float
+            Standard error.
         """
         return self.std / np.sqrt(self.n)
 
@@ -117,6 +135,11 @@ class OnlineStatistics:
     def half_width(self):
         """
         Computes and returns the half-width of the confidence interval.
+
+        Returns
+        -------
+        float
+            Confidence interval half-width.
         """
         dof = self.n - 1
         t_value = t.ppf(1 - (self.alpha / 2), dof)
@@ -127,6 +150,11 @@ class OnlineStatistics:
         """
         Computes and returns the lower confidence interval bound, or NaN if
         not enough data.
+
+        Returns
+        -------
+        float
+            Lower confidence interval bound.
         """
         if self.n > 2:
             return self.mean - self.half_width
@@ -137,6 +165,11 @@ class OnlineStatistics:
         """
         Computes and returns the upper confidence interval bound, or NaN if
         not enough data.
+
+        Returns
+        -------
+        float
+            Upper confidence interval bound.
         """
         if self.n > 2:
             return self.mean + self.half_width
@@ -147,6 +180,11 @@ class OnlineStatistics:
         """
         Computes and returns the precision of the confidence interval
         expressed as the percentage deviation of the half width from the mean.
+
+        Returns
+        -------
+        float
+            Relative deviation of the confidence interval half width.
         """
         if self.n > 2:
             return self.half_width / self.mean

@@ -1,12 +1,17 @@
 """
 confidence_interval_method.
 """
+# pylint: disable=duplicate-code
 
-from simulation import Param, Runner, ReplicationTabulizer
+import warnings
+
+import numpy as np
+import pandas as pd
+
+from simulation import Param, Runner, ReplicationTabulizer, OnlineStatistics
 
 
-# pylint: disable=too-many-arguments,too-many-positional-arguments
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
 def confidence_interval_method(
     replications,
     metrics,
@@ -19,46 +24,49 @@ def confidence_interval_method(
     """
     The confidence interval method for selecting the number of replications.
 
-    This method will run the model for the specified number of replications.
-    It then calculates the cumulative  mean and confidence intervals with
-    each of those replications. It then checks the results to find when the
-    precision is first achieved. It does not check if this precision is
-    maintained.
+    This method runs the model for the specified number of replications,
+    calculates the cumulative mean and confidence intervals for each
+    replication, and determines when the desired precision is first achieved
+    for each metric. It does not check if this precision is maintained.
 
-    Arguments:
-        replications (int):
-            Number of times to run the model.
-        metrics (list):
-            List of performance metrics to assess (should correspond to
-            column names from the run results dataframe).
-        param (Param):
-            Instance of the parameter class with parameters to use (will use
-            default parameters if not provided).
-        alpha (float, optional):
-            Significance level for confidence interval calculations.
-        desired_precision (float, optional):
-            The target half width precision (i.e. percentage deviation of the
-            confidence interval from the mean).
-        min_rep (int, optional):
-            Minimum number of replications before checking precision. Useful
-            when the number of replications returned does not provide a stable
-            precision below target.
-        verbose (bool, optional):
-            Whether to print progress updates.
+    Parameters
+    ----------
+    replications : int
+        Number of times to run the model.
+    metrics : list of str
+        List of performance metrics to assess (should correspond to
+        column names from the run results dataframe).
+    param : Param, optional
+        Instance of the parameter class with parameters to use (will use
+        default parameters if not provided).
+    alpha : float, optional
+        Significance level for confidence interval calculations.
+    desired_precision : float, optional
+        The target half width precision (i.e. percentage deviation of the
+        confidence interval from the mean).
+    min_rep : int, optional
+        Minimum number of replications before checking precision. Useful
+        when the number of replications returned does not provide a stable
+        precision below target.
+    verbose : bool, optional
+        Whether to print progress updates.
 
-    Returns:
-        tuple[dict, pd.DataFrame]:
-            - A dictionary with the minimum number of replications required
-            to meet the precision for each metric.
-            - DataFrame containing cumulative statistics for each
-            replication for each metric.
+    Returns
+    -------
+    tuple of (dict, pd.DataFrame)
+        - A dictionary with the minimum number of replications required
+          to meet the precision for each metric.
+        - DataFrame containing cumulative statistics for each
+          replication for each metric.
 
-    Warnings:
-        Issues a warning if the desired precision is not met within the
-        provided replications.
+    Warnings
+    --------
+    Issues a warning if the desired precision is not met within the
+    provided replications.
 
-    Acknowledgements:
-        - Class adapted from Monks 2021.
+    Notes
+    -----
+    Class adapted from Monks 2021.
     """
     # Replace runs in param with the specified number of replications
     param.number_of_runs = replications
@@ -77,28 +85,29 @@ def confidence_interval_method(
         # Set up method for calculating statistics and saving them as a table
         observer = ReplicationTabulizer()
         stats = OnlineStatistics(
-            alpha=alpha, data=np.array(rep_res[:2]), observer=observer)
+            alpha=alpha, data=np.array(rep_res[:2]), observer=observer
+        )
 
         # Calculate statistics with each replication, and get summary table
         for i in range(2, len(rep_res)):
             stats.update(rep_res[i])
+
         results = observer.summary_table()
 
         # Get minimum number of replications where deviation is below target
         try:
             nreps = (
-                (results
-                 .loc[results['replications'] >= min_rep]
-                 .loc[results['deviation'] <= desired_precision]
-                 .iloc[0]
-                 .replications)
+                results
+                .loc[results["replications"] >= min_rep]
+                .loc[results["deviation"] <= desired_precision]
+                .iloc[0]
+                .replications
             )
             if verbose:
-                print(f'{metric}: Reached desired precision in {nreps} ' +
-                      'replications.')
-        # Return warning if there are no replications with desired precision
+                print(f"{metric}: Reached desired precision in {nreps} " +
+                      "replications.")
         except IndexError:
-            message = f'WARNING: {metric} does not reach desired precision.'
+            message = f"WARNING: {metric} does not reach desired precision."
             warnings.warn(message)
             nreps = None
 
@@ -106,7 +115,7 @@ def confidence_interval_method(
         nreps_dict[metric] = nreps
 
         # Add metric name to table then append to list
-        results['metric'] = metric
+        results["metric"] = metric
         summary_table_list.append(results)
 
     # Combine into a single table

@@ -17,7 +17,8 @@ def summary_stats(data):
 
     Returns
     -------
-    tuple: (mean, standard deviation, CI lower, CI upper).
+    tuple
+        (mean, standard deviation, CI lower, CI upper).
     """
     # Remove any NaN from the series
     data = data.dropna()
@@ -47,5 +48,4 @@ def summary_stats(data):
                 df=count-1,
                 loc=mean,
                 scale=st.sem(data))
-
     return mean, std_dev, ci_lower, ci_upper
