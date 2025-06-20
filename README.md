@@ -55,8 +55,7 @@ The simulation code is in the `simulation/` folder as a local package. Example a
 %autoreload 1
 %aimport simulation
 
-from simulation.model import Param, Runner, run_scenarios
-from simulation.helper import summary_stats
+from simulation import Param, Runner, run_scenarios, summary_stats
 # etc.
 ```
 
