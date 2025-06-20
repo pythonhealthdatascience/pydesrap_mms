@@ -1,5 +1,15 @@
 """
 ReplicationsAlgorithm.
+
+Acknowledgements
+----------------
+This code is adapted from Tom Monks (2021) sim-tools: fundamental tools to
+support the simulation process in python
+(https://github.com/TomMonks/sim-tools) (MIT Licence). In sim-tools, they cite
+that their implementation is of the "replications algorithm" from: Hoad,
+Robinson, & Davies (2010). Automated selection of the number of replications
+for a discrete-event simulation. Journal of the Operational Research Society.
+https://www.jstor.org/stable/40926090.
 """
 
 import warnings
@@ -15,8 +25,6 @@ class ReplicationsAlgorithm:
     Implements an adaptive replication algorithm for selecting the
     appropriate number of simulation replications based on statistical
     precision.
-
-    Uses the "Replications Algorithm" from Hoad, Robinson, & Davies (2010).
 
     Attributes
     ----------

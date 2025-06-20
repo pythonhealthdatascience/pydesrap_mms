@@ -1,5 +1,11 @@
 """
 plotly_confidence_interval_method.
+
+Acknowledgements
+----------------
+This code is adapted from Tom Monks (2021) sim-tools: fundamental tools to
+support the simulation process in python
+(https://github.com/TomMonks/sim-tools) (MIT Licence).
 """
 
 import plotly.graph_objects as go

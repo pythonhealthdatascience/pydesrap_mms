@@ -1,5 +1,11 @@
 """
 confidence_interval_method.
+
+Acknowledgements
+----------------
+This code is adapted from Tom Monks (2021) sim-tools: fundamental tools to
+support the simulation process in python
+(https://github.com/TomMonks/sim-tools) (MIT Licence).
 """
 # pylint: disable=duplicate-code
 
@@ -69,7 +75,7 @@ def confidence_interval_method(
 
     Notes
     -----
-    Class adapted from Monks 2021.
+    Function adapted from Monks 2021.
     """
     # Replace runs in param with the specified number of replications
     param.number_of_runs = replications

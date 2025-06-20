@@ -1,5 +1,11 @@
 """
 Patient.
+
+Acknowledgements
+----------------
+This code is adapted from Sammi Rosser and Dan Chalk (2024) HSMA - the
+little book of DES (https://github.com/hsma-programme/hsma6_des_book)
+(MIT Licence).
 """
 
 import numpy as np
@@ -20,6 +26,10 @@ class Patient:
         Time the patient spent waiting for a nurse in minutes.
     time_with_nurse : float
         Time spent in consultation with a nurse in minutes.
+
+    Notes
+    -----
+    Class adapted from Rosser and Chalk 2024.
     """
 
     def __init__(self, patient_id):

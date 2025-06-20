@@ -1,5 +1,11 @@
 """
 run_scenarios.
+
+Acknowledgements
+----------------
+This code is adapted from Sammi Rosser and Dan Chalk (2024) HSMA - the
+little book of DES (https://github.com/hsma-programme/hsma6_des_book)
+(MIT Licence).
 """
 
 import itertools
