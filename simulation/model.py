@@ -137,7 +137,7 @@ class Model:
                 # Check if it meets the rules for that parameter
                 if rule == "positive" and param_value <= 0:
                     raise ValueError(
-                        f'Parameter "{param_name}" must be greater than 0.')
+                        f"Parameter '{param_name}' must be greater than 0.")
                 if rule == "non_negative" and param_value < 0:
                     raise ValueError(
                         f"Parameter '{param_name}' must be greater than or " +
