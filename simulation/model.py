@@ -1,293 +1,22 @@
-"""Simple Reproducible SimPy Discrete-Event Simulation (DES) Model.
+"""
+Model.
 
-Uses object-oriented approach to create an M/M/c model with a warm-up
-period, replications, seed control. For this example application, the time unit
-is described as minutes, but this could be changed - for example, to hours,
-days.
-
-Credit:
-    > This code is adapted from Sammi Rosser and Dan Chalk (2024) HSMA - the
-    little book of DES (https://github.com/hsma-programme/hsma6_des_book)
-    (MIT Licence).
-    > The MonitoredResource class is based on Tom Monks, Alison Harper and Amy
-    Heather (2025) An introduction to Discrete-Event Simulation (DES) using
-    Free and Open Source Software
-    (https://github.com/pythonhealthdatascience/intro-open-sim/tree/main)
-    (MIT Licence). They based it on the method described in Law. Simulation
-    Modeling and Analysis 4th Ed. Pages 14 - 17.
-
-Licence:
-    This project is licensed under the MIT Licence. See the LICENSE file for
-    more details.
-
-Typical usage example:
-    experiment = Runner(param=Param())
-    experiment.run_reps()
-    print(experiment.run_results_df)
+Acknowledgements
+----------------
+This code is adapted from Sammi Rosser and Dan Chalk (2024) HSMA - the
+little book of DES (https://github.com/hsma-programme/hsma6_des_book)
+(MIT Licence).
 """
 
-import itertools
-
-from joblib import Parallel, delayed, cpu_count
 import numpy as np
-import pandas as pd
 import simpy
 from sim_tools.distributions import Exponential
 
-from simulation.logging import SimLogger
-from simulation.helper import summary_stats
+from .monitoredresource import MonitoredResource
+from .patient import Patient
 
 
-# pylint: disable=too-many-instance-attributes,too-few-public-methods
-class Param:
-    """
-    Default parameters for simulation.
-
-    Attributes are described in initialisation docstring.
-    """
-    # pylint: disable=too-many-arguments,too-many-positional-arguments
-    def __init__(
-        self,
-        patient_inter=4,
-        mean_n_consult_time=10,
-        number_of_nurses=5,
-        warm_up_period=1440*27,  # 27 days
-        data_collection_period=1440*30,  # 30 days
-        number_of_runs=31,
-        audit_interval=120,  # every 2 hours
-        scenario_name=0,
-        cores=-1,
-        logger=SimLogger(log_to_console=False, log_to_file=False)
-    ):
-        """
-        Initialise instance of parameters class.
-
-        Arguments:
-            patient_inter (float):
-                Mean inter-arrival time between patients in minutes.
-            mean_n_consult_time (float):
-                Mean nurse consultation time in minutes.
-            number_of_nurses (float):
-                Number of available nurses.
-            warm_up_period (int):
-                Duration of the warm-up period in minutes - running simulation
-                but not yet collecting results.
-            data_collection_period (int):
-                Duration of data collection period in minutes (also known as
-                measurement interval) - which begins after any warm-up period.
-            number_of_runs (int):
-                The number of runs (i.e. replications), defining how many
-                times to re-run the simulation (with different random numbers).
-            audit_interval (int):
-                How frequently to audit resource utilisation, in minutes.
-            scenario_name (int|float|string):
-                Label for the scenario.
-            cores (int):
-                Number of CPU cores to use for parallel execution. Set to
-                desired number, or to -1 to use all available cores. For
-                sequential execution, set to 1.
-            logger (logging.Logger):
-                The logging instance used for logging messages.
-        """
-        # Disable restriction on attribute modification during initialisation
-        object.__setattr__(self, '_initialising', True)
-
-        self.patient_inter = patient_inter
-        self.mean_n_consult_time = mean_n_consult_time
-        self.number_of_nurses = number_of_nurses
-        self.warm_up_period = warm_up_period
-        self.data_collection_period = data_collection_period
-        self.number_of_runs = number_of_runs
-        self.audit_interval = audit_interval
-        self.scenario_name = scenario_name
-        self.cores = cores
-        self.logger = logger
-
-        # Re-enable attribute checks after initialisation
-        object.__setattr__(self, '_initialising', False)
-
-    def __setattr__(self, name, value):
-        """
-        Prevent addition of new attributes.
-
-        This method overrides the default `__setattr__` behavior to restrict
-        the addition of new attributes to the instance. It allows modification
-        of existing attributes but raises an `AttributeError` if an attempt is
-        made to create a new attribute. This ensures that accidental typos in
-        attribute names do not silently create new attributes.
-
-        Arguments:
-            name (str):
-                The name of the attribute to set.
-            value (Any):
-                The value to assign to the attribute.
-
-        Raises:
-            AttributeError:
-                If `name` is not an existing attribute and an attempt is made
-                to add it to the instance.
-        """
-        # Skip the check if the object is still initialising
-        # pylint: disable=maybe-no-member
-        if hasattr(self, '_initialising') and self._initialising:
-            super().__setattr__(name, value)
-        else:
-            # Check if attribute of that name is already present
-            if name in self.__dict__:
-                super().__setattr__(name, value)
-            else:
-                raise AttributeError(
-                    f'Cannot add new attribute "{name}" - only possible to ' +
-                    f'modify existing attributes: {self.__dict__.keys()}')
-
-
-class Patient:
-    """
-    Represents a patient.
-
-    Attributes:
-        patient_id (int|float|string):
-            Patient's unique identifier.
-        arrival_time (float):
-            Arrival time for the patient in minutes.
-        q_time_nurse (float):
-            Time the patient spent waiting for a nurse in minutes.
-        time_with_nurse (float):
-            Time spent in consultation with a nurse in minutes.
-    """
-    def __init__(self, patient_id):
-        """
-        Initialises a new patient.
-
-        Arguments:
-            patient_id (int):
-                Patient's unique identifier.
-        """
-        self.patient_id = patient_id
-        self.arrival_time = np.nan
-        self.q_time_nurse = np.nan
-        self.time_with_nurse = np.nan
-
-
-class MonitoredResource(simpy.Resource):
-    """
-    Subclass of simpy.Resource used to monitor resource usage during the run.
-
-    Calculates resource utilisation and the queue length during the model run.
-    As it is a subclass, it inherits the attributes and methods from
-    simpy.Resource, which is referred to as the superclass or parent class.
-
-    Attributes:
-        time_last_event (list):
-            Time of last resource request or release.
-        area_n_in_queue (list):
-            Time that patients have spent queueing for the resource
-            (i.e. sum of the times each patient spent waiting). Used to
-            calculate the average queue length.
-        area_resource_busy (list):
-            Time that resources have been in use during the simulation
-            (i.e. sum of the times each individual resource was busy). Used
-            to calculated utilisation.
-
-    Acknowledgements:
-        - Class adapted from Monks, Harper and Heather 2025.
-    """
-    def __init__(self, *args, **kwargs):
-        """
-        Initialises a MonitoredResource - which involves initialising a SimPy
-        resource and resetting monitoring attributes.
-
-        Arguments:
-            *args:
-                Positional arguments to be passed to the parent class.
-            **kwargs:
-                Keyword arguments to be passed to the parent class.
-        """
-        # Initialise a SimPy Resource
-        super().__init__(*args, **kwargs)
-        # Run the init_results() method
-        self.init_results()
-
-    def init_results(self):
-        """
-        Resets monitoring attributes to initial values.
-        """
-        self.time_last_event = [self._env.now]
-        self.area_n_in_queue = [0.0]
-        self.area_resource_busy = [0.0]
-
-    def request(self, *args, **kwargs):
-        """
-        Requests a resource, but updates time-weighted statistics BEFORE
-        making the request.
-
-        Arguments:
-            *args:
-                Positional arguments to be passed to the parent class.
-            **kwargs:
-                Keyword arguments to be passed to the parent class.
-
-        Returns:
-            simpy.events.Event:
-                Event representing the request.
-        """
-        # Update time-weighted statistics
-        self.update_time_weighted_stats()
-        # Request a resource
-        return super().request(*args, **kwargs)
-
-    def release(self, *args, **kwargs):
-        """
-        Releases a resource, but updates time-weighted statistics BEFORE
-        releasing it.
-
-        Arguments:
-            *args:
-                Positional arguments to be passed to the parent class.
-            **kwargs:
-                Keyword arguments to be passed to the parent class.#
-
-        Returns:
-            simpy.events.Event:
-                Event representing the request.
-        """
-        # Update time-weighted statistics
-        self.update_time_weighted_stats()
-        # Release a resource
-        return super().release(*args, **kwargs)
-
-    def update_time_weighted_stats(self):
-        """
-        Update the time-weighted statistics for resource usage.
-
-        Between every request or release of the resource, it calculates the
-        relevant statistics - e.g.:
-        - Total queue time (number of requests in queue * time)
-        - Total resource use (number of resources in use * time)
-        These are summed to return the totals from across the whole simulation.
-        In Runner.run_single(), these are then used to calculate utilisation.
-
-        Further details:
-        - These sums can be referred to as "the area under the curve".
-        - They are called "time-weighted" statistics as they account for how
-        long certain events or states (such as resource use or queue length)
-        persist over time.
-        """
-        # Calculate time since last event
-        time_since_last_event = self._env.now - self.time_last_event[-1]
-
-        # Add record of current time
-        self.time_last_event.append(self._env.now)
-
-        # Add "area under curve" of people in queue
-        # len(self.queue) is the number of requests queued
-        self.area_n_in_queue.append(len(self.queue) * time_since_last_event)
-
-        # Add "area under curve" of resources in use
-        # self.count is the number of resources in use
-        self.area_resource_busy.append(self.count * time_since_last_event)
-
-
+# pylint: disable=too-many-instance-attributes
 class Model:
     """
     Simulation model for a clinic.
@@ -295,55 +24,58 @@ class Model:
     In this model, patients arrive at the clinic, wait for an available
     nurse, have a consultation with the nurse, and then leave.
 
-    Attributes:
-        param (Param):
-            Simulation parameters.
-        run_number (int):
-            Run number for random seed generation.
-        env (simpy.Environment):
-            The SimPy environment for the simulation.
-        nurse (MonitoredResource):
-            Subclass of SimPy resource representing nurses (whilst monitoring
-            the resource during the simulation run).
-        patients (list):
-            List containing the generated patient objects.
-        nurse_time_used (float):
-            Total time the nurse resources have been used in minutes.
-        nurse_time_used_correction (float):
-            Correction for nurse time used with a warm-up period. Without
-            correction, it will be underestimated, as patients who start their
-            time with the nurse during the warm-up period and finish it during
-            the data collection period will not be included in the recorded
-            time.
-        nurse_consult_count (int):
-            Count of patients seen by nurse, using to calculate running mean
-            wait time.
-        running_mean_nurse_wait (float):
-            Running mean wait time for nurse during simulation in minutes,
-            calculated using Welford's Running Average.
-        audit_list (list):
-            List to store metrics recorded at regular intervals.
-        results_list (list):
-            List of dictionaries with the results for each patient (as defined
-            by their patient object attributes).
-        patient_inter_arrival_dist (Exponential):
-            Distribution for sampling patient inter-arrival times.
-        nurse_consult_time_dist (Exponential):
-            Distribution for sampling nurse consultation times.
+    Attributes
+    ----------
+    param : Param
+        Simulation parameters.
+    run_number : int
+        Run number for random seed generation.
+    env : simpy.Environment
+        The SimPy environment for the simulation.
+    nurse : MonitoredResource
+        Subclass of SimPy resource representing nurses (whilst monitoring
+        the resource during the simulation run).
+    patients : list
+        List containing the generated patient objects.
+    nurse_time_used : float
+        Total time the nurse resources have been used in minutes.
+    nurse_time_used_correction : float
+        Correction for nurse time used with a warm-up period. Without
+        correction, it will be underestimated, as patients who start their
+        time with the nurse during the warm-up period and finish it during
+        the data collection period will not be included in the recorded
+        time.
+    nurse_consult_count : int
+        Count of patients seen by nurse, using to calculate running mean
+        wait time.
+    running_mean_nurse_wait : float
+        Running mean wait time for nurse during simulation in minutes,
+        calculated using Welford's Running Average.
+    audit_list : list
+        List to store metrics recorded at regular intervals.
+    results_list : list
+        List of dictionaries with the results for each patient (as defined
+        by their patient object attributes).
+    patient_inter_arrival_dist : Exponential
+        Distribution for sampling patient inter-arrival times.
+    nurse_consult_time_dist : Exponential
+        Distribution for sampling nurse consultation times.
 
-    Acknowledgements:
-        - Class adapted from Rosser and Chalk 2024.
+    Notes
+    -----
+    Class adapted from Rosser and Chalk 2024.
     """
+
     def __init__(self, param, run_number):
         """
-        Initalise a new model.
+        Initialise a new model.
 
-        Arguments:
-            param (Param, optional):
-                Simulation parameters. Defaults to new instance of the
-                Param() class.
-            run_number (int):
-                Run number for random seed generation.
+        Parameters
+        ----------
+        param : Param
+            Simulation parameters.
+        run_number : int
+            Run number for random seed generation.
         """
         # Set parameters and run number
         self.param = param
@@ -354,8 +86,9 @@ class Model:
 
         # Create simpy environment and resource
         self.env = simpy.Environment()
-        self.nurse = MonitoredResource(self.env,
-                                       capacity=self.param.number_of_nurses)
+        self.nurse = MonitoredResource(
+            self.env, capacity=self.param.number_of_nurses
+        )
 
         # Initialise attributes to store results
         self.patients = []
@@ -378,9 +111,9 @@ class Model:
             mean=self.param.mean_n_consult_time, random_seed=seeds[1])
 
         # Log model initialisation
-        self.param.logger.log(sim_time=self.env.now, msg='Initialise model:\n')
+        self.param.logger.log(sim_time=self.env.now, msg="Initialise model:\n")
         self.param.logger.log(vars(self))
-        self.param.logger.log(sim_time=self.env.now, msg='Parameters:\n ')
+        self.param.logger.log(sim_time=self.env.now, msg="Parameters:\n ")
         self.param.logger.log(vars(self.param))
 
     def valid_inputs(self):
@@ -390,10 +123,11 @@ class Model:
         # Define validation rules for attributes
         # Doesn't include number_of_nurses as this is tested by simpy.Resource
         validation_rules = {
-            'positive': ['patient_inter', 'mean_n_consult_time',
-                         'number_of_runs', 'audit_interval',
-                         'number_of_nurses'],
-            'non_negative': ['warm_up_period', 'data_collection_period']
+            "positive": [
+                "patient_inter", "mean_n_consult_time", "number_of_runs",
+                "audit_interval", "number_of_nurses"
+            ],
+            "non_negative": ["warm_up_period", "data_collection_period"]
         }
         # Iterate over the validation rules
         for rule, param_names in validation_rules.items():
@@ -401,14 +135,13 @@ class Model:
                 # Get the value of the parameter by its name
                 param_value = getattr(self.param, param_name)
                 # Check if it meets the rules for that parameter
-                if rule == 'positive' and param_value <= 0:
+                if rule == "positive" and param_value <= 0:
                     raise ValueError(
-                        f'Parameter "{param_name}" must be greater than 0.'
-                    )
-                if rule == 'non_negative' and param_value < 0:
+                        f"Parameter '{param_name}' must be greater than 0.")
+                if rule == "non_negative" and param_value < 0:
                     raise ValueError(
-                        f'Parameter "{param_name}" must be greater than or ' +
-                        'equal to 0.'
+                        f"Parameter '{param_name}' must be greater than or " +
+                        "equal to 0."
                     )
 
     def generate_patient_arrivals(self):
@@ -431,13 +164,13 @@ class Model:
 
             # Log arrival time
             if p.arrival_time < self.param.warm_up_period:
-                arrive_pre = '\U0001F538 WU'
+                arrive_pre = "\U0001F538 WU"
             else:
-                arrive_pre = '\U0001F539 DC'
+                arrive_pre = "\U0001F539 DC"
             self.param.logger.log(
                 sim_time=self.env.now,
-                msg=(f'{arrive_pre} Patient {p.patient_id} arrives at: ' +
-                     f'{p.arrival_time:.3f}.')
+                msg=(f"{arrive_pre} Patient {p.patient_id} arrives at: " +
+                     f"{p.arrival_time:.3f}.")
             )
 
             # Start process of attending clinic
@@ -447,9 +180,10 @@ class Model:
         """
         Simulates the patient's journey through the clinic.
 
-        Arguments:
-            patient (Patient):
-                Instance of the Patient() class representing a single patient.
+        Parameters
+        ----------
+        patient : Patient
+            Instance of the Patient() class representing a single patient.
         """
         # Start queueing and request nurse resource
         start_q_nurse = self.env.now
@@ -462,8 +196,8 @@ class Model:
             # Update running mean of wait time for the nurse
             self.nurse_consult_count += 1
             self.running_mean_nurse_wait += (
-               (patient.q_time_nurse - self.running_mean_nurse_wait) /
-               self.nurse_consult_count
+                (patient.q_time_nurse - self.running_mean_nurse_wait) /
+                self.nurse_consult_count
             )
 
             # Sample time spent with nurse
@@ -471,14 +205,14 @@ class Model:
 
             # Log wait time and time spent with nurse
             if patient.arrival_time < self.param.warm_up_period:
-                nurse_pre = '\U0001F536 WU'
+                nurse_pre = "\U0001F536 WU"
             else:
-                nurse_pre = '\U0001F537 DC'
+                nurse_pre = "\U0001F537 DC"
             self.param.logger.log(
                 sim_time=self.env.now,
-                msg=(f'{nurse_pre} Patient {patient.patient_id} is seen ' +
-                     f'by nurse after {patient.q_time_nurse:.3f}. ' +
-                     f'Consultation length: {patient.time_with_nurse:.3f}.')
+                msg=(f"{nurse_pre} Patient {patient.patient_id} is seen by " +
+                     f"nurse after {patient.q_time_nurse:.3f}. Consultation " +
+                     f"length: {patient.time_with_nurse:.3f}.")
             )
 
             # Update the total nurse time used.
@@ -506,14 +240,14 @@ class Model:
                     # Logging message
                     self.param.logger.log(
                         sim_time=self.env.now,
-                        msg=(f'\U0001F6E0 Patient {patient.patient_id} ' +
-                             'starts consultation with ' +
-                             f'{remaining_warmup:.3f} left of warm-up (which' +
-                             f' is {self.param.warm_up_period:.3f}). As ' +
-                             'their consultation is for ' +
-                             f'{patient.time_with_nurse:.3f}, they will ' +
-                             f'exceed warmup by {time_exceeding_warmup:.3f},' +
-                             ' so we correct for this.')
+                        msg=(f"\U0001F6E0 Patient {patient.patient_id} " +
+                             "starts consultation with " +
+                             f"{remaining_warmup:.3f} left of warm-up (which" +
+                             f" is {self.param.warm_up_period:.3f}). " +
+                             "As their consultation is for " +
+                             f"{patient.time_with_nurse:.3f}, they will " +
+                             f"exceed warmup by {time_exceeding_warmup:.3f}," +
+                             "so we correct for this.")
                     )
 
             # Pass time spent with nurse
@@ -529,9 +263,10 @@ class Model:
         times to compute the average. The running mean reflects the main wait
         time for all patients seen by nurse up to that point in the simulation.
 
-        Arguments:
-            interval (int, optional):
-                Time between audits in minutes.
+        Parameters
+        ----------
+        interval : int
+            Time between audits in minutes.
         """
         # Wait until warm-up period has passed
         yield self.env.timeout(self.param.warm_up_period)
@@ -539,11 +274,11 @@ class Model:
         # Begin interval auditor
         while True:
             self.audit_list.append({
-                'resource_name': 'nurse',
-                'simulation_time': self.env.now,
-                'utilisation': self.nurse.count / self.nurse.capacity,
-                'queue_length': len(self.nurse.queue),
-                'running_mean_wait_time': self.running_mean_nurse_wait
+                "resource_name": "nurse",
+                "simulation_time": self.env.now,
+                "utilisation": self.nurse.count / self.nurse.capacity,
+                "queue_length": len(self.nurse.queue),
+                "running_mean_wait_time": self.running_mean_nurse_wait
             })
 
             # Trigger next audit after desired interval has passed
@@ -578,13 +313,11 @@ class Model:
 
             # If there was a warm-up period, log that this time has passed so
             # can distinguish between patients before and after warm-up in logs
-            if self.param.warm_up_period > 0:
-                self.param.logger.log(sim_time=self.env.now,
-                                      msg='─' * 10)
-                self.param.logger.log(sim_time=self.env.now,
-                                      msg='Warm up complete.')
-                self.param.logger.log(sim_time=self.env.now,
-                                      msg='─' * 10)
+            self.param.logger.log(sim_time=self.env.now, msg="──────────")
+            self.param.logger.log(
+                sim_time=self.env.now, msg="Warm up complete."
+            )
+            self.param.logger.log(sim_time=self.env.now, msg="──────────")
 
     def run(self):
         """
@@ -623,250 +356,3 @@ class Model:
         # Convert list of patient objects into a list that just contains the
         # attributes of each of those patients as dictionaries
         self.results_list = [x.__dict__ for x in self.patients]
-
-
-class Runner:
-    """
-    Run the simulation.
-
-    Manages simulation runs, either running the model once or multiple times
-    (replications).
-
-    Attributes:
-        param (Param):
-            Simulation parameters.
-        patient_results_df (pandas.DataFrame):
-            Dataframe to store patient-level results.
-        run_results_df (pandas.DataFrame):
-            Dataframe to store results from each run.
-        interval_audit_df (pandas.DataFrame):
-            Dataframe to store interval audit results.
-        overall_results_df (pandas.DataFrame):
-            Dataframe to store average results from across the runs.
-
-    Acknowledgements:
-        - Class adapted from Rosser and Chalk 2024.
-    """
-    def __init__(self, param):
-        """
-        Initialise a new instance of the Runner class.
-
-        Arguments:
-            param (Param):
-                Simulation parameters.
-        """
-        # Store model parameters
-        self.param = param
-        # Initialise empty dataframes to store results
-        self.patient_results_df = pd.DataFrame()
-        self.run_results_df = pd.DataFrame()
-        self.interval_audit_df = pd.DataFrame()
-        self.overall_results_df = pd.DataFrame()
-
-    def run_single(self, run):
-        """
-        Executes a single simulation run and records the results.
-
-        Arguments:
-            run (int):
-                The run number for the simulation.
-
-        Returns:
-            dict:
-                A dictionary containing the patient-level results, results
-                from each run, and interval audit results.
-        """
-        # Run model
-        model = Model(param=self.param, run_number=run)
-        model.run()
-
-        # PATIENT RESULTS
-        # Convert patient-level results to a dataframe and add column with run
-        patient_results = pd.DataFrame(model.results_list)
-        patient_results['run'] = run
-        # If there was at least one patient...
-        if len(patient_results) > 0:
-            # Add a column with the wait time of patients who remained unseen
-            # at the end of the simulation
-            patient_results['q_time_unseen_nurse'] = np.where(
-                patient_results['time_with_nurse'].isna(),
-                model.env.now - patient_results['arrival_time'], np.nan
-            )
-        else:
-            # Set to NaN if no patients
-            patient_results['q_time_unseen_nurse'] = np.nan
-
-        # RUN RESULTS
-        # The run, scenario and arrivals are handled the same regardless of
-        # whether there were any patients
-        run_results = {
-            'run_number': run,
-            'scenario': self.param.scenario_name,
-            'arrivals': len(patient_results)
-        }
-        # If there was at least one patient...
-        if len(patient_results) > 0:
-            # Create dictionary recording the run results
-            # Currently has two alternative methods of measuring utilisation
-            run_results = {
-                **run_results,
-                'mean_q_time_nurse': patient_results['q_time_nurse'].mean(),
-                'mean_time_with_nurse': (
-                    patient_results['time_with_nurse'].mean()),
-                'mean_nurse_utilisation': (
-                    model.nurse_time_used / (
-                        self.param.number_of_nurses *
-                        self.param.data_collection_period)),
-                'mean_nurse_utilisation_tw': (
-                    sum(model.nurse.area_resource_busy) / (
-                        self.param.number_of_nurses *
-                        self.param.data_collection_period)),
-                'mean_nurse_q_length': (sum(model.nurse.area_n_in_queue) /
-                                        self.param.data_collection_period),
-                'count_nurse_unseen': (
-                    patient_results['time_with_nurse'].isna().sum()),
-                'mean_q_time_nurse_unseen': (
-                    patient_results['q_time_unseen_nurse'].mean())
-            }
-        else:
-            # Set results to NaN if no patients
-            run_results = {
-                **run_results,
-                'mean_q_time_nurse': np.nan,
-                'mean_time_with_nurse': np.nan,
-                'mean_nurse_utilisation': np.nan,
-                'mean_nurse_utilisation_tw': np.nan,
-                'mean_nurse_q_length': np.nan,
-                'count_nurse_unseen': np.nan,
-                'mean_q_time_nurse_unseen': np.nan
-            }
-
-        # INTERVAL AUDIT RESULTS
-        # Convert interval audit results to a dataframe and add run column
-        interval_audit_df = pd.DataFrame(model.audit_list)
-        interval_audit_df['run'] = run
-
-        return {
-            'patient': patient_results,
-            'run': run_results,
-            'interval_audit': interval_audit_df
-        }
-
-    def run_reps(self):
-        """
-        Execute a single model configuration for multiple runs/replications.
-
-        These can be run sequentially or in parallel.
-        """
-        # Sequential execution
-        if self.param.cores == 1:
-            all_results = [self.run_single(run)
-                           for run in range(self.param.number_of_runs)]
-        # Parallel execution
-        else:
-
-            # Check number of cores is valid - must be -1, or between 1 and
-            # total CPUs-1 (saving one for logic control).
-            # Done here rather than in model as this is called before model,
-            # and only relevant for Runner.
-            valid_cores = [-1] + list(range(1, cpu_count()))
-            if self.param.cores not in valid_cores:
-                raise ValueError(
-                    f'Invalid cores: {self.param.cores}. Must be one of: ' +
-                    f'{valid_cores}.')
-
-            # Warn users that logging will not run as it is in parallel
-            if (
-                self.param.logger.log_to_console or
-                self.param.logger.log_to_file
-            ):
-                self.param.logger.log(
-                    'WARNING: Logging is disabled in parallel ' +
-                    '(multiprocessing mode). Simulation log will not appear.' +
-                    ' If you wish to generate logs, switch to `cores=1`, or ' +
-                    'just run one replication with `run_single()`.')
-
-            # Execute replications
-            all_results = Parallel(n_jobs=self.param.cores)(
-                delayed(self.run_single)(run)
-                for run in range(self.param.number_of_runs))
-
-        # Seperate results from each run into appropriate lists
-        patient_results_list = [
-            result['patient'] for result in all_results]
-        run_results_list = [
-            result['run'] for result in all_results]
-        interval_audit_list = [
-            result['interval_audit'] for result in all_results]
-
-        # Convert lists into dataframes
-        self.patient_results_df = pd.concat(patient_results_list,
-                                            ignore_index=True)
-        self.run_results_df = pd.DataFrame(run_results_list)
-        self.interval_audit_df = pd.concat(interval_audit_list,
-                                           ignore_index=True)
-
-        # Calculate average results and uncertainty from across all runs
-        uncertainty_metrics = {}
-        run_col = self.run_results_df.columns
-
-        # Loop through the run performance measure columns
-        # Calculate mean, standard deviation and 95% confidence interval
-        for col in run_col[~run_col.isin(['run_number', 'scenario'])]:
-            uncertainty_metrics[col] = dict(zip(
-                ['mean', 'std_dev', 'lower_95_ci', 'upper_95_ci'],
-                summary_stats(self.run_results_df[col])
-            ))
-        # Convert to dataframe
-        self.overall_results_df = pd.DataFrame(uncertainty_metrics)
-
-
-def run_scenarios(scenarios, param=None):
-    """
-    Execute a set of scenarios and return the results from each run.
-
-    Arguments:
-        scenarios (dict):
-            Dictionary where key is name of parameter and value is a list
-            with different values to run in scenarios.
-        param (dict):
-            Instance of Param with parameters for the base case. Optional,
-            defaults to use those as set in Param.
-
-    Returns:
-        pandas.dataframe:
-            Dataframe with results from each run of each scenario.
-
-    Acknowledgements:
-        - Function adapted from Rosser and Chalk 2024.
-    """
-    # Find every possible permutation of the scenarios
-    all_scenarios_tuples = list(itertools.product(*scenarios.values()))
-    # Convert back into dictionaries
-    all_scenarios_dicts = [
-        dict(zip(scenarios.keys(), p)) for p in all_scenarios_tuples]
-    # Preview some of the scenarios
-    print(f'There are {len(all_scenarios_dicts)} scenarios. Running:')
-
-    # Run the scenarios...
-    results = []
-    for index, scenario_to_run in enumerate(all_scenarios_dicts):
-        print(scenario_to_run)
-
-        # Create instance of parameter class, if not provided
-        if param is None:
-            param = Param()
-
-        # Update parameter list with the scenario parameters
-        param.scenario_name = index
-        for key in scenario_to_run:
-            setattr(param, key, scenario_to_run[key])
-
-        # Perform replications and keep results from each run, adding the
-        # scenario values to the results dataframe
-        scenario_exp = Runner(param)
-        scenario_exp.run_reps()
-        for key in scenario_to_run:
-            scenario_exp.run_results_df[key] = scenario_to_run[key]
-        results.append(scenario_exp.run_results_df)
-    return pd.concat(results)
