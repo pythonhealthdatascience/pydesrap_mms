@@ -89,6 +89,8 @@ pytest
 pytest -n auto
 # Run a specific test
 pytest tests/testfile.py -k 'testname'
+# Run with coverage
+pytest --cov
 ```
 
 **Lint code:**
