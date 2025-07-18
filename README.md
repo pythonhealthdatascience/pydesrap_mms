@@ -89,6 +89,8 @@ pytest
 pytest -n auto
 # Run a specific test
 pytest tests/testfile.py -k 'testname'
+# Run with coverage
+pytest --cov
 ```
 
 **Lint code:**
@@ -134,7 +136,12 @@ Having set up `experiment = Runner()`...
 
 ## Reproducing results
 
-TBC
+To generate the figures and tables from the paper (`mock_paper.md`), execute:
+
+* **Figures 1-4**: `notebooks/analysis.ipynb`
+* **Figures A.1-A.2**: `notebooks/input_modelling.ipynb`
+* **Figure B.1**: `notebooks/choosing_warmup.ipynb`
+* **Figures C.1-C.3**: `notebooks/choosing_replications.ipynb`
 
 <br>
 

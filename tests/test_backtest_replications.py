@@ -54,6 +54,7 @@ def test_cimethods(ci_function):
     pd.testing.assert_frame_equal(cumulative_df.reset_index(drop=True),
                                   exp_df.reset_index(drop=True))
 
+
 def test_algorithm():
     """
     Check that the ReplicationsAlgorithm produces results consistent with those
