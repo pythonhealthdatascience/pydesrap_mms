@@ -81,6 +81,12 @@ experiment.run_reps()
 bash run_notebooks.sh
 ```
 
+To run one notebook from the command line (with the same settings - clearing the meta data etc):
+
+```{.bash}
+bash run_notebooks.sh notebooks/notebook_name.ipynb
+```
+
 **Run tests:**
 
 ```{.r}
@@ -221,9 +227,9 @@ Run times from our analyses (on Intel Core i7-12700H, 32GB RAM, Ubuntu 24.04.1):
 
 If you use this repository, please cite either the GitHub repository or Zenodo:
 
-> Heather, A. Monks, T. (2025). Python DES RAP Template. GitHub. https://github.com/pythonhealthdatascience/pydesrap_mms.
+> Heather, A. Monks, T. (2025). Simple M/M/s queuing model: Python DES RAP. GitHub. https://github.com/pythonhealthdatascience/pydesrap_mms.
 >
-> Heather, A. Monks, T. (2025). Python DES RAP Template. Zenodo. https://doi.org/10.5281/zenodo.14622466
+> Heather, A. Monks, T. (2025). Simple M/M/s queuing model: Python DES RAP. Zenodo. https://doi.org/10.5281/zenodo.14622466
 
 **Contributors:**
 
