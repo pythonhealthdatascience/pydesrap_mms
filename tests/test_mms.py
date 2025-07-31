@@ -21,22 +21,22 @@ The system is modeled as an M/M/S queue with:
 Key Components
 --------------
 1. **MMSQueue Class**: Implements analytical M/M/S queueing theory formulas
-   to calculate theoretical performance metrics including server utilization,
+   to calculate theoretical performance metrics including server utilisation,
    queue lengths, and waiting times.
 
 2. **Simulation Interface**: Functions to execute discrete event simulation
    runs with proper warm-up periods, multiple replications, and statistical
    analysis of results.
 
-3. **Validation Tests**: Parametrized test suite that compares simulation
+3. **Validation Tests**: Parametrised test suite that compares simulation
    outputs against theoretical predictions across various system configurations
-   and utilization levels.
+   and utilisation levels.
 
 Performance Metrics
 ------------------
 The module uses standard queueing theory notation:
 
-- **ρ (rho)**: Server utilization / traffic intensity
+- **ρ (rho)**: Server utilisation / traffic intensity
 - **L_q**: Expected number of customers waiting in queue
 - **L_s**: Expected number of customers in system (queue + service)
 - **W_q**: Expected waiting time in queue
@@ -47,9 +47,9 @@ Validation Approach
 Simulation results are validated by:
 
 1. Running multiple independent replications to obtain statistical estimates
-2. Using appropriate warm-up periods to eliminate initialization bias
+2. Using appropriate warm-up periods to eliminate initialisation bias
 3. Comparing mean simulation outputs against theoretical values
-4. Testing across diverse parameter combinations and utilization levels
+4. Testing across diverse parameter combinations and utilisation levels
 5. Applying relative tolerance bounds to account for simulation variability
 
 Usage Notes
@@ -65,7 +65,6 @@ and capacity planning in healthcare systems.
 """
 
 import math
-from typing import Union
 import numpy as np
 import pandas as pd
 import pytest
@@ -94,16 +93,14 @@ class MMSQueue:
     num_servers : int
         Number of servers (s)
     rho : float
-        Traffic intensity (utilization factor)
+        Traffic intensity (utilisation factor)
     metrics : dict
         Dictionary of performance metrics
     """
 
-    def __init__(
-        self, arrival_rate: float, service_rate: float, num_servers: int
-    ) -> None:
+    def __init__(self, arrival_rate, service_rate, num_servers):
         """
-        Initialize the M/M/S queue.
+        Initialise the M/M/S queue.
 
         Parameters
         ----------
@@ -141,9 +138,9 @@ class MMSQueue:
         # Calculate performance metrics using Little's Law
         self.metrics = self._calculate_metrics()
 
-    def _get_traffic_intensity(self) -> float:
+    def _get_traffic_intensity(self):
         """
-        Calculate the traffic intensity (server utilization).
+        Calculate the traffic intensity (server utilisation).
 
         Returns
         -------
@@ -152,7 +149,7 @@ class MMSQueue:
         """
         return self.arrival_rate / (self.num_servers * self.service_rate)
 
-    def _calculate_metrics(self) -> dict[str, float]:
+    def _calculate_metrics(self):
         """
         Calculate all performance metrics for the queue.
 
@@ -171,7 +168,7 @@ class MMSQueue:
         metrics["W_q"] = metrics["W_s"] - (1 / self.service_rate)
         return metrics
 
-    def _get_mean_queue_length(self) -> float:
+    def _get_mean_queue_length(self):
         """
         Calculate the expected number of customers waiting in queue (L_q).
 
@@ -192,7 +189,7 @@ class MMSQueue:
 
         return lq
 
-    def prob_system_empty(self) -> float:
+    def prob_system_empty(self):
         """
         Calculate the probability that the system is empty (P₀).
 
@@ -219,9 +216,7 @@ class MMSQueue:
 
         return 1 / (sum_part + server_term)
 
-    def prob_n_in_system(
-        self, n: int, return_all_solutions: bool = True, as_frame: bool = True
-    ) -> Union[float, np.ndarray, pd.DataFrame]:
+    def prob_n_in_system(self, n, return_all_solutions=True, as_frame=True):
         """
         Calculate the probability of having n customers in the system.
 
@@ -276,12 +271,11 @@ class MMSQueue:
                 return pd.DataFrame(
                     results, index=index, columns=["Probability"]
                 )
-            else:
-                return results
+            return results
 
         return probs[n] if n < len(probs) else 0.0
 
-    def summary_frame(self) -> pd.DataFrame:
+    def summary_frame(self):
         """
         Return performance metrics as a formatted DataFrame.
 
@@ -291,7 +285,7 @@ class MMSQueue:
             DataFrame with performance metrics and descriptions
         """
         descriptions = {
-            "ρ": "Server utilization (traffic intensity)",
+            "ρ": "Server utilisation (traffic intensity)",
             "L_q": "Expected number in queue",
             "L_s": "Expected number in system",
             "W_q": "Expected waiting time in queue",
@@ -301,7 +295,7 @@ class MMSQueue:
         df = pd.DataFrame(
             {
                 "Value": list(self.metrics.values()),
-                "Description": [descriptions[k] for k in self.metrics.keys()],
+                "Description": [descriptions[k] for k in self.metrics],
             },
             index=list(self.metrics.keys()),
         )
@@ -309,27 +303,27 @@ class MMSQueue:
         return df
 
     @property
-    def total_in_system(self) -> float:
+    def total_in_system(self):
         """Expected number of customers in the system (L_s)."""
         return self.metrics["L_s"]
 
     @property
-    def avg_queue_length(self) -> float:
+    def avg_queue_length(self):
         """Expected number of customers in queue (L_q)."""
         return self.metrics["L_q"]
 
     @property
-    def avg_wait_time(self) -> float:
+    def avg_wait_time(self):
         """Expected waiting time in queue (W_q)."""
         return self.metrics["W_q"]
 
     @property
-    def avg_system_time(self) -> float:
+    def avg_system_time(self):
         """Expected total time in system (W_s)."""
         return self.metrics["W_s"]
 
 
-def add_time_in_system_column(df: pd.DataFrame) -> pd.DataFrame:
+def add_time_in_system_column(df):
     """
     Add mean_time_in_system column to the dataframe.
 
@@ -349,17 +343,18 @@ def add_time_in_system_column(df: pd.DataFrame) -> pd.DataFrame:
     return df_copy
 
 
+# pylint: disable=too-many-arguments,too-many-positional-arguments
 def run_simulation_model(
-    patient_inter: int = 4,
-    mean_n_consult_time: float = 10.0,
-    number_of_nurses: int = 4,
-    warm_up_period: float = 500.0,
-    data_collection_period: float = 1500.0,
-    number_of_runs: int = 100,
-    audit_interval: float = 50.0,
-    scenario_name: int = 0,
-    cores: int = -1,
-) -> pd.Series:
+    patient_inter=4,
+    mean_n_consult_time=10,
+    number_of_nurses=4,
+    warm_up_period=500,
+    data_collection_period=1500,
+    number_of_runs=100,
+    audit_interval=50,
+    scenario_name=0,
+    cores=-1,
+):
     """
     Run multiple replications of an M/M/S queueing simulation model.
 
@@ -386,7 +381,7 @@ def run_simulation_model(
         Number of nurses available to serve patients (number of servers).
     warm_up_period : float, default=500.0
         Duration of warm-up period (minutes) before data collection begins.
-        Results from this period are discarded to avoid initialization bias.
+        Results from this period are discarded to avoid initialisation bias.
     data_collection_period : float, default=1500.0
         Duration of data collection period (minutes) after warm-up.
         Performance metrics are calculated from this period only.
@@ -399,7 +394,7 @@ def run_simulation_model(
     scenario_name : int, default=0
         Identifier for the simulation scenario (for tracking purposes).
     cores : int, default=-1
-        Number of CPU cores to utilize for parallel execution.
+        Number of CPU cores to utilise for parallel execution.
         If -1, uses all available cores.
 
     Returns
@@ -410,7 +405,7 @@ def run_simulation_model(
 
         - 'W_q': Mean waiting time in queue (minutes)
         - 'W_s': Mean total time in system (minutes)
-        - 'rho': Mean server (nurse) utilization (0-1)
+        - 'rho': Mean server (nurse) utilisation (0-1)
         - 'L_q': Mean number of patients in queue
 
     Notes
@@ -465,27 +460,27 @@ def run_simulation_model(
 @pytest.mark.parametrize(
     "patient_inter,mean_n_consult_time,number_of_nurses",
     [
-        # Test case 1: Low utilization (ρ ≈ 0.3)
+        # Test case 1: Low utilisation (ρ ≈ 0.3)
         (10, 3, 2),
-        # Test case 2: Medium utilization (ρ ≈ 0.67)
+        # Test case 2: Medium utilisation (ρ ≈ 0.67)
         (6, 4, 2),
         # Test case 3: M/M/1 (ρ = 0.75)
         (4, 3, 1),
-        # Test case 4: Multiple servers, high utilization (ρ ≈ 0.91)
+        # Test case 4: Multiple servers, high utilisation (ρ ≈ 0.91)
         (5.5, 5.0, 3),
         # Test case 5: Balanced system (ρ = 0.5)
         (8, 4, 1),
-        # Test case 6: Many servers, low individual utilization (ρ ≈ 0.63)
+        # Test case 6: Many servers, low individual utilisation (ρ ≈ 0.63)
         (4, 10, 4),
-        # Test case 7: Very low utilization (ρ ≈ 0.167)
+        # Test case 7: Very low utilisation (ρ ≈ 0.167)
         (60, 10, 15),
     ],
 )
 def test_simulation_against_theory(
-    patient_inter: float,
-    mean_n_consult_time: float,
-    number_of_nurses: int,
-    decimal_places: int = 3,
+    patient_inter,
+    mean_n_consult_time,
+    number_of_nurses,
+    decimal_places=3
 ):
     """
     Test simulation results against theoretical M/M/S queue calculations.
