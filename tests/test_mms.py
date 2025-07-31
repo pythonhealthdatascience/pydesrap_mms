@@ -227,6 +227,25 @@ class MMSQueue:
 
 
 
+def add_time_in_system_column(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add mean_time_in_system column to the dataframe.
+    
+    This column represents the total time a patient spends in the system,
+    which is the sum of waiting time in queue and service time with nurse.
+    
+    Args:
+        df: DataFrame containing simulation results
+        
+    Returns:
+        DataFrame with added mean_time_in_system column
+    """
+    df_copy = df.copy()
+    df_copy['mean_time_in_system'] = df_copy['mean_q_time_nurse'] + df_copy['mean_time_with_nurse']
+    return df_copy
+
+
+
 def run_simulation_model(
         patient_inter: int = 4,
         mean_n_consult_time: float = 10.0,
@@ -301,11 +320,12 @@ def run_simulation_model(
     
     """
 
-
-    # xol mapping to queuing theory notation
+    # col mapping to queuing theory notation
+    # note that the simulation model does not directly output W_s
+    # so we need to calculate W_s = mean_q_time_nurse + mean_time_with_nurse
     col_kpi_mapping = {
         "mean_q_time_nurse": "W_q",
-        "mean_time_with_nurse": "W_s",
+        "mean_time_in_system": "W_s",
         "mean_nurse_utilisation": "rho",
         "mean_nurse_q_length": "L_q"
     }
@@ -327,10 +347,101 @@ def run_simulation_model(
     experiment = Runner(param)
     experiment.run_reps()
 
+    # Add the mean_time_in_system column before renaming
+    comparable_results_df = add_time_in_system_column(experiment.overall_results_df)
+
      # rename columns and return only relevenat
-    results_df = experiment.overall_results_df.rename(columns=col_kpi_mapping)
-    return results_df[col_kpi_mapping.values()].T['mean']
+    comparable_results_df = comparable_results_df.rename(columns=col_kpi_mapping)
+    return comparable_results_df[col_kpi_mapping.values()].T['mean']
 
 
-results = run_simulation_model()
-print(results)
+class TestSimulationModel:
+    """Test suite for validating simulation model against M/M/S queueing theory."""
+    
+    @pytest.mark.parametrize("patient_inter,mean_n_consult_time,number_of_nurses", [
+        # Test case 1: Low utilization (ρ ≈ 0.3)
+        (10, 3, 2),
+        
+        # Test case 2: Medium utilization (ρ ≈ 0.67) 
+        (6, 4, 2),
+        
+        # Test case 3: M/M/1 (ρ = 0.75)
+        (4, 3, 1),
+        
+        # Test case 4: Multiple servers, high utilization (ρ ≈ 0.91)
+        (5.5, 5.0, 3),
+        
+        # Test case 5: Balanced system (ρ = 0.5)
+        (8, 4, 1),
+        
+        # Test case 6: Many servers, low individual utilization (ρ ≈ 0.63)
+        (4, 10, 4),
+
+         # Test case 7: Very low utilization (ρ ≈ 0.167)
+        (60, 10, 15), 
+
+    ])
+    def test_simulation_against_theory(
+        self, 
+        patient_inter: float, 
+        mean_n_consult_time: float, 
+        number_of_nurses: int,
+        decimal_places: int = 3
+    ):
+        """
+        Test simulation results against theoretical M/M/S queue calculations.
+        
+        Parameters correspond to:
+        - arrival_rate (λ) = 1 / patient_inter  
+        - service_rate (μ) = 1 / mean_n_consult_time
+        - num_servers (s) = number_of_nurses
+        """
+        
+        # Calculate theoretical results using MMSQueue
+        arrival_rate = 1.0 / patient_inter
+        service_rate = 1.0 / mean_n_consult_time
+               
+        # Create theoretical M/M/S queue model
+        mms_queue = MMSQueue(
+            arrival_rate=arrival_rate,
+            service_rate=service_rate, 
+            num_servers=number_of_nurses
+        )
+        
+        # Get theoretical metrics
+        theoretical_metrics = {
+            'W_q': mms_queue.avg_wait_time,
+            'W_s': mms_queue.avg_system_time, 
+            'rho': mms_queue.rho,
+            'L_q': mms_queue.avg_queue_length
+        }
+        
+        # Run simulation
+        simulation_results = run_simulation_model(
+            patient_inter=patient_inter,
+            mean_n_consult_time=mean_n_consult_time,
+            number_of_nurses=number_of_nurses,
+            number_of_runs=100
+
+        )
+
+        
+        relative_tolerance = 0.15
+        
+        # Compare results with appropriate tolerances (we round to 3 dp)
+        assert round(simulation_results['rho'], decimal_places) == pytest.approx(
+            round(theoretical_metrics['rho'], decimal_places), rel=relative_tolerance
+        ), f"Utilization mismatch: sim={simulation_results['rho']:.3f}, theory={theoretical_metrics['rho']:.3f}"
+        
+        # Queue length and wait times may have more variability (15% tolerance)  
+        assert round(simulation_results['L_q'], decimal_places) == pytest.approx(
+            round(theoretical_metrics['L_q'], decimal_places), rel=relative_tolerance
+        ), f"Queue length mismatch: sim={simulation_results['L_q']:.3f}, theory={theoretical_metrics['L_q']:.3f}"
+        
+        assert round(simulation_results['W_q'], decimal_places) == pytest.approx(
+            round(theoretical_metrics['W_q'], decimal_places), rel=relative_tolerance
+        ), f"Wait time mismatch: sim={simulation_results['W_q']:.3f}, theory={theoretical_metrics['W_q']:.3f}"
+        
+        assert round(simulation_results['W_s'], decimal_places) == pytest.approx(
+            round(theoretical_metrics['W_s'], decimal_places), rel=relative_tolerance
+        ), f"System time mismatch: sim={simulation_results['W_s']:.3f}, theory={theoretical_metrics['W_s']:.3f}"
