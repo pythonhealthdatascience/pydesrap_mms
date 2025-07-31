@@ -159,7 +159,7 @@ class MMSQueue:
             Dictionary containing performance metrics
         """
         metrics = {}
-        metrics["ρ"] = self.rho
+        metrics["rho"] = self.rho
         metrics["L_q"] = self._get_mean_queue_length()
         metrics["L_s"] = metrics["L_q"] + (
             self.arrival_rate / self.service_rate
@@ -274,53 +274,6 @@ class MMSQueue:
             return results
 
         return probs[n] if n < len(probs) else 0.0
-
-    def summary_frame(self):
-        """
-        Return performance metrics as a formatted DataFrame.
-
-        Returns
-        -------
-        pd.DataFrame
-            DataFrame with performance metrics and descriptions
-        """
-        descriptions = {
-            "ρ": "Server utilisation (traffic intensity)",
-            "L_q": "Expected number in queue",
-            "L_s": "Expected number in system",
-            "W_q": "Expected waiting time in queue",
-            "W_s": "Expected time in system",
-        }
-
-        df = pd.DataFrame(
-            {
-                "Value": list(self.metrics.values()),
-                "Description": [descriptions[k] for k in self.metrics],
-            },
-            index=list(self.metrics.keys()),
-        )
-
-        return df
-
-    @property
-    def total_in_system(self):
-        """Expected number of customers in the system (L_s)."""
-        return self.metrics["L_s"]
-
-    @property
-    def avg_queue_length(self):
-        """Expected number of customers in queue (L_q)."""
-        return self.metrics["L_q"]
-
-    @property
-    def avg_wait_time(self):
-        """Expected waiting time in queue (W_q)."""
-        return self.metrics["W_q"]
-
-    @property
-    def avg_system_time(self):
-        """Expected total time in system (W_s)."""
-        return self.metrics["W_s"]
 
 
 def add_time_in_system_column(df):
@@ -481,33 +434,15 @@ def test_simulation_against_theory(
     mean_n_consult_time,
     number_of_nurses
 ):
-    """
-    Test simulation results against theoretical M/M/S queue calculations.
+    """Test simulation results against theoretical M/M/S queue calculations."""
 
-    Parameters correspond to:
-    - arrival_rate (λ) = 1 / patient_inter
-    - service_rate (μ) = 1 / mean_n_consult_time
-    - num_servers (s) = number_of_nurses
-    """
-
-    # Calculate theoretical results using MMSQueue
-    arrival_rate = 1.0 / patient_inter
-    service_rate = 1.0 / mean_n_consult_time
-
-    # Create theoretical M/M/S queue model
+    # Create theoretical M/M/S queue model and get metrics
     mms_queue = MMSQueue(
-        arrival_rate=arrival_rate,
-        service_rate=service_rate,
+        arrival_rate=1/patient_inter,
+        service_rate=1/mean_n_consult_time,
         num_servers=number_of_nurses,
     )
-
-    # Get theoretical metrics
-    theoretical_metrics = {
-        "W_q": mms_queue.avg_wait_time,
-        "W_s": mms_queue.avg_system_time,
-        "rho": mms_queue.rho,
-        "L_q": mms_queue.avg_queue_length,
-    }
+    theoretical_metrics = mms_queue.metrics
 
     # Run simulation
     simulation_results = run_simulation_model(
