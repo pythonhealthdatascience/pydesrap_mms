@@ -278,7 +278,7 @@ class MMSQueue:
                 )
             else:
                 return results
-        
+
         return probs[n] if n < len(probs) else 0.0
 
     def summary_frame(self) -> pd.DataFrame:
@@ -327,7 +327,6 @@ class MMSQueue:
     def avg_system_time(self) -> float:
         """Expected total time in system (W_s)."""
         return self.metrics["W_s"]
-
 
 
 def add_time_in_system_column(df: pd.DataFrame) -> pd.DataFrame:
@@ -463,7 +462,6 @@ def run_simulation_model(
     return comparable_results_df[col_kpi_mapping.values()].T["mean"]
 
 
-
 @pytest.mark.parametrize(
     "patient_inter,mean_n_consult_time,number_of_nurses",
     [
@@ -528,9 +526,7 @@ def test_simulation_against_theory(
     relative_tolerance = 0.15
 
     # Compare results with appropriate tolerances (we round to 3 dp)
-    assert round(
-        simulation_results["rho"], decimal_places
-    ) == pytest.approx(
+    assert round(simulation_results["rho"], decimal_places) == pytest.approx(
         round(theoretical_metrics["rho"], decimal_places),
         rel=relative_tolerance,
     ), (
@@ -539,9 +535,7 @@ def test_simulation_against_theory(
     )
 
     # Queue length and wait times may have more variability (15% tolerance)
-    assert round(
-        simulation_results["L_q"], decimal_places
-    ) == pytest.approx(
+    assert round(simulation_results["L_q"], decimal_places) == pytest.approx(
         round(theoretical_metrics["L_q"], decimal_places),
         rel=relative_tolerance,
     ), (
@@ -549,9 +543,7 @@ def test_simulation_against_theory(
         + f"theory={theoretical_metrics['L_q']:.3f}"
     )
 
-    assert round(
-        simulation_results["W_q"], decimal_places
-    ) == pytest.approx(
+    assert round(simulation_results["W_q"], decimal_places) == pytest.approx(
         round(theoretical_metrics["W_q"], decimal_places),
         rel=relative_tolerance,
     ), (
@@ -559,9 +551,7 @@ def test_simulation_against_theory(
         + f"theory={theoretical_metrics['W_q']:.3f}"
     )
 
-    assert round(
-        simulation_results["W_s"], decimal_places
-    ) == pytest.approx(
+    assert round(simulation_results["W_s"], decimal_places) == pytest.approx(
         round(theoretical_metrics["W_s"], decimal_places),
         rel=relative_tolerance,
     ), (
