@@ -1,9 +1,67 @@
 """
-Testing of the simulation model using an MMS queue
+Simulation Model Validation Using M/M/S Queueing Theory
+======================================================
 
-Note that simulation will need to be run for suitable warm-up period in order to be comparable
-Here we choose a large one to be sure.
+This module provides validation testing for a discrete event simulation model
+of a healthcare queueing system by comparing simulation results against 
+theoretical M/M/S queueing theory calculations.
 
+Overview
+--------
+The module implements both analytical and simulation-based approaches to 
+modeling a healthcare system where patients arrive for nurse consultations.
+The system is modeled as an M/M/S queue with:
+
+- **Markovian arrivals**: Patients arrive according to a Poisson process
+- **Markovian service**: Consultation times follow exponential distribution  
+- **S servers**: Multiple nurses available to serve patients
+- **Infinite capacity**: No limit on queue length or patient population
+- **FIFO discipline**: First-in-first-out queueing
+
+Key Components
+--------------
+1. **MMSQueue Class**: Implements analytical M/M/S queueing theory formulas
+   to calculate theoretical performance metrics including server utilization,
+   queue lengths, and waiting times.
+
+2. **Simulation Interface**: Functions to execute discrete event simulation
+   runs with proper warm-up periods, multiple replications, and statistical
+   analysis of results.
+
+3. **Validation Tests**: Parametrized test suite that compares simulation
+   outputs against theoretical predictions across various system configurations
+   and utilization levels.
+
+Performance Metrics
+------------------
+The module uses standard queueing theory notation:
+
+- **ρ (rho)**: Server utilization / traffic intensity
+- **L_q**: Expected number of customers waiting in queue
+- **L_s**: Expected number of customers in system (queue + service)
+- **W_q**: Expected waiting time in queue
+- **W_s**: Expected total time in system
+
+Validation Approach
+------------------
+Simulation results are validated by:
+
+1. Running multiple independent replications to obtain statistical estimates
+2. Using appropriate warm-up periods to eliminate initialization bias
+3. Comparing mean simulation outputs against theoretical values
+4. Testing across diverse parameter combinations and utilization levels
+5. Applying relative tolerance bounds to account for simulation variability
+
+Usage Notes
+-----------
+- The warm-up period should be sufficiently long for steady-state convergence
+- Multiple replications provide confidence intervals for statistical validation
+- System stability requires arrival rate < number_of_servers * service_rate
+- Relative tolerance of 15% is used to accommodate simulation stochasticity
+
+This validation framework ensures the simulation model accurately represents
+the underlying queueing process and can be trusted for performance analysis
+and capacity planning in healthcare systems.
 """
 
 import math
