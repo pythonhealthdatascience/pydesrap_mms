@@ -479,8 +479,7 @@ def run_simulation_model(
 def test_simulation_against_theory(
     patient_inter,
     mean_n_consult_time,
-    number_of_nurses,
-    decimal_places=3
+    number_of_nurses
 ):
     """
     Test simulation results against theoretical M/M/S queue calculations.
@@ -518,38 +517,16 @@ def test_simulation_against_theory(
         number_of_runs=100,
     )
 
-    relative_tolerance = 0.15
-
-    # Compare results with appropriate tolerances (we round to 3 dp)
-    assert round(simulation_results["rho"], decimal_places) == pytest.approx(
-        round(theoretical_metrics["rho"], decimal_places),
-        rel=relative_tolerance,
-    ), (
-        f"Utilization mismatch: sim={simulation_results['rho']:.3f}, "
-        + f"theory={theoretical_metrics['rho']:.3f}"
-    )
-
-    # Queue length and wait times may have more variability (15% tolerance)
-    assert round(simulation_results["L_q"], decimal_places) == pytest.approx(
-        round(theoretical_metrics["L_q"], decimal_places),
-        rel=relative_tolerance,
-    ), (
-        f"Queue length mismatch: sim={simulation_results['L_q']:.3f}, "
-        + f"theory={theoretical_metrics['L_q']:.3f}"
-    )
-
-    assert round(simulation_results["W_q"], decimal_places) == pytest.approx(
-        round(theoretical_metrics["W_q"], decimal_places),
-        rel=relative_tolerance,
-    ), (
-        f"Wait time mismatch: sim={simulation_results['W_q']:.3f}, "
-        + f"theory={theoretical_metrics['W_q']:.3f}"
-    )
-
-    assert round(simulation_results["W_s"], decimal_places) == pytest.approx(
-        round(theoretical_metrics["W_s"], decimal_places),
-        rel=relative_tolerance,
-    ), (
-        f"System time mismatch: sim={simulation_results['W_s']:.3f}, "
-        + f"theory={theoretical_metrics['W_s']:.3f}"
-    )
+    # Compare results with appropriate tolerance (round to 3dp + 15% tolerance)
+    metrics = [
+        ("rho", "Utilisation"),
+        ("L_q", "Queue length"),
+        ("W_q", "Wait time"),
+        ("W_s", "System time")
+    ]
+    for key, label in metrics:
+        sim_val = round(simulation_results[key], 3)
+        theo_val = round(theoretical_metrics[key], 3)
+        assert sim_val == pytest.approx(theo_val, rel=0.15), (
+            f"{label} mismatch: sim={sim_val}, theory={theo_val}"
+        )
