@@ -12,8 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from simulation import confidence_interval_method, Param, Runner, run_scenarios
-
+from simulation import  Param, Runner
 
 
 class MMSQueue:
@@ -228,21 +227,80 @@ class MMSQueue:
 
 
 
-def run_simlation_model(
+def run_simulation_model(
         patient_inter: int = 4,
         mean_n_consult_time: float = 10.0,
         number_of_nurses: int = 4,
         warm_up_period: float = 500.0,
         data_collection_period: float = 1500.0,
-        number_of_runs: int =100,
+        number_of_runs: int = 100,
         audit_interval: float = 50.0,
         scenario_name: int = 0,
         cores: int = -1
 ) -> pd.Series:
     """
-    Run multiple replications of the simulation model and return
-    results with names mapped to queuing theory nototation.
+    Run multiple replications of an M/M/S queueing simulation model.
+    
+    This function executes a discrete event simulation of a healthcare system
+    modeled as an M/M/S queue (Markovian arrivals, Markovian service times, 
+    S servers) and returns key performance indicators using standard queueing
+    theory notation.
+    
+    The simulation models patients arriving for nurse consultations with:
+    - Exponential inter-arrival times
+    - Exponential service (consultation) times  
+    - Multiple nurses (servers)
+    - FIFO queueing discipline
+    
+    Parameters
+    ----------
+    patient_inter : int, default=4
+        Mean time between patient arrivals (minutes). Used as parameter
+        for exponential inter-arrival time distribution.
+    mean_n_consult_time : float, default=10.0
+        Mean consultation time with nurse (minutes). Used as parameter
+        for exponential service time distribution.
+    number_of_nurses : int, default=4
+        Number of nurses available to serve patients (number of servers).
+    warm_up_period : float, default=500.0
+        Duration of warm-up period (minutes) before data collection begins.
+        Results from this period are discarded to avoid initialization bias.
+    data_collection_period : float, default=1500.0
+        Duration of data collection period (minutes) after warm-up.
+        Performance metrics are calculated from this period only.
+    number_of_runs : int, default=100
+        Number of independent simulation replications to execute.
+        More runs provide better statistical precision.
+    audit_interval : float, default=50.0
+        Time interval (minutes) for collecting intermediate statistics
+        during simulation runs.
+    scenario_name : int, default=0
+        Identifier for the simulation scenario (for tracking purposes).
+    cores : int, default=-1
+        Number of CPU cores to utilize for parallel execution.
+        If -1, uses all available cores.
+    
+    Returns
+    -------
+    pd.Series
+        Series containing mean performance metrics across all replications,
+        indexed with standard queueing theory notation:
+        
+        - 'W_q': Mean waiting time in queue (minutes)
+        - 'W_s': Mean total time in system (minutes) 
+        - 'rho': Mean server (nurse) utilization (0-1)
+        - 'L_q': Mean number of patients in queue
+    
+    Notes
+    -----
+    - The warm-up period should be sufficiently long to allow the system
+      to reach steady-state before data collection begins
+    - Results can be compared against theoretical M/M/S queue formulas
+      to validate simulation model accuracy
+    - System stability requires arrival_rate < number_of_nurses * service_rate
+    
     """
+
 
     # xol mapping to queuing theory notation
     col_kpi_mapping = {
@@ -274,5 +332,5 @@ def run_simlation_model(
     return results_df[col_kpi_mapping.values()].T['mean']
 
 
-results = run_simlation_model()
+results = run_simulation_model()
 print(results)
