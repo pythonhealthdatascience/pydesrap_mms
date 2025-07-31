@@ -228,39 +228,51 @@ class MMSQueue:
 
 
 
-def run_simulation():
+def run_simlation_model(
+        patient_inter: int = 4,
+        mean_n_consult_time: float = 10.0,
+        number_of_nurses: int = 4,
+        warm_up_period: float = 500.0,
+        data_collection_period: float = 1500.0,
+        number_of_runs: int =100,
+        audit_interval: float = 50.0,
+        scenario_name: int = 0,
+        cores: int = -1
+) -> pd.Series:
+    """
+    Run multiple replications of the simulation model and return
+    results with names mapped to queuing theory nototation.
+    """
+
+    # xol mapping to queuing theory notation
+    col_kpi_mapping = {
+        "mean_q_time_nurse": "W_q",
+        "mean_time_with_nurse": "W_s",
+        "mean_nurse_utilisation": "rho",
+        "mean_nurse_q_length": "L_q"
+    }
+
     # Define model parameters
     param = Param(
-        patient_inter=4,
-        mean_n_consult_time = 10,
-        number_of_nurses = 4,
-        warm_up_period = 500,
-        data_collection_period = 1500,
-        number_of_runs=100,
-        audit_interval = 50,
-        scenario_name = 0,
-        cores = 1
+        patient_inter=patient_inter,
+        mean_n_consult_time=mean_n_consult_time,
+        number_of_nurses=number_of_nurses,
+        warm_up_period=warm_up_period,
+        data_collection_period = data_collection_period,
+        number_of_runs=number_of_runs,
+        audit_interval=audit_interval,
+        scenario_name=scenario_name,
+        cores=cores
     )
 
     # Run the replications
     experiment = Runner(param)
     experiment.run_reps()
 
-   
-
-    kpi_mapping = {
-        "mean_q_time_nurse": "wq",
-        "mean_time_with_nurse": "ws",
-        "mean_nurse_utilisation": "rho",
-        "mean_nurse_q_length": "lq"
-    }
+     # rename columns and return only relevenat
+    results_df = experiment.overall_results_df.rename(columns=col_kpi_mapping)
+    return results_df[col_kpi_mapping.values()].T['mean']
 
 
-     # results
-    return experiment.overall_results_df.T['mean'], kpi_mapping
-
-
-
-
-results, map = run_simulation()
+results = run_simlation_model()
 print(results)
