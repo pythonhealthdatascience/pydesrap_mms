@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Dates formatted as YYYY-MM-DD as per [ISO standard](https://www.iso.org/iso-8601-date-and-time-format.html).
 
+
+## Unreleased
+
+Additional validation: Test simulation model against analytical queuing results
+
+### Added
+
+* Analytical queuing model `MMSQueue` in `test/test_mms.py`
+* A small test suite for comparing long run simulation estimation of means to analytical results (to 3 dp with 0.15 relative tolerance). Tested L_q, L_s, W_q, W_s.
+
 ## v1.2.0 - 2025-03-26
 
 Add tests, change from default inputs, rename some variables, and add a method which allows the solution of `ReplicationsAlgorithm` to be less than the `initial_replications` set.
