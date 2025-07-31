@@ -54,7 +54,7 @@ class ReplicationsAlgorithm:
     def __init__(
         self,
         alpha=0.05,
-        half_width_precision=0.05,
+        half_width_precision=0.1,
         initial_replications=3,
         look_ahead=5,
         replication_budget=1000
