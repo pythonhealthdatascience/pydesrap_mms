@@ -17,7 +17,7 @@ def confidence_interval_method_simple(
     replications,
     metrics,
     param=Param(),
-    desired_precision=0.05,
+    desired_precision=0.1,
     min_rep=3,
     verbose=False
 ):

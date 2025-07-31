@@ -3,7 +3,7 @@
 
 cff-version: 1.2.0
 title: >-
-  Python DES RAP Template
+  Simple M/M/s queuing model: Python DES RAP
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
@@ -22,8 +22,8 @@ authors:
 repository-code: >-
   https://github.com/pythonhealthdatascience/pydesrap_mms
 abstract: >-
-  A template for creating discrete-event simulation (DES) models in Python
-  within a reproducible analytical pipeline (RAP).
+  Reproducible analytical pipeline (RAP) for python discrete-event simulation
+  (DES) implementing a simple M/M/s queueing model.
 license: MIT
 version: '1.2.0'
 date-released: '2025-03-26'
