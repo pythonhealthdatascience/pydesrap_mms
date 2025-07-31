@@ -3,17 +3,17 @@ Simulation Model Validation Using M/M/S Queueing Theory
 ======================================================
 
 This module provides validation testing for a discrete event simulation model
-of a healthcare queueing system by comparing simulation results against 
+of a healthcare queueing system by comparing simulation results against
 theoretical M/M/S queueing theory calculations.
 
 Overview
 --------
-The module implements both analytical and simulation-based approaches to 
+The module implements both analytical and simulation-based approaches to
 modeling a healthcare system where patients arrive for nurse consultations.
 The system is modeled as an M/M/S queue with:
 
 - **Markovian arrivals**: Patients arrive according to a Poisson process
-- **Markovian service**: Consultation times follow exponential distribution  
+- **Markovian service**: Consultation times follow exponential distribution
 - **S servers**: Multiple nurses available to serve patients
 - **Infinite capacity**: No limit on queue length or patient population
 - **FIFO discipline**: First-in-first-out queueing
@@ -85,12 +85,18 @@ class MMSQueue:
     - Infinite population
     - First-In-First-Out discipline
 
-    Attributes:
-        arrival_rate (float): Customer arrival rate (λ)
-        service_rate (float): Service rate per server (μ)
-        num_servers (int): Number of servers (s)
-        rho (float): Traffic intensity (utilization factor)
-        metrics (dict): Dictionary of performance metrics
+    Attributes
+    ----------
+    arrival_rate : float
+        Customer arrival rate (λ)
+    service_rate : float
+        Service rate per server (μ)
+    num_servers : int
+        Number of servers (s)
+    rho : float
+        Traffic intensity (utilization factor)
+    metrics : dict
+        Dictionary of performance metrics
     """
 
     def __init__(
@@ -99,13 +105,19 @@ class MMSQueue:
         """
         Initialize the M/M/S queue.
 
-        Args:
-            arrival_rate: The arrival rate of customers (λ > 0)
-            service_rate: The service rate per server (μ > 0)
-            num_servers: The number of servers (s >= 1)
+        Parameters
+        ----------
+        arrival_rate : float
+            The arrival rate of customers (λ > 0)
+        service_rate : float
+            The service rate per server (μ > 0)
+        num_servers : int
+            The number of servers (s >= 1)
 
-        Raises:
-            ValueError: If parameters are invalid or system is unstable
+        Raises
+        ------
+        ValueError
+            If parameters are invalid or system is unstable
         """
         if arrival_rate <= 0:
             raise ValueError("Arrival rate must be positive")
@@ -133,7 +145,9 @@ class MMSQueue:
         """
         Calculate the traffic intensity (server utilization).
 
-        Returns:
+        Returns
+        -------
+        float
             Traffic intensity ρ = λ/(s*μ)
         """
         return self.arrival_rate / (self.num_servers * self.service_rate)
@@ -142,13 +156,17 @@ class MMSQueue:
         """
         Calculate all performance metrics for the queue.
 
-        Returns:
+        Returns
+        -------
+        dict[str, float]
             Dictionary containing performance metrics
         """
         metrics = {}
         metrics["ρ"] = self.rho
         metrics["L_q"] = self._get_mean_queue_length()
-        metrics["L_s"] = metrics["L_q"] + (self.arrival_rate / self.service_rate)
+        metrics["L_s"] = metrics["L_q"] + (
+            self.arrival_rate / self.service_rate
+        )
         metrics["W_s"] = metrics["L_s"] / self.arrival_rate
         metrics["W_q"] = metrics["W_s"] - (1 / self.service_rate)
         return metrics
@@ -160,7 +178,9 @@ class MMSQueue:
         Uses the formula:
         L_q = P₀ * (λ/μ)^s * ρ / (s! * (1-ρ)²)
 
-        Returns:
+        Returns
+        -------
+        float
             Expected queue length
         """
         p0 = self.prob_system_empty()
@@ -179,14 +199,17 @@ class MMSQueue:
         Uses the formula:
         P₀ = [Σ(n=0 to s-1) (λ/μ)^n/n! + (λ/μ)^s/(s!(1-ρ))]^(-1)
 
-        Returns:
+        Returns
+        -------
+        float
             Probability that system is empty
         """
         lambda_over_mu = self.arrival_rate / self.service_rate
 
         # Sum for n = 0 to s-1
         sum_part = sum(
-            (lambda_over_mu**n) / math.factorial(n) for n in range(self.num_servers)
+            (lambda_over_mu**n) / math.factorial(n)
+            for n in range(self.num_servers)
         )
 
         # Term for n >= s
@@ -202,18 +225,26 @@ class MMSQueue:
         """
         Calculate the probability of having n customers in the system.
 
-        Args:
-            n: Number of customers in the system (n >= 0)
-            return_all_solutions: If True, return probabilities for 0,1,...,n
-            as_frame: If True and return_all_solutions=True, return as DataFrame
+        Parameters
+        ----------
+        n : int
+            Number of customers in the system (n >= 0)
+        return_all_solutions : bool, default=True
+            If True, return probabilities for 0,1,...,n
+        as_frame : bool, default=True
+            If True and return_all_solutions=True, return as DataFrame
 
-        Returns:
+        Returns
+        -------
+        float or np.ndarray or pd.DataFrame
             If return_all_solutions=False: Single probability P(N=n)
             If return_all_solutions=True: Array/DataFrame of probabilities
             P(N=0) to P(N=n)
 
-        Raises:
-            ValueError: If n < 0
+        Raises
+        ------
+        ValueError
+            If n < 0
         """
         if n < 0:
             raise ValueError("n must be non-negative")
@@ -242,7 +273,9 @@ class MMSQueue:
             results = np.array(probs)
             if as_frame:
                 index = [f"P(N={i})" for i in range(len(results))]
-                return pd.DataFrame(results, index=index, columns=["Probability"])
+                return pd.DataFrame(
+                    results, index=index, columns=["Probability"]
+                )
             else:
                 return results
         else:
@@ -252,7 +285,9 @@ class MMSQueue:
         """
         Return performance metrics as a formatted DataFrame.
 
-        Returns:
+        Returns
+        -------
+        pd.DataFrame
             DataFrame with performance metrics and descriptions
         """
         descriptions = {
@@ -292,6 +327,7 @@ class MMSQueue:
     def avg_system_time(self) -> float:
         """Expected total time in system (W_s)."""
         return self.metrics["W_s"]
+
 
 
 def add_time_in_system_column(df: pd.DataFrame) -> pd.DataFrame:
@@ -416,10 +452,14 @@ def run_simulation_model(
     experiment.run_reps()
 
     # Add the mean_time_in_system column before renaming
-    comparable_results_df = add_time_in_system_column(experiment.overall_results_df)
+    comparable_results_df = add_time_in_system_column(
+        experiment.overall_results_df
+    )
 
     # rename columns and return only relevenat
-    comparable_results_df = comparable_results_df.rename(columns=col_kpi_mapping)
+    comparable_results_df = comparable_results_df.rename(
+        columns=col_kpi_mapping
+    )
     return comparable_results_df[col_kpi_mapping.values()].T["mean"]
 
 
@@ -491,23 +531,43 @@ class TestSimulationModel:
         relative_tolerance = 0.15
 
         # Compare results with appropriate tolerances (we round to 3 dp)
-        assert round(simulation_results["rho"], decimal_places) == pytest.approx(
+        assert round(
+            simulation_results["rho"], decimal_places
+        ) == pytest.approx(
             round(theoretical_metrics["rho"], decimal_places),
             rel=relative_tolerance,
-        ), f"Utilization mismatch: sim={simulation_results['rho']:.3f}, theory={theoretical_metrics['rho']:.3f}"
+        ), (
+            f"Utilization mismatch: sim={simulation_results['rho']:.3f}, "
+            + f"theory={theoretical_metrics['rho']:.3f}"
+        )
 
         # Queue length and wait times may have more variability (15% tolerance)
-        assert round(simulation_results["L_q"], decimal_places) == pytest.approx(
+        assert round(
+            simulation_results["L_q"], decimal_places
+        ) == pytest.approx(
             round(theoretical_metrics["L_q"], decimal_places),
             rel=relative_tolerance,
-        ), f"Queue length mismatch: sim={simulation_results['L_q']:.3f}, theory={theoretical_metrics['L_q']:.3f}"
+        ), (
+            f"Queue length mismatch: sim={simulation_results['L_q']:.3f}, "
+            + f"theory={theoretical_metrics['L_q']:.3f}"
+        )
 
-        assert round(simulation_results["W_q"], decimal_places) == pytest.approx(
+        assert round(
+            simulation_results["W_q"], decimal_places
+        ) == pytest.approx(
             round(theoretical_metrics["W_q"], decimal_places),
             rel=relative_tolerance,
-        ), f"Wait time mismatch: sim={simulation_results['W_q']:.3f}, theory={theoretical_metrics['W_q']:.3f}"
+        ), (
+            f"Wait time mismatch: sim={simulation_results['W_q']:.3f}, "
+            + f"theory={theoretical_metrics['W_q']:.3f}"
+        )
 
-        assert round(simulation_results["W_s"], decimal_places) == pytest.approx(
+        assert round(
+            simulation_results["W_s"], decimal_places
+        ) == pytest.approx(
             round(theoretical_metrics["W_s"], decimal_places),
             rel=relative_tolerance,
-        ), f"System time mismatch: sim={simulation_results['W_s']:.3f}, theory={theoretical_metrics['W_s']:.3f}"
+        ), (
+            f"System time mismatch: sim={simulation_results['W_s']:.3f}, "
+            + f"theory={theoretical_metrics['W_s']:.3f}"
+        )
