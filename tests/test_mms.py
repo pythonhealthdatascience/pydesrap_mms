@@ -12,6 +12,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from simulation import confidence_interval_method, Param, Runner, run_scenarios
+
+
+
 class MMSQueue:
     """
     M/M/S/∞/∞/FIFO Queueing System
@@ -224,3 +228,39 @@ class MMSQueue:
 
 
 
+def run_simulation():
+    # Define model parameters
+    param = Param(
+        patient_inter=4,
+        mean_n_consult_time = 10,
+        number_of_nurses = 4,
+        warm_up_period = 500,
+        data_collection_period = 1500,
+        number_of_runs=100,
+        audit_interval = 50,
+        scenario_name = 0,
+        cores = 1
+    )
+
+    # Run the replications
+    experiment = Runner(param)
+    experiment.run_reps()
+
+   
+
+    kpi_mapping = {
+        "mean_q_time_nurse": "wq",
+        "mean_time_with_nurse": "ws",
+        "mean_nurse_utilisation": "rho",
+        "mean_nurse_q_length": "lq"
+    }
+
+
+     # results
+    return experiment.overall_results_df.T['mean'], kpi_mapping
+
+
+
+
+results, map = run_simulation()
+print(results)
