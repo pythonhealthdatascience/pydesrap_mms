@@ -1,7 +1,9 @@
 0.000: Initialise model:
 
-{   'audit_list': [],
+{   'area_n_in_system': [0],
+    'audit_list': [],
     'env': '<simpy.core.Environment>',
+    'n_in_system': 0,
     'nurse': '<simulation.monitoredresource.MonitoredResource>',
     'nurse_consult_count': 0,
     'nurse_consult_time_dist': '<sim_tools.distributions.Exponential>',
@@ -12,7 +14,8 @@
     'patients': [],
     'results_list': [],
     'run_number': 0,
-    'running_mean_nurse_wait': 0}
+    'running_mean_nurse_wait': 0,
+    'time_last_n_in_system': 0}
 0.000: Parameters:
  
 {   '_initialising': False,
