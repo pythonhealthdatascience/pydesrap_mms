@@ -1,72 +1,20 @@
 """
-Simulation Model Validation Using M/M/S Queueing Theory
-======================================================
+Validates a discrete event simulation of a healthcare M/M/S queue by comparing
+simulation results to analytical queueing theory.
 
-This module provides validation testing for a discrete event simulation model
-of a healthcare queueing system by comparing simulation results against
-theoretical M/M/S queueing theory calculations.
+Metrics (using standard queueing theory notation):
+- ρ (rho): utilisation
+- L_q: mean queue length
+- L_s: mean number of patients in system
+- W_q: mean waiting
+- W_s: mean time in system
 
-Overview
---------
-The module implements both analytical and simulation-based approaches to
-modeling a healthcare system where patients arrive for nurse consultations.
-The system is modeled as an M/M/S queue with:
-
-- **Markovian arrivals**: Patients arrive according to a Poisson process
-- **Markovian service**: Consultation times follow exponential distribution
-- **S servers**: Multiple nurses available to serve patients
-- **Infinite capacity**: No limit on queue length or patient population
-- **FIFO discipline**: First-in-first-out queueing
-
-Key Components
---------------
-1. **MMSQueue Class**: Implements analytical M/M/S queueing theory formulas
-   to calculate theoretical performance metrics including server utilisation,
-   queue lengths, and waiting times.
-
-2. **Simulation Interface**: Functions to execute discrete event simulation
-   runs with proper warm-up periods, multiple replications, and statistical
-   analysis of results.
-
-3. **Validation Tests**: Parametrised test suite that compares simulation
-   outputs against theoretical predictions across various system configurations
-   and utilisation levels.
-
-Performance Metrics
-------------------
-The module uses standard queueing theory notation:
-
-- **ρ (rho)**: Server utilisation / traffic intensity
-- **L_q**: Expected number of customers waiting in queue
-- **L_s**: Expected number of customers in system (queue + service)
-- **W_q**: Expected waiting time in queue
-- **W_s**: Expected total time in system
-
-Validation Approach
-------------------
-Simulation results are validated by:
-
-1. Running multiple independent replications to obtain statistical estimates
-2. Using appropriate warm-up periods to eliminate initialisation bias
-3. Comparing mean simulation outputs against theoretical values
-4. Testing across diverse parameter combinations and utilisation levels
-5. Applying relative tolerance bounds to account for simulation variability
-
-Usage Notes
------------
-- The warm-up period should be sufficiently long for steady-state convergence
-- Multiple replications provide confidence intervals for statistical validation
-- System stability requires arrival rate < number_of_servers * service_rate
-- Relative tolerance of 15% is used to accommodate simulation stochasticity
-
-This validation framework ensures the simulation model accurately represents
-the underlying queueing process and can be trusted for performance analysis
-and capacity planning in healthcare systems.
+Results must match theory with a 15% tolerance (accomodates stochasticity).
+Tests are run across diverse parameter combinations and utilisation levels.
+System stability requires arrival rate < number_of_servers * service_rate.
 """
 
 import math
-import numpy as np
-import pandas as pd
 import pytest
 
 from simulation import Param, Runner
@@ -74,17 +22,9 @@ from simulation import Param, Runner
 
 class MMSQueue:
     """
-    M/M/S/∞/∞/FIFO Queueing System
+    Analytical M/M/S queue formulas.
 
-    A queueing system with:
-    - Markovian (Poisson) arrivals
-    - Markovian (exponential) service times
-    - S servers
-    - Infinite system capacity
-    - Infinite population
-    - First-In-First-Out discipline
-
-    Attributes
+    Parameters
     ----------
     arrival_rate : float
         Customer arrival rate (λ)
@@ -92,24 +32,18 @@ class MMSQueue:
         Service rate per server (μ)
     num_servers : int
         Number of servers (s)
+
+    Attributes
+    ----------
     rho : float
-        Traffic intensity (utilisation factor)
+        Utilisation (λ / (sμ))
     metrics : dict
-        Dictionary of performance metrics
+        Calculated performance metrics
     """
 
     def __init__(self, arrival_rate, service_rate, num_servers):
         """
         Initialise the M/M/S queue.
-
-        Parameters
-        ----------
-        arrival_rate : float
-            The arrival rate of customers (λ > 0)
-        service_rate : float
-            The service rate per server (μ > 0)
-        num_servers : int
-            The number of servers (s >= 1)
 
         Raises
         ------
@@ -216,198 +150,50 @@ class MMSQueue:
 
         return 1 / (sum_part + server_term)
 
-    def prob_n_in_system(self, n, return_all_solutions=True, as_frame=True):
-        """
-        Calculate the probability of having n customers in the system.
-
-        Parameters
-        ----------
-        n : int
-            Number of customers in the system (n >= 0)
-        return_all_solutions : bool, default=True
-            If True, return probabilities for 0,1,...,n
-        as_frame : bool, default=True
-            If True and return_all_solutions=True, return as DataFrame
-
-        Returns
-        -------
-        float or np.ndarray or pd.DataFrame
-            If return_all_solutions=False: Single probability P(N=n)
-            If return_all_solutions=True: Array/DataFrame of probabilities
-            P(N=0) to P(N=n)
-
-        Raises
-        ------
-        ValueError
-            If n < 0
-        """
-        if n < 0:
-            raise ValueError("n must be non-negative")
-
-        p0 = self.prob_system_empty()
-        lambda_over_mu = self.arrival_rate / self.service_rate
-        probs = [p0]
-
-        # For n = 1 to min(s, n)
-        for i in range(1, min(self.num_servers + 1, n + 1)):
-            pn = ((lambda_over_mu**i) / math.factorial(i)) * p0
-            probs.append(pn)
-
-        # For n > s
-        for i in range(self.num_servers + 1, n + 1):
-            pn = (
-                (lambda_over_mu**i)
-                / (
-                    math.factorial(self.num_servers)
-                    * (self.num_servers ** (i - self.num_servers))
-                )
-            ) * p0
-            probs.append(pn)
-
-        if return_all_solutions:
-            results = np.array(probs)
-            if as_frame:
-                index = [f"P(N={i})" for i in range(len(results))]
-                return pd.DataFrame(
-                    results, index=index, columns=["Probability"]
-                )
-            return results
-
-        return probs[n] if n < len(probs) else 0.0
-
-
-def add_time_in_system_column(df):
-    """
-    Add mean_time_in_system column to the dataframe.
-
-    This column represents the total time a patient spends in the system,
-    which is the sum of waiting time in queue and service time with nurse.
-
-    Args:
-        df: DataFrame containing simulation results
-
-    Returns:
-        DataFrame with added mean_time_in_system column
-    """
-    df_copy = df.copy()
-    df_copy["mean_time_in_system"] = (
-        df_copy["mean_q_time_nurse"] + df_copy["mean_time_with_nurse"]
-    )
-    return df_copy
-
 
 # pylint: disable=too-many-arguments,too-many-positional-arguments
 def run_simulation_model(
-    patient_inter=4,
-    mean_n_consult_time=10,
-    number_of_nurses=4,
-    warm_up_period=500,
-    data_collection_period=1500,
-    number_of_runs=100,
-    audit_interval=50,
-    scenario_name=0,
-    cores=-1,
+    patient_inter,
+    mean_n_consult_time,
+    number_of_nurses
 ):
     """
-    Run multiple replications of an M/M/S queueing simulation model.
+    Run simulation and return key performance indicators using standard
+    queueing theory notation.
 
-    This function executes a discrete event simulation of a healthcare system
-    modeled as an M/M/S queue (Markovian arrivals, Markovian service times,
-    S servers) and returns key performance indicators using standard queueing
-    theory notation.
-
-    The simulation models patients arriving for nurse consultations with:
-    - Exponential inter-arrival times
-    - Exponential service (consultation) times
-    - Multiple nurses (servers)
-    - FIFO queueing discipline
-
-    Parameters
-    ----------
-    patient_inter : int, default=4
-        Mean time between patient arrivals (minutes). Used as parameter
-        for exponential inter-arrival time distribution.
-    mean_n_consult_time : float, default=10.0
-        Mean consultation time with nurse (minutes). Used as parameter
-        for exponential service time distribution.
-    number_of_nurses : int, default=4
-        Number of nurses available to serve patients (number of servers).
-    warm_up_period : float, default=500.0
-        Duration of warm-up period (minutes) before data collection begins.
-        Results from this period are discarded to avoid initialisation bias.
-    data_collection_period : float, default=1500.0
-        Duration of data collection period (minutes) after warm-up.
-        Performance metrics are calculated from this period only.
-    number_of_runs : int, default=100
-        Number of independent simulation replications to execute.
-        More runs provide better statistical precision.
-    audit_interval : float, default=50.0
-        Time interval (minutes) for collecting intermediate statistics
-        during simulation runs.
-    scenario_name : int, default=0
-        Identifier for the simulation scenario (for tracking purposes).
-    cores : int, default=-1
-        Number of CPU cores to utilise for parallel execution.
-        If -1, uses all available cores.
-
-    Returns
-    -------
-    pd.Series
-        Series containing mean performance metrics across all replications,
-        indexed with standard queueing theory notation:
-
-        - 'W_q': Mean waiting time in queue (minutes)
-        - 'W_s': Mean total time in system (minutes)
-        - 'rho': Mean server (nurse) utilisation (0-1)
-        - 'L_q': Mean number of patients in queue
-
-    Notes
-    -----
-    - The warm-up period should be sufficiently long to allow the system
-      to reach steady-state before data collection begins
-    - Results can be compared against theoretical M/M/S queue formulas
-      to validate simulation model accuracy
-    - System stability requires arrival_rate < number_of_nurses * service_rate
-
+    The warm-up period should be sufficiently long to allow the system
+    to reach steady-state before data collection begins
     """
+    param = Param(
+        patient_inter=patient_inter,
+        mean_n_consult_time=mean_n_consult_time,
+        number_of_nurses=number_of_nurses,
+        warm_up_period=500,
+        data_collection_period=1500,
+        number_of_runs=100,
+        audit_interval=50,
+        scenario_name=0,
+        cores=1,
+    )
+    experiment = Runner(param)
+    experiment.run_reps()
 
-    # col mapping to queuing theory notation
-    # note that the simulation model does not directly output W_s
-    # so we need to calculate W_s = mean_q_time_nurse + mean_time_with_nurse
-    col_kpi_mapping = {
+    # Calculate the mean time in the system
+    df = experiment.overall_results_df.assign(mean_time_in_system=(
+        lambda d: d["mean_q_time_nurse"] + d["mean_time_with_nurse"]
+    ))
+
+    # Rename the columns using queuing theory notation
+    mapping = {
         "mean_q_time_nurse": "W_q",
         "mean_time_in_system": "W_s",
         "mean_nurse_utilisation": "rho",
         "mean_nurse_q_length": "L_q",
     }
+    df = df.rename(columns=mapping)
 
-    # Define model parameters
-    param = Param(
-        patient_inter=patient_inter,
-        mean_n_consult_time=mean_n_consult_time,
-        number_of_nurses=number_of_nurses,
-        warm_up_period=warm_up_period,
-        data_collection_period=data_collection_period,
-        number_of_runs=number_of_runs,
-        audit_interval=audit_interval,
-        scenario_name=scenario_name,
-        cores=cores,
-    )
-
-    # Run the replications
-    experiment = Runner(param)
-    experiment.run_reps()
-
-    # Add the mean_time_in_system column before renaming
-    comparable_results_df = add_time_in_system_column(
-        experiment.overall_results_df
-    )
-
-    # rename columns and return only relevenat
-    comparable_results_df = comparable_results_df.rename(
-        columns=col_kpi_mapping
-    )
-    return comparable_results_df[col_kpi_mapping.values()].T["mean"]
+    # Return relevant columns
+    return df[mapping.values()].T["mean"]
 
 
 @pytest.mark.parametrize(
@@ -420,7 +206,7 @@ def run_simulation_model(
         # Test case 3: M/M/1 (ρ = 0.75)
         (4, 3, 1),
         # Test case 4: Multiple servers, high utilisation (ρ ≈ 0.91)
-        (5.5, 5.0, 3),
+        (5.5, 5, 3),
         # Test case 5: Balanced system (ρ = 0.5)
         (8, 4, 1),
         # Test case 6: Many servers, low individual utilisation (ρ ≈ 0.63)
@@ -437,19 +223,15 @@ def test_simulation_against_theory(
     """Test simulation results against theoretical M/M/S queue calculations."""
 
     # Create theoretical M/M/S queue model and get metrics
-    mms_queue = MMSQueue(
-        arrival_rate=1/patient_inter,
-        service_rate=1/mean_n_consult_time,
-        num_servers=number_of_nurses,
-    )
-    theoretical_metrics = mms_queue.metrics
+    lam = 1 / patient_inter
+    mu = 1 / mean_n_consult_time
+    theory = MMSQueue(lam, mu, number_of_nurses).metrics
 
     # Run simulation
-    simulation_results = run_simulation_model(
+    sim = run_simulation_model(
         patient_inter=patient_inter,
         mean_n_consult_time=mean_n_consult_time,
-        number_of_nurses=number_of_nurses,
-        number_of_runs=100,
+        number_of_nurses=number_of_nurses
     )
 
     # Compare results with appropriate tolerance (round to 3dp + 15% tolerance)
@@ -460,8 +242,8 @@ def test_simulation_against_theory(
         ("W_s", "System time")
     ]
     for key, label in metrics:
-        sim_val = round(simulation_results[key], 3)
-        theo_val = round(theoretical_metrics[key], 3)
-        assert sim_val == pytest.approx(theo_val, rel=0.15), (
-            f"{label} mismatch: sim={sim_val}, theory={theo_val}"
+        sim_val = round(sim[key], 3)
+        theory_val = round(theory[key], 3)
+        assert sim_val == pytest.approx(theory_val, rel=0.15), (
+            f"{label} mismatch: sim={sim_val}, theory={theory_val}"
         )
