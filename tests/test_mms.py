@@ -181,12 +181,6 @@ def run_simulation_model(
     experiment = Runner(param)
     experiment.run_reps()
 
-    # Calculate the mean time in the system
-    df = experiment.overall_results_df.copy()
-    df["mean_time_in_system"] = (
-        df["mean_q_time_nurse"] + df["mean_time_with_nurse"]
-    )
-
     # Rename the columns using queuing theory notation
     mapping = {
         "mean_q_time_nurse": "W_q",
@@ -194,7 +188,7 @@ def run_simulation_model(
         "mean_nurse_utilisation": "rho",
         "mean_nurse_q_length": "L_q",
     }
-    df = df.rename(columns=mapping)
+    df = experiment.overall_results_df.rename(columns=mapping)
 
     # Return relevant columns
     return df[mapping.values()].T["mean"]
