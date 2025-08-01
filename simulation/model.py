@@ -99,6 +99,11 @@ class Model:
         self.audit_list = []
         self.results_list = []
 
+        # Initialise attributes used to calculate patients in system
+        self.area_n_in_system = [0]
+        self.time_last_n_in_system = self.env.now
+        self.n_in_system = 0
+
         # Generate seeds based on run_number as entropy (the "starter" seed)
         # The seeds produced will create independent streams
         ss = np.random.SeedSequence(entropy=self.run_number)
@@ -161,6 +166,9 @@ class Model:
             # The list stores a reference to the patient object, so any updates
             # to the patient attributes will be reflected in the list as well
             self.patients.append(p)
+
+            # Update the number in the system
+            self.update_n_in_system(inc=1)
 
             # Log arrival time
             if p.arrival_time < self.param.warm_up_period:
@@ -253,8 +261,9 @@ class Model:
             # Pass time spent with nurse
             yield self.env.timeout(patient.time_with_nurse)
 
-            # Record departure time
+            # Record departure time and update number in system
             patient.end_time = self.env.now
+            self.update_n_in_system(inc=-1)
 
     def interval_audit(self, interval):
         """
@@ -287,6 +296,22 @@ class Model:
             # Trigger next audit after desired interval has passed
             yield self.env.timeout(interval)
 
+    def update_n_in_system(self, inc):
+        """
+        Update the time-weighted statistics for number of patients in system.
+
+        Parameters
+        ----------
+        inc : int
+            Change in the number of patients (+1, 0, -1).
+        """
+        # Compute time since last event and calculate area under curve for that
+        duration = self.env.now - self.time_last_n_in_system
+        self.area_n_in_system.append(self.n_in_system * duration)
+        # Update time and n in system
+        self.time_last_n_in_system = self.env.now
+        self.n_in_system += inc
+
     def init_results_variables(self):
         """
         Resets all results collection variables to their initial values.
@@ -295,6 +320,10 @@ class Model:
         self.nurse_time_used = 0
         self.audit_list = []
         self.nurse.init_results()
+        # For number in system, we reset area and time but not the count, as it
+        # should include any remaining warm-up patients in the count
+        self.area_n_in_system = [0]
+        self.time_last_n_in_system = self.env.now
 
     def warm_up_complete(self):
         """
@@ -343,6 +372,9 @@ class Model:
 
         # Run the simulation
         self.env.run(until=run_length)
+
+        # Run final calculation of number in system
+        self.update_n_in_system(inc=0)
 
         # If the simulation ends while resources are still in use or requests
         # are still in the queue, the time between the last recorded event and

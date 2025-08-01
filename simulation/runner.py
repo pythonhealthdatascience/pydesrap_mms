@@ -140,6 +140,10 @@ class Runner:
                 ),
                 "mean_time_in_system": (
                     patient_results["time_in_system"].mean()
+                ),
+                "mean_n_in_system": (
+                    sum(model.area_n_in_system) /
+                    self.param.data_collection_period
                 )
             }
         else:
