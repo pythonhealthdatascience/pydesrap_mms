@@ -253,6 +253,9 @@ class Model:
             # Pass time spent with nurse
             yield self.env.timeout(patient.time_with_nurse)
 
+            # Record departure time
+            patient.end_time = self.env.now
+
     def interval_audit(self, interval):
         """
         Audit waiting times and resource utilisation at regular intervals.
