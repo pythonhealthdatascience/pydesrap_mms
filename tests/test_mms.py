@@ -27,18 +27,20 @@ class MMSQueue:
     Parameters
     ----------
     arrival_rate : float
-        Customer arrival rate (λ)
+        Customer arrival rate (λ).
     service_rate : float
-        Service rate per server (μ)
+        Service rate per server (μ).
     num_servers : int
-        Number of servers (s)
+        Number of servers (s).
 
     Attributes
     ----------
     rho : float
-        Utilisation (λ / (sμ))
+        Utilisation (λ / (sμ)).
+    lambda_over_mu : float
+        Arrival/service rate ratio (λ / μ).
     metrics : dict
-        Calculated performance metrics
+        Calculated performance metrics.
     """
 
     def __init__(self, arrival_rate, service_rate, num_servers):
@@ -48,7 +50,7 @@ class MMSQueue:
         Raises
         ------
         ValueError
-            If parameters are invalid or system is unstable
+            If parameters are invalid or system is unstable.
         """
         if arrival_rate <= 0:
             raise ValueError("Arrival rate must be positive")
@@ -60,7 +62,9 @@ class MMSQueue:
         self.arrival_rate = arrival_rate
         self.service_rate = service_rate
         self.num_servers = num_servers
-        self.rho = self._get_traffic_intensity()
+
+        # Calculate utilisation
+        self.rho = self.get_traffic_intensity()
 
         # Check system stability
         if self.rho >= 1:
@@ -69,32 +73,35 @@ class MMSQueue:
                 f"Need λ < s*μ ({arrival_rate} < {num_servers * service_rate})"
             )
 
-        # Calculate performance metrics using Little's Law
-        self.metrics = self._calculate_metrics()
+        # Calculate λ/μ (average customers in service if infinite servers)
+        self.lambda_over_mu = self.arrival_rate / self.service_rate
 
-    def _get_traffic_intensity(self):
+        # Calculate performance metrics using Little's Law
+        self.metrics = self.calculate_metrics()
+
+    def get_traffic_intensity(self):
         """
         Calculate the traffic intensity (server utilisation).
 
         Returns
         -------
         float
-            Traffic intensity ρ = λ/(s*μ)
+            Traffic intensity ρ = λ/(s*μ).
         """
         return self.arrival_rate / (self.num_servers * self.service_rate)
 
-    def _calculate_metrics(self):
+    def calculate_metrics(self):
         """
         Calculate all performance metrics for the queue.
 
         Returns
         -------
         dict[str, float]
-            Dictionary containing performance metrics
+            Dictionary containing performance metrics.
         """
         metrics = {}
         metrics["rho"] = self.rho
-        metrics["L_q"] = self._get_mean_queue_length()
+        metrics["L_q"] = self.get_mean_queue_length()
         metrics["L_s"] = metrics["L_q"] + (
             self.arrival_rate / self.service_rate
         )
@@ -102,7 +109,7 @@ class MMSQueue:
         metrics["W_q"] = metrics["W_s"] - (1 / self.service_rate)
         return metrics
 
-    def _get_mean_queue_length(self):
+    def get_mean_queue_length(self):
         """
         Calculate the expected number of customers waiting in queue (L_q).
 
@@ -112,12 +119,11 @@ class MMSQueue:
         Returns
         -------
         float
-            Expected queue length
+            Expected queue length.
         """
         p0 = self.prob_system_empty()
-        lambda_over_mu = self.arrival_rate / self.service_rate
 
-        lq = (p0 * (lambda_over_mu**self.num_servers) * self.rho) / (
+        lq = (p0 * (self.lambda_over_mu**self.num_servers) * self.rho) / (
             math.factorial(self.num_servers) * (1 - self.rho) ** 2
         )
 
@@ -133,25 +139,22 @@ class MMSQueue:
         Returns
         -------
         float
-            Probability that system is empty
+            Probability that system is empty.
         """
-        lambda_over_mu = self.arrival_rate / self.service_rate
-
         # Sum for n = 0 to s-1
         sum_part = sum(
-            (lambda_over_mu**n) / math.factorial(n)
+            (self.lambda_over_mu**n) / math.factorial(n)
             for n in range(self.num_servers)
         )
 
         # Term for n >= s
-        server_term = (lambda_over_mu**self.num_servers) / (
+        server_term = (self.lambda_over_mu**self.num_servers) / (
             math.factorial(self.num_servers) * (1 - self.rho)
         )
 
         return 1 / (sum_part + server_term)
 
 
-# pylint: disable=too-many-arguments,too-many-positional-arguments
 def run_simulation_model(
     patient_inter,
     mean_n_consult_time,
@@ -162,7 +165,7 @@ def run_simulation_model(
     queueing theory notation.
 
     The warm-up period should be sufficiently long to allow the system
-    to reach steady-state before data collection begins
+    to reach steady-state before data collection begins.
     """
     param = Param(
         patient_inter=patient_inter,
@@ -179,9 +182,10 @@ def run_simulation_model(
     experiment.run_reps()
 
     # Calculate the mean time in the system
-    df = experiment.overall_results_df.assign(mean_time_in_system=(
-        lambda d: d["mean_q_time_nurse"] + d["mean_time_with_nurse"]
-    ))
+    df = experiment.overall_results_df.copy()
+    df["mean_time_in_system"] = (
+        df["mean_q_time_nurse"] + df["mean_time_with_nurse"]
+    )
 
     # Rename the columns using queuing theory notation
     mapping = {
