@@ -28,6 +28,7 @@
     'number_of_runs': 1,
     'patient_inter': 4,
     'scenario_name': 0,
+    'seed_offset': 0,
     'warm_up_period': 30}
 13.174: 🔸 WU Patient 1 arrives at: 13.174.
 13.174: 🔶 WU Patient 1 is seen by nurse after 0.000. Consultation length: 8.031.

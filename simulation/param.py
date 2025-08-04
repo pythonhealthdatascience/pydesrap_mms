@@ -48,7 +48,7 @@ class Param:
         number_of_nurses=5,
         warm_up_period=1440*27,  # 27 days
         data_collection_period=1440*30,  # 30 days
-        number_of_runs=31,
+        number_of_runs=15,
         audit_interval=120,  # Every 2 hours
         scenario_name=0,
         cores=-1,
