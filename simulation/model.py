@@ -106,7 +106,9 @@ class Model:
 
         # Generate seeds based on run_number as entropy (the "starter" seed)
         # The seeds produced will create independent streams
-        ss = np.random.SeedSequence(entropy=self.run_number)
+        ss = np.random.SeedSequence(
+            entropy=self.run_number + self.param.seed_offset
+        )
         seeds = ss.spawn(2)
 
         # Initialise distributions using those seeds

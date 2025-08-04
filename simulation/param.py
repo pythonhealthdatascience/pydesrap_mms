@@ -34,6 +34,9 @@ class Param:
     cores : int
         Number of CPU cores to use for parallel execution. For all
         available cores, set to -1. For sequential execution, set to 1.
+    seed_offset : int
+        Optional value to add to each run number when generating seeds for
+        simulation replciations (used for sensitivity analyses).
     logger : logging.Logger
         The logging instance used for logging messages.
     """
@@ -49,6 +52,7 @@ class Param:
         audit_interval=120,  # Every 2 hours
         scenario_name=0,
         cores=-1,
+        seed_offset=0,
         logger=SimLogger(log_to_console=False, log_to_file=False)
     ):
         """
@@ -74,6 +78,8 @@ class Param:
             Label for the scenario.
         cores : int, optional
             Number of CPU cores to use for parallel execution.
+        seed_offset : int
+            Value added to each run's seed.
         logger : logging.Logger, optional
             The logging instance used for logging messages.
         """
@@ -88,6 +94,7 @@ class Param:
         self.audit_interval = audit_interval
         self.scenario_name = scenario_name
         self.cores = cores
+        self.seed_offset = seed_offset
         self.logger = logger
 
         # Re-enable attribute checks after initialisation
