@@ -425,11 +425,13 @@ def test_monitoredresource_cleanup():
     # Simulation setup
     env = simpy.Environment()
     resource = MonitoredResource(env, capacity=1)
+
     def process_task(env, resource, duration):
         """Simulate a task that requests the resource."""
         with resource.request() as req:
             yield req
             yield env.timeout(duration)
+
     # Set run length
     run_length = 12
     # Schedule tasks to occur during the simulation
@@ -519,27 +521,31 @@ def test_no_missing_values():
                "mean_time_with_nurse", "mean_nurse_utilisation",
                "mean_nurse_utilisation_tw", "mean_nurse_q_length",
                "count_nurse_unseen", "mean_time_in_system", "mean_n_in_system"]
+    # Also, some columns that expect possible to have missing values
+    notreq_overall = ["mean_q_time_nurse_unseen"]
     # Check for missing values
     res_patient = experiment.patient_results_df[req_patient].isnull().any()
     assert not res_patient.any(), {
         "Found missing values in patient results in columns that we expect " +
-        f"to have none - in the columns marked True: {res_patient}"
+        "to have none in these columns: " +
+        f"{res_patient[res_patient].keys().to_list()}"
     }
     res_run = experiment.run_results_df[req_run].isnull().any()
     assert not res_run.any(), {
         "Found missing values in run results in columns that we expect " +
-        f"to have none - in the columns marked True: {res_run}"
+        f"to have none in these columns: {res_run[res_run].keys().to_list()}"
     }
     res_interval = experiment.interval_audit_df.isnull().any()
     assert not res_interval.any(), {
-        "Found missing values in interval results - in the columns marked " +
-        f"True: {res_interval}"
+        "Found missing values in interval results in these columns: " +
+        f"True: {res_interval[res_interval].keys().to_list()}"
     }
-    res_overall = experiment.overall_results_df.isnull().any()
-    assert not res_overall.any(), {
-        "Found missing values in overall results - in the columns marked " +
-        f"True: {res_overall}"
-    }
+    filter_overall = experiment.overall_results_df.drop(notreq_overall, axis=1)
+    res_overall = filter_overall.isnull().any()
+    assert not res_overall.any(), (
+        "Found missing values in overall results in these columns: " +
+        f"{res_overall[res_overall].keys().to_list()}"
+    )
 
 
 def test_sampled_times():
