@@ -66,15 +66,13 @@ def test_high_demand():
         "The interval audit must not record any utilisation that is below 0."
     )
     # Check that the final patient in the patient-level results is not seen
-    # by a nurse.
+    # by a nurse and remains in the simulation.
     last_patient = results["patient"].iloc[-1]
-    assert np.isnan(last_patient["q_time_nurse"]), (
-        "Expect last patient in high demand scenario to have queue time NaN."
-    )
-    assert np.isnan(last_patient["time_with_nurse"]), (
-        "Expect last patient in high demand scenario to have NaN for time" +
-        "with nurse."
-    )
+    for field in ["q_time_nurse", "time_with_nurse", "end_time"]:
+        assert np.isnan(last_patient[field]), (
+            "Expect last patient in high demand scenario to have NaN for " +
+            f"{field}."
+        )
 
 
 def test_warmup_high_demand():
@@ -91,17 +89,20 @@ def test_warmup_high_demand():
     results = experiment.run_single(run=0)
     # ONLY REFLECTS DC PATIENTS
     # Expect these to be NaN, as no patients in data collection period seen,
-    # and we're not interested in the wait times of the warm-up patients
+    # and we're not interested in the times of the warm-up patients
     assert np.isnan(results["run"]["mean_q_time_nurse"])
     assert np.isnan(results["run"]["mean_time_with_nurse"])
+    assert np.isnan(results["run"]["mean_time_in_system"])
     # REFLECTS USE BY WU + DC PATIENTS
     # Expect these to be 1, as nurses busy for whole time
     assert results["run"]["mean_nurse_utilisation"] == 1
     assert results["run"]["mean_nurse_utilisation_tw"] == 1
     assert results["interval_audit"]["utilisation"][0] == 1
     # REFLECTS USE BY WU + DC PATIENTS
-    # Expect this to be positive and greater than arrivals
+    # Expect these to be positive and greater than arrivals (as they include
+    # the remaining warm-up patients who are unseen).
     assert results["run"]["mean_nurse_q_length"] > results["run"]["arrivals"]
+    assert results["run"]["mean_n_in_system"] > results["run"]["arrivals"]
     # ONLY REFLECTS DC PATIENTS
     # Expect this to match arrivals
     assert results["run"]["count_nurse_unseen"] == results["run"]["arrivals"]
@@ -231,9 +232,9 @@ def test_arrivals():
     experiment.run_reps()
     # Get count of patients from patient-level and run results
     patient_n = (experiment
-        .patient_results_df
-        .groupby("run")["patient_id"]
-        .count())
+                 .patient_results_df
+                 .groupby("run")["patient_id"]
+                 .count())
     run_n = experiment.run_results_df["arrivals"]
     # Compare the counts from each run
     assert all(patient_n == run_n), (
@@ -424,11 +425,13 @@ def test_monitoredresource_cleanup():
     # Simulation setup
     env = simpy.Environment()
     resource = MonitoredResource(env, capacity=1)
+
     def process_task(env, resource, duration):
         """Simulate a task that requests the resource."""
         with resource.request() as req:
             yield req
             yield env.timeout(duration)
+
     # Set run length
     run_length = 12
     # Schedule tasks to occur during the simulation
@@ -517,28 +520,32 @@ def test_no_missing_values():
     req_run = ["run_number", "scenario", "arrivals", "mean_q_time_nurse",
                "mean_time_with_nurse", "mean_nurse_utilisation",
                "mean_nurse_utilisation_tw", "mean_nurse_q_length",
-               "count_nurse_unseen"]
+               "count_nurse_unseen", "mean_time_in_system", "mean_n_in_system"]
+    # Also, some columns that expect possible to have missing values
+    notreq_overall = ["mean_q_time_nurse_unseen"]
     # Check for missing values
     res_patient = experiment.patient_results_df[req_patient].isnull().any()
     assert not res_patient.any(), {
         "Found missing values in patient results in columns that we expect " +
-        f"to have none - in the columns marked True: {res_patient}"
+        "to have none in these columns: " +
+        f"{res_patient[res_patient].keys().to_list()}"
     }
     res_run = experiment.run_results_df[req_run].isnull().any()
     assert not res_run.any(), {
         "Found missing values in run results in columns that we expect " +
-        f"to have none - in the columns marked True: {res_run}"
+        f"to have none in these columns: {res_run[res_run].keys().to_list()}"
     }
     res_interval = experiment.interval_audit_df.isnull().any()
     assert not res_interval.any(), {
-        "Found missing values in interval results - in the columns marked " +
-        f"True: {res_interval}"
+        "Found missing values in interval results in these columns: " +
+        f"True: {res_interval[res_interval].keys().to_list()}"
     }
-    res_overall = experiment.overall_results_df.isnull().any()
-    assert not res_overall.any(), {
-        "Found missing values in overall results - in the columns marked " +
-        f"True: {res_overall}"
-    }
+    filter_overall = experiment.overall_results_df.drop(notreq_overall, axis=1)
+    res_overall = filter_overall.isnull().any()
+    assert not res_overall.any(), (
+        "Found missing values in overall results in these columns: " +
+        f"{res_overall[res_overall].keys().to_list()}"
+    )
 
 
 def test_sampled_times():

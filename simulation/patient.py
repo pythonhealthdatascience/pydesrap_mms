@@ -26,6 +26,8 @@ class Patient:
         Time the patient spent waiting for a nurse in minutes.
     time_with_nurse : float
         Time spent in consultation with a nurse in minutes.
+    end_time : float
+        Time the patients leaves the system, or NaN if not yet left.
 
     Notes
     -----
@@ -45,3 +47,4 @@ class Patient:
         self.arrival_time = np.nan
         self.q_time_nurse = np.nan
         self.time_with_nurse = np.nan
+        self.end_time = np.nan

@@ -211,15 +211,13 @@ repo/
 
 Run times from our analyses (on Intel Core i7-12700H, 32GB RAM, Ubuntu 24.04.1):
 
-* `analysis.ipynb` - 37s
-* `choosing_cores.ipynb` - 25s
-* `choosing_replications.ipynb` - 11s
-* `choosing_warmup.ipynb` - 3s
-* `generate_exp_results.ipynb` - 2s
+* `analysis.ipynb` - 23s
+* `choosing_cores.ipynb` - 19s
+* `choosing_replications.ipynb` - 33s
+* `choosing_warmup.ipynb` - 4s
+* `generate_exp_results.ipynb` - 7s
 * `logs.ipynb` - 0s
-* `time_weighted_averages.ipynb` - 0s
-
-<!--TODO: Update run times -->
+* `time_weighted_averages.ipynb` - 1s
 
 <br>
 

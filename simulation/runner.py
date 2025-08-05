@@ -89,9 +89,14 @@ class Runner:
                 patient_results["time_with_nurse"].isna(),
                 model.env.now - patient_results["arrival_time"], np.nan
             )
+            # Calculate time in system (unfinished patients will set to NaN)
+            patient_results["time_in_system"] = (
+                patient_results["end_time"] - patient_results["arrival_time"]
+            )
         else:
             # Set to NaN if no patients
             patient_results["q_time_unseen_nurse"] = np.nan
+            patient_results["time_in_system"] = np.nan
 
         # RUN RESULTS
         # The run, scenario and arrivals are handled the same regardless of
@@ -132,6 +137,13 @@ class Runner:
                 ),
                 "mean_q_time_nurse_unseen": (
                     patient_results["q_time_unseen_nurse"].mean()
+                ),
+                "mean_time_in_system": (
+                    patient_results["time_in_system"].mean()
+                ),
+                "mean_n_in_system": (
+                    sum(model.area_n_in_system) /
+                    self.param.data_collection_period
                 )
             }
         else:

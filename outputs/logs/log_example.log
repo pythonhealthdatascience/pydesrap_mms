@@ -1,7 +1,9 @@
 0.000: Initialise model:
 
-{   'audit_list': [],
+{   'area_n_in_system': [0],
+    'audit_list': [],
     'env': '<simpy.core.Environment>',
+    'n_in_system': 0,
     'nurse': '<simulation.monitoredresource.MonitoredResource>',
     'nurse_consult_count': 0,
     'nurse_consult_time_dist': '<sim_tools.distributions.Exponential>',
@@ -12,7 +14,8 @@
     'patients': [],
     'results_list': [],
     'run_number': 0,
-    'running_mean_nurse_wait': 0}
+    'running_mean_nurse_wait': 0,
+    'time_last_n_in_system': 0}
 0.000: Parameters:
  
 {   '_initialising': False,
@@ -25,6 +28,7 @@
     'number_of_runs': 1,
     'patient_inter': 4,
     'scenario_name': 0,
+    'seed_offset': 0,
     'warm_up_period': 30}
 13.174: 🔸 WU Patient 1 arrives at: 13.174.
 13.174: 🔶 WU Patient 1 is seen by nurse after 0.000. Consultation length: 8.031.
