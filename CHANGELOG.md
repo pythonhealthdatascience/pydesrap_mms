@@ -5,15 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Dates formatted as YYYY-MM-DD as per [ISO standard](https://www.iso.org/iso-8601-date-and-time-format.html).
 
+## v1.3.0 - 2025-08-05
 
-## Unreleased
-
-Additional validation: Test simulation model against analytical queuing results
+This release introduces several new features including input modelling, code-based model validation, new key performance indicators, and more - as well as improvements to documentation and code.
 
 ### Added
 
-* Analytical queuing model `MMSQueue` in `test/test_mms.py`
-* A small test suite for comparing long run simulation estimation of means to analytical results (to 3 dp with 0.15 relative tolerance). Tested L_q, L_s, W_q, W_s.
+* Created notebook generating a synthetic dataset.
+* Created notebook for input modelling using `distfit`.
+* Add mock paper.
+* Add `pytest-cov` and instructions for running with coverage.
+* Add code-based model validation, via tests comparing results against analytical queueing theory model.
+* Add two new metrics: mean time in system and time-weighted mean number of patients in system.
+* Add seed offset to allow change from use of run number.
+
+### Changed
+
+* Removed internal distributions and tests, switched to import `sim-tools` for these features (with corresponding tests in the `sim-tools` repo).
+* Amended `pyproject.toml` (include author name & description).
+* Renamed and replaced all "rap_template_python_des" with "pydesrap_mms", and moved away from "template" phrasing.
+* Simplified README so more relevant to repository content.
+* Moved each function/class into its own file.
+* Simplified and standardised NumPy style docstrings.
+* Changed default precision when choosing replications to 0.1.
+* Amend `run_notebooks.sh` so can use to run a single notebook.
+* Changed default number of replications to 15.
+* Can choose operating system when manually trigger tests GitHub action.
+* Add imports to `__init__.py` so can import using e.g. `from simulation import Model` rather than `from simulation.model import Model`.
 
 ## v1.2.0 - 2025-03-26
 

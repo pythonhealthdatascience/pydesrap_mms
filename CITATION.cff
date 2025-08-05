@@ -25,5 +25,5 @@ abstract: >-
   Reproducible analytical pipeline (RAP) for python discrete-event simulation
   (DES) implementing a simple M/M/s queueing model.
 license: MIT
-version: '1.2.0'
-date-released: '2025-03-26'
+version: '1.3.0'
+date-released: '2025-08-25'
