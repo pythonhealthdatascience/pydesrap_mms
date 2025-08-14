@@ -66,7 +66,7 @@ conda env create --file environment.yaml
 conda activate
 ```
 
-There is also a `requirements.txt` file whcih can be used to set up the environment with `virtualenv`, but this won't fetch a specific version of Python - so please note the version listed in `environment.yaml`.
+There is also a `requirements.txt` file which can be used to set up the environment with `virtualenv`, but this won't fetch a specific version of Python - so please note the version listed in `environment.yaml`.
 
 <br>
 
