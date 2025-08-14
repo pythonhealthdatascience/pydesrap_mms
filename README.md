@@ -87,29 +87,6 @@ To run one notebook from the command line (with the same settings - clearing the
 bash run_notebooks.sh notebooks/notebook_name.ipynb
 ```
 
-**Run tests:**
-
-```{.r}
-pytest
-# Run in parallel
-pytest -n auto
-# Run a specific test
-pytest tests/testfile.py -k 'testname'
-# Run with coverage
-pytest --cov
-```
-
-**Lint code:**
-
-```{.r}
-# Lint all files
-bash lint.sh
-# Lint specific .py file
-pylint simulation/model.py
-# Lint specific .ipynb file
-nbqa pylint notebooks/analysis.ipynb
-```
-
 <br>
 
 ## How does the model work?
@@ -218,6 +195,12 @@ Run times from our analyses (on Intel Core i7-12700H, 32GB RAM, Ubuntu 24.04.1):
 * `generate_exp_results.ipynb` - 7s
 * `logs.ipynb` - 0s
 * `time_weighted_averages.ipynb` - 1s
+
+<br>
+
+## Community
+
+Curious about contributing? Check out the [contributing guidelines](CONTRIBUTING.md) to learn how you can help. Every bit of help counts, and your contribution - no matter how minor - is highly valued.
 
 <br>
 
