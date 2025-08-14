@@ -7,7 +7,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14622466.svg)](https://doi.org/10.5281/zenodo.14622466)
 [![Tests](https://github.com/pythonhealthdatascience/pydesrap_mms/actions/workflows/tests.yaml/badge.svg)](https://github.com/pythonhealthdatascience/pydesrap_mms/actions/workflows/tests.yaml)
 [![Linting](https://github.com/pythonhealthdatascience/pydesrap_mms/actions/workflows/lint.yaml/badge.svg)](https://github.com/pythonhealthdatascience/pydesrap_mms/actions/workflows/lint.yaml)
-[![ORCID](https://img.shields.io/badge/ORCID_Amy_Heather-0000--0002--6596--3479-A6CE39?&logo=orcid&logoColor=white)](https://orcid.org/0000-0002-6596-3479)
+[![Coverage](https://github.com/pythonhealthdatascience/pydesrap_mms/raw/main/images/coverage-badge.svg)](https://github.com/pythonhealthdatascience/pydesrap_mms/actions/workflows/tests.yaml)
 </div>
 
 ## Repository overview
