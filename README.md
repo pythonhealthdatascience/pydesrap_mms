@@ -7,7 +7,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14622466.svg)](https://doi.org/10.5281/zenodo.14622466)
 [![Tests](https://github.com/pythonhealthdatascience/pydesrap_mms/actions/workflows/tests.yaml/badge.svg)](https://github.com/pythonhealthdatascience/pydesrap_mms/actions/workflows/tests.yaml)
 [![Linting](https://github.com/pythonhealthdatascience/pydesrap_mms/actions/workflows/lint.yaml/badge.svg)](https://github.com/pythonhealthdatascience/pydesrap_mms/actions/workflows/lint.yaml)
-[![ORCID](https://img.shields.io/badge/ORCID_Amy_Heather-0000--0002--6596--3479-A6CE39?&logo=orcid&logoColor=white)](https://orcid.org/0000-0002-6596-3479)
+[![Coverage](https://github.com/pythonhealthdatascience/pydesrap_mms/raw/main/images/coverage-badge.svg)](https://github.com/pythonhealthdatascience/pydesrap_mms/actions/workflows/tests.yaml)
 </div>
 
 ## Repository overview
@@ -40,7 +40,7 @@ conda env create --file environment.yaml
 conda activate
 ```
 
-There is also a `requirements.txt` file whcih can be used to set up the environment with `virtualenv`, but this won't fetch a specific version of Python - so please note the version listed in `environment.yaml`.
+There is also a `requirements.txt` file which can be used to set up the environment with `virtualenv`, but this won't fetch a specific version of Python - so please note the version listed in `environment.yaml`.
 
 <br>
 
@@ -85,29 +85,6 @@ To run one notebook from the command line (with the same settings - clearing the
 
 ```{.bash}
 bash run_notebooks.sh notebooks/notebook_name.ipynb
-```
-
-**Run tests:**
-
-```{.r}
-pytest
-# Run in parallel
-pytest -n auto
-# Run a specific test
-pytest tests/testfile.py -k 'testname'
-# Run with coverage
-pytest --cov
-```
-
-**Lint code:**
-
-```{.r}
-# Lint all files
-bash lint.sh
-# Lint specific .py file
-pylint simulation/model.py
-# Lint specific .ipynb file
-nbqa pylint notebooks/analysis.ipynb
 ```
 
 <br>
@@ -218,6 +195,12 @@ Run times from our analyses (on Intel Core i7-12700H, 32GB RAM, Ubuntu 24.04.1):
 * `generate_exp_results.ipynb` - 7s
 * `logs.ipynb` - 0s
 * `time_weighted_averages.ipynb` - 1s
+
+<br>
+
+## Community
+
+Curious about contributing? Check out the [contributing guidelines](CONTRIBUTING.md) to learn how you can help. Every bit of help counts, and your contribution - no matter how minor - is highly valued.
 
 <br>
 
