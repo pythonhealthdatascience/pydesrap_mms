@@ -15,7 +15,7 @@ from .param import Param
 from .runner import Runner
 
 
-def run_scenarios(scenarios, param=None):
+def run_scenarios(scenarios, param=None, verbose=True):
     """
     Execute a set of scenarios and return the results from each run.
 
@@ -27,6 +27,8 @@ def run_scenarios(scenarios, param=None):
     param : Param, optional
         Instance of Param with parameters for the base case. Optional, defaults
         to use those as set in Param.
+    verbose : bool
+        Whether to print messages about scenarios as run.
 
     Returns
     -------
@@ -43,8 +45,13 @@ def run_scenarios(scenarios, param=None):
     all_scenarios_dicts = [
         dict(zip(scenarios.keys(), p)) for p in all_scenarios_tuples
     ]
-    # Preview some of the scenarios
-    print(f"There are {len(all_scenarios_dicts)} scenarios. Running:")
+    # Preview the number of scenarios and base parameters
+    if verbose:
+        print(f"There are {len(all_scenarios_dicts)} scenarios.")
+        if param is None:
+            print(f"Base parameters: {Param().__dict__}")
+        else:
+            print(f"Base parameters: {param.__dict__}")
 
     # Run the scenarios...
     results = []
