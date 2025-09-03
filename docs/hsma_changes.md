@@ -170,7 +170,7 @@ In the template, results are instead saved as a dictionary into a list as the ru
 * Avoids initialising an empty dataframe.
 * Is consistent with how the patient-level results were also generated in the template.
 
-Also, some of the calculations have been performed directly during the `run_single()` method, instead of from a seperate method `calculate_run_results()`. This is to help simplify the code, as it makes clear how each metric was calculated in one place, rather than needing to refer elsewhere.
+Also, some of the calculations have been performed directly during the `run_single()` method, instead of from a separate method `calculate_run_results()`. This is to help simplify the code, as it makes clear how each metric was calculated in one place, rather than needing to refer elsewhere.
 
 ```
 run_results = {
