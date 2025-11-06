@@ -10,9 +10,17 @@
 [![Coverage](https://github.com/pythonhealthdatascience/pydesrap_mms/raw/main/images/coverage-badge.svg)](https://github.com/pythonhealthdatascience/pydesrap_mms/actions/workflows/tests.yaml)
 </div>
 
+<br>
+
+This repository is an example accompanying the [**DES RAP Book**](https://github.com/pythonhealthdatascience/des_rap_book) — an open educational resource on reproducible discrete-event simulation (DES) in Python and R. The book demonstrates best practices for building, validating, and sharing DES models within a reproducible analytical pipeline (RAP). The `pydesrap_mms` model illustrates how these principles can be applied to a simple queueing model.
+
+<br>
+
 ## Repository overview
 
 This repository provides a reproducible analytical pipeline (RAP) for a simple **M/M/s queuing model** implemented in Python using SimPy. The model simulates patients arriving, waiting to see a nurse, being served, and leaving. All code is structured as a local Python package.
+
+![](images/nurse_des.drawio.png)
 
 An M/M/s queueing model is a classic mathematical model for systems where:
 
@@ -24,7 +32,9 @@ This type of model is widely used for studying waiting lines in healthcare, call
 
 <br>
 
-## Installation
+## Usage and reproduction instructions
+
+<details><summary><b>Installation</b></summary>
 
 Clone the repository:
 
@@ -42,9 +52,11 @@ conda activate
 
 There is also a `requirements.txt` file which can be used to set up the environment with `virtualenv`, but this won't fetch a specific version of Python - so please note the version listed in `environment.yaml`.
 
+</details>
+
 <br>
 
-## How to run
+<details><summary><b>How to run</b></summary>
 
 The simulation code is in the `simulation/` folder as a local package. Example analyses and model runs are in `notebooks/`.
 
@@ -87,48 +99,12 @@ To run one notebook from the command line (with the same settings - clearing the
 bash run_notebooks.sh notebooks/notebook_name.ipynb
 ```
 
-<br>
 
-## How does the model work?
-
-This section describes the purposes of each class in the simulation.
-
-**Model Run Process:**
-
-1. **Set Parameters:** Create a `Param` instance with desired model parameters.
-2. **Initialise Model:** Instantiate `Model` using the parameters. During setup, `Model` creates `Exponential` instances for each distribution.
-3. **Run Simulation:** Call `model.run()` to execute the simulation within the SimPy environment, running two processes:
-
-    * `generate_patient_arrivals()` to handle patient creation, then sending them on to `attend_clinic()`.
-    * `interval_audit()` to record utilisation and wait times at specified intervals during the simulation.
-
-**Runner Class Usage:**
-
-Having set up `experiment = Runner()`...
-
-* **Single Run:** Use `experiment.run_single()` to execute a single model run.
-* **Multiple Runs:** Use `experiment.run_reps()` to perform multiple replications of the model.
+</details>
 
 <br>
 
-![Model structure diagram](images/model_structure.png)
-
-*Illustration of model structure created using [draw.io](https://draw.io/).*
-
-<br>
-
-## Reproducing results
-
-To generate the figures and tables from the paper (`mock_paper.md`), execute:
-
-* **Figures 1-4**: `notebooks/analysis.ipynb`
-* **Figures A.1-A.2**: `notebooks/input_modelling.ipynb`
-* **Figure B.1**: `notebooks/choosing_warmup.ipynb`
-* **Figures C.1-C.3**: `notebooks/choosing_replications.ipynb`
-
-<br>
-
-## Input data
+<details><summary><b>Input data</b></summary>
 
 **Patient-level data** for our system is provided in the file: `inputs/NHS_synthetic.csv`.
 
@@ -145,46 +121,24 @@ This dataset is released under the MIT licence. If you use this data, please cit
 
 The code for input modelling is in: `notebooks/input_modelling.ipynb`. Model parameters are determined in this file and then stored in: `simulation/model.py`. Description for each parameter can be found in the class docstring within this file.
 
-<br>
-
-## GitHub actions
-
-GitHub actions in `.github/workflows/` automate testing and code checks.
-
-* **tests.yaml** runs the tests on Ubuntu, Windows, and Mac after each push to main.
-* **lint.yaml** checks code style in python scripts and .ipynb files to maintain code quality.
+</details>
 
 <br>
 
-## Repository structure
+<details><summary><b>Reproducing results</b></summary>
 
-```
-repo/
-├── .github/workflows/    # GitHub actions
-├── docs/                 # Documentation
-├── images/               # Image files and GIFs
-├── inputs/               # Folder to store any input data
-├── notebooks/            # Run DES model and analyse results
-├── outputs/              # Folder to save any outputs from model
-├── simulation/           # Local package containing code for the DES model
-├── tests/                # Unit and back testing of the DES model
-├── .gitignore            # Untracked files
-├── .pylintrc             # Pylint settings
-├── CHANGELOG.md          # Describes changes between releases
-├── CITATION.cff          # How to cite the repository
-├── CONTRIBUTING.md       # Contribution instructions
-├── environment.yaml      # Conda environment (includes Python version)
-├── LICENSE               # Licence file
-├── lint.sh               # Bash script to lint all .py and .ipynb files at once
-├── pyproject.toml        # Metadata for local `simulation/` package
-├── README.md             # This file! Describes the repository
-├── requirements.txt      # Virtual environment (used by GitHub actions)
-└── run_notebooks.sh      # Bash script to run all .ipynb from the command line
-```
+To generate the figures and tables from the paper (`mock_paper.md`), execute:
+
+* **Figures 1-4**: `notebooks/analysis.ipynb`
+* **Figures A.1-A.2**: `notebooks/input_modelling.ipynb`
+* **Figure B.1**: `notebooks/choosing_warmup.ipynb`
+* **Figures C.1-C.3**: `notebooks/choosing_replications.ipynb`
+
+</details>
 
 <br>
 
-## Run time and machine specification
+<details><summary><b>Run time and machine specification</b></summary>
 
 Run times from our analyses (on Intel Core i7-12700H, 32GB RAM, Ubuntu 24.04.1):
 
@@ -196,15 +150,13 @@ Run times from our analyses (on Intel Core i7-12700H, 32GB RAM, Ubuntu 24.04.1):
 * `logs.ipynb` - 0s
 * `time_weighted_averages.ipynb` - 1s
 
-<br>
-
-## Community
-
-Curious about contributing? Check out the [contributing guidelines](CONTRIBUTING.md) to learn how you can help. Every bit of help counts, and your contribution - no matter how minor - is highly valued.
+</details>
 
 <br>
 
-## Citation
+## Project details and credits
+
+### How to cite the repository
 
 If you use this repository, please cite either the GitHub repository or Zenodo:
 
@@ -212,7 +164,7 @@ If you use this repository, please cite either the GitHub repository or Zenodo:
 >
 > Heather, A. Monks, T. (2025). Simple M/M/s queuing model: Python DES RAP. Zenodo. https://doi.org/10.5281/zenodo.14622466
 
-**Contributors:**
+### Contributors
 
 **Amy Heather** - developed the repository.
 
@@ -224,15 +176,15 @@ If you use this repository, please cite either the GitHub repository or Zenodo:
 * [![ORCID](https://img.shields.io/badge/ORCID-0000--0003--2631--4481-A6CE39?style=for-the-badge&logo=orcid&logoColor=white)](https://orcid.org/0000-0003-2631-4481)
 * [![GitHub](https://img.shields.io/badge/GitHub-TomMonks-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/TomMonks)
 
-<br>
-
-## Licence
+### Licence
 
 MIT Licence. See `LICENSE` for details.
 
-<br>
+### Community
 
-## Acknowledgements
+Curious about contributing? Check out the [contributing guidelines](CONTRIBUTING.md) to learn how you can help. Every bit of help counts, and your contribution - no matter how minor - is highly valued.
+
+### Acknowledgements
 
 This repository was developed with thanks to several others sources. These are acknowledged throughout in the relevant notebooks/modules/functions, and also summarised here:
 
@@ -246,8 +198,6 @@ This repository was developed with thanks to several others sources. These are a
 | Tom Monks (2024) [HPDM097 - Making a difference with health data](https://github.com/health-data-science-OR/stochastic_systems) (MIT Licence). | `notebooks/analysis.ipynb`<br>`notebooks/choosing_replications.ipynb`<br>`notebooks/choosing_warmup.ipynb` |
 | Monks T and Harper A. Improving the usability of open health service delivery simulation models using Python and web apps (https://doi.org/10.3310/nihropenres.13467.2) [version 2; peer review: 3 approved]. NIHR Open Res 2023, 3:48.<br>Who themselves cite a [Stack Overflow](https://stackoverflow.com/questions/59406167/plotly-how-to-filter-a-pandas-dataframe-using-a-dropdown-menu) post. | `notebooks/analysis.ipynb` |
 
-<br>
-
-## Funding
+### Funding
 
 This project was developed as part of the project STARS: Sharing Tools and Artefacts for Reproducible Simulations. It is supported by the Medical Research Council [grant number [MR/Z503915/1](https://gtr.ukri.org/projects?ref=MR%2FZ503915%2F1)].
