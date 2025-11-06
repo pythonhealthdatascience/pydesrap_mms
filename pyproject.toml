@@ -5,5 +5,8 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "simulation"
 description = "Simple M/M/s queueing model."
-authors = [{name = "Amy Heather", email = "a.heather2@exeter.ac.uk"}]
+authors = [
+  {name = "Amy Heather", email = "a.heather2@exeter.ac.uk"},
+  {name = "Tom Monks", email = "t.m.w.monks@exeter.ac.uk"}
+]
 dynamic = ["version"]
