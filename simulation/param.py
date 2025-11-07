@@ -28,7 +28,7 @@ class Param:
     number_of_runs : int
         The number of runs (i.e. replications).
     audit_interval : int
-        How frequently to audit resource utilisation, in minutes.
+        How frequently to audit performance measures, in minutes.
     scenario_name : int|float|str
         Label for the scenario.
     cores : int
@@ -36,7 +36,7 @@ class Param:
         available cores, set to -1. For sequential execution, set to 1.
     seed_offset : int
         Optional value to add to each run number when generating seeds for
-        simulation replciations (used for sensitivity analyses).
+        simulation replications (used for sensitivity analyses).
     logger : logging.Logger
         The logging instance used for logging messages.
     """
@@ -73,7 +73,7 @@ class Param:
         number_of_runs : int, optional
             The number of runs (i.e. replications).
         audit_interval : int, optional
-            How frequently to audit resource utilisation, in minutes.
+            How frequently to audit performance measures, in minutes.
         scenario_name : int|float|str, optional
             Label for the scenario.
         cores : int, optional
