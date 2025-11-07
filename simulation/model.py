@@ -56,6 +56,14 @@ class Model:
     results_list : list
         List of dictionaries with the results for each patient (as defined
         by their patient object attributes).
+    area_n_in_system : list of float
+        Tracks the cumulative area under the 'number in system' function over
+        time; used for calculating time-weighted averages.
+    time_last_n_in_system: float
+        Last simulation time at which n_in_system was updated; used to
+        compute area increments.
+    n_in_system : int
+        Current number of patients in the system.
     patient_inter_arrival_dist : Exponential
         Distribution for sampling patient inter-arrival times.
     nurse_consult_time_dist : Exponential
