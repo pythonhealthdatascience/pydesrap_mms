@@ -65,7 +65,7 @@ def test_scenarios():
     results = run_scenarios(
         scenarios={"patient_inter": [3, 4],
                    "number_of_nurses": [6, 7]},
-        param=param
+        param_factory=lambda: param
     )
     # Compare to expected results
     exp_results = pd.read_csv(
