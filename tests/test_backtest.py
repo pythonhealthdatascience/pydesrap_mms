@@ -21,7 +21,6 @@ def test_reproduction():
         warm_up_period=500,
         data_collection_period=1500,
         number_of_runs=5,
-        audit_interval=50,
         scenario_name=0,
         cores=1
     )
@@ -36,10 +35,6 @@ def test_reproduction():
     exp_run = pd.read_csv(
         Path(__file__).parent.joinpath("exp_results/run.csv"))
     pd.testing.assert_frame_equal(experiment.run_results_df, exp_run)
-    # Compare interval audit results
-    exp_interval = pd.read_csv(
-        Path(__file__).parent.joinpath("exp_results/interval.csv"))
-    pd.testing.assert_frame_equal(experiment.interval_audit_df, exp_interval)
     # Compare overall results
     exp_overall = pd.read_csv(
         Path(__file__).parent.joinpath("exp_results/overall.csv"), index_col=0)
@@ -59,7 +54,6 @@ def test_scenarios():
         warm_up_period=2000,
         data_collection_period=6000,
         number_of_runs=3,
-        audit_interval=120,
         cores=1
     )
     results = run_scenarios(

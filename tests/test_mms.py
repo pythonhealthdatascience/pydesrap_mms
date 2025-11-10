@@ -174,7 +174,6 @@ def run_simulation_model(
         warm_up_period=500,
         data_collection_period=1500,
         number_of_runs=100,
-        audit_interval=50,
         scenario_name=0,
         cores=1,
     )
