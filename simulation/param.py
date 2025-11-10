@@ -27,8 +27,6 @@ class Param:
         Duration of data collection period in minutes.
     number_of_runs : int
         The number of runs (i.e. replications).
-    audit_interval : int
-        How frequently to audit performance measures, in minutes.
     scenario_name : int|float|str
         Label for the scenario.
     cores : int
@@ -49,7 +47,6 @@ class Param:
         warm_up_period=1440*27,  # 27 days
         data_collection_period=1440*30,  # 30 days
         number_of_runs=15,
-        audit_interval=120,  # Every 2 hours
         scenario_name=0,
         cores=-1,
         seed_offset=0,
@@ -72,8 +69,6 @@ class Param:
             Duration of data collection period in minutes.
         number_of_runs : int, optional
             The number of runs (i.e. replications).
-        audit_interval : int, optional
-            How frequently to audit performance measures, in minutes.
         scenario_name : int|float|str, optional
             Label for the scenario.
         cores : int, optional
@@ -91,7 +86,6 @@ class Param:
         self.warm_up_period = warm_up_period
         self.data_collection_period = data_collection_period
         self.number_of_runs = number_of_runs
-        self.audit_interval = audit_interval
         self.scenario_name = scenario_name
         self.cores = cores
         self.seed_offset = seed_offset

@@ -17,6 +17,7 @@ from .runner import Runner
 from .simlogger import SimLogger
 from .simulationadapter import SimulationAdapter
 from .summary_stats import summary_stats
+from .warmupauditor import WarmupAuditor
 
 __all__ = [
     "Model",
@@ -27,5 +28,6 @@ __all__ = [
     "Runner",
     "SimLogger",
     "SimulationAdapter",
-    "summary_stats"
+    "summary_stats",
+    "WarmupAuditor"
 ]
