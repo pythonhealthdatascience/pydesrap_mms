@@ -20,6 +20,8 @@ class Patient:
     ----------
     patient_id : int|float|str
         Patient's unique identifier.
+    period : str
+        Arrival period (warm up or data collection) with emoji.
     arrival_time : float
         Arrival time for the patient in minutes.
     q_time_nurse : float
@@ -34,7 +36,7 @@ class Patient:
     Class adapted from Rosser and Chalk 2024.
     """
 
-    def __init__(self, patient_id):
+    def __init__(self, patient_id, period, arrival_time):
         """
         Initialises a new patient.
 
@@ -42,9 +44,14 @@ class Patient:
         ----------
         patient_id : int|float|str
             Patient's unique identifier.
+        period : str
+            Arrival period (warm up or data collection) with emoji.
+        arrival_time : float
+            Arrival time for the patient in minutes.
         """
         self.patient_id = patient_id
-        self.arrival_time = np.nan
+        self.period = period
+        self.arrival_time = arrival_time
         self.q_time_nurse = np.nan
         self.time_with_nurse = np.nan
         self.end_time = np.nan
