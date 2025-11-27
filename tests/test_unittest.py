@@ -37,7 +37,6 @@ def test_new_attribute():
     ("patient_inter", 0, "positive"),
     ("mean_n_consult_time", 0, "positive"),
     ("number_of_runs", 0, "positive"),
-    ("audit_interval", 0, "positive"),
     ("number_of_nurses", 0, "positive"),
     ("warm_up_period", -1, "non_negative"),
     ("data_collection_period", -1, "non_negative")

@@ -51,8 +51,6 @@ class Model:
     running_mean_nurse_wait : float
         Running mean wait time for nurse during simulation in minutes,
         calculated using Welford's Running Average.
-    audit_list : list
-        List to store metrics recorded at regular intervals.
     results_list : list
         List of dictionaries with the results for each patient (as defined
         by their patient object attributes).
@@ -104,7 +102,6 @@ class Model:
         self.nurse_time_used_correction = 0
         self.nurse_consult_count = 0
         self.running_mean_nurse_wait = 0
-        self.audit_list = []
         self.results_list = []
 
         # Initialise attributes used to calculate patients in system
@@ -140,7 +137,7 @@ class Model:
         validation_rules = {
             "positive": [
                 "patient_inter", "mean_n_consult_time", "number_of_runs",
-                "audit_interval", "number_of_nurses"
+                "number_of_nurses"
             ],
             "non_negative": ["warm_up_period", "data_collection_period"]
         }
@@ -275,37 +272,6 @@ class Model:
             patient.end_time = self.env.now
             self.update_n_in_system(inc=-1)
 
-    def interval_audit(self, interval):
-        """
-        Audit waiting times and resource utilisation at regular intervals.
-        This is set-up to start when the warm-up period has ended.
-
-        The running mean wait time is calculated using Welford's Running
-        Average, which is a method that avoids the need to store previous wait
-        times to compute the average. The running mean reflects the main wait
-        time for all patients seen by nurse up to that point in the simulation.
-
-        Parameters
-        ----------
-        interval : int
-            Time between audits in minutes.
-        """
-        # Wait until warm-up period has passed
-        yield self.env.timeout(self.param.warm_up_period)
-
-        # Begin interval auditor
-        while True:
-            self.audit_list.append({
-                "resource_name": "nurse",
-                "simulation_time": self.env.now,
-                "utilisation": self.nurse.count / self.nurse.capacity,
-                "queue_length": len(self.nurse.queue),
-                "running_mean_wait_time": self.running_mean_nurse_wait
-            })
-
-            # Trigger next audit after desired interval has passed
-            yield self.env.timeout(interval)
-
     def update_n_in_system(self, inc):
         """
         Update the time-weighted statistics for number of patients in system.
@@ -328,7 +294,6 @@ class Model:
         """
         self.patients = []
         self.nurse_time_used = 0
-        self.audit_list = []
         self.nurse.init_results()
         # For number in system, we reset area and time but not the count, as it
         # should include any remaining warm-up patients in the count
@@ -375,10 +340,6 @@ class Model:
 
         # Schedule patient generator to run during simulation
         self.env.process(self.generate_patient_arrivals())
-
-        # Schedule interval auditor to run during simulation
-        self.env.process(
-            self.interval_audit(interval=self.param.audit_interval))
 
         # Run the simulation
         self.env.run(until=run_length)

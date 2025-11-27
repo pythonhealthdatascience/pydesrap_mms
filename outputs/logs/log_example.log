@@ -1,7 +1,6 @@
 0.000: Initialise model:
 
 {   'area_n_in_system': [0],
-    'audit_list': [],
     'env': '<simpy.core.Environment>',
     'n_in_system': 0,
     'nurse': '<simulation.monitoredresource.MonitoredResource>',
@@ -19,7 +18,6 @@
 0.000: Parameters:
  
 {   '_initialising': False,
-    'audit_interval': 120,
     'cores': 1,
     'data_collection_period': 50,
     'logger': '<simulation.simlogger.SimLogger>',

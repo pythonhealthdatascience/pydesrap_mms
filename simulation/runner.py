@@ -31,8 +31,6 @@ class Runner:
         DataFrame to store patient-level results.
     run_results_df : pandas.DataFrame
         DataFrame to store results from each run.
-    interval_audit_df : pandas.DataFrame
-        DataFrame to store interval audit results.
     overall_results_df : pandas.DataFrame
         DataFrame to store average results from across the runs.
 
@@ -55,7 +53,6 @@ class Runner:
         # Initialise empty dataframes to store results
         self.patient_results_df = pd.DataFrame()
         self.run_results_df = pd.DataFrame()
-        self.interval_audit_df = pd.DataFrame()
         self.overall_results_df = pd.DataFrame()
 
     def run_single(self, run):
@@ -70,8 +67,8 @@ class Runner:
         Returns
         -------
         dict
-            A dictionary containing the patient-level results, results from
-            each run, and interval audit results.
+            A dictionary containing the patient-level results and results from
+            each run.
         """
         # Run model
         model = Model(param=self.param, run_number=run)
@@ -159,15 +156,9 @@ class Runner:
                 "mean_q_time_nurse_unseen": np.nan
             }
 
-        # INTERVAL AUDIT RESULTS
-        # Convert interval audit results to a dataframe and add run column
-        interval_audit_df = pd.DataFrame(model.audit_list)
-        interval_audit_df["run"] = run
-
         return {
             "patient": patient_results,
-            "run": run_results,
-            "interval_audit": interval_audit_df
+            "run": run_results
         }
 
     def run_reps(self):
@@ -213,18 +204,12 @@ class Runner:
         # Separate results from each run into appropriate lists
         patient_results_list = [result["patient"] for result in all_results]
         run_results_list = [result["run"] for result in all_results]
-        interval_audit_list = [
-            result["interval_audit"] for result in all_results
-        ]
 
         # Convert lists into dataframes
         self.patient_results_df = pd.concat(
             patient_results_list, ignore_index=True
         )
         self.run_results_df = pd.DataFrame(run_results_list)
-        self.interval_audit_df = pd.concat(
-            interval_audit_list, ignore_index=True
-        )
 
         # Calculate average results and uncertainty from across all runs
         uncertainty_metrics = {}

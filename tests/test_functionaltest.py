@@ -55,16 +55,6 @@ def test_high_demand():
         "The run `mean_nurse_utilisation` should not drop below 0, but " +
         f"found utilisation of {util}."
     )
-    # Check that the utilisation recorded by the interval audit does not
-    # exceed 1 or drop below 0
-    util_high = [x <= 1 for x in results["interval_audit"]["utilisation"]]
-    util_low = [x >= 0 for x in results["interval_audit"]["utilisation"]]
-    assert all(util_high), (
-        "The interval audit must not record any utilisation that exceeds 1."
-    )
-    assert all(util_low), (
-        "The interval audit must not record any utilisation that is below 0."
-    )
     # Check that the final patient in the patient-level results is not seen
     # by a nurse and remains in the simulation.
     last_patient = results["patient"].iloc[-1]
@@ -97,7 +87,6 @@ def test_warmup_high_demand():
     # Expect these to be 1, as nurses busy for whole time
     assert results["run"]["mean_nurse_utilisation"] == 1
     assert results["run"]["mean_nurse_utilisation_tw"] == 1
-    assert results["interval_audit"]["utilisation"][0] == 1
     # REFLECTS USE BY WU + DC PATIENTS
     # Expect these to be positive and greater than arrivals (as they include
     # the remaining warm-up patients who are unseen).
@@ -132,10 +121,6 @@ def test_warmup_only():
     error_msg = ("Patient result list should be empty, but found " +
                  f"{len(model.results_list)} entries.")
     assert len(model.results_list) == 0, error_msg
-    # Check that there are no records in interval audit
-    error_msg = ("Interval audit list should be empty, but found " +
-                 f"{len(model.audit_list)} entries.")
-    assert len(model.audit_list) == 0, error_msg
 
 
 def test_warmup_impact():
@@ -189,38 +174,6 @@ def test_warmup_impact():
         "Expect first patient to have no wait time in model without warm-up " +
         f"but got {first_none['q_time_nurse']}."
     )
-    # Check that the first interval audit entry with no warm-up has time and
-    # no queue or wait time. However, as our first patient arrives at time 0,
-    # we do expect to have utilisation over 0.
-    first_interval = results_none["interval_audit"].iloc[0]
-    assert first_interval["simulation_time"] == 0, (
-        "With no warm-up, expect first entry in interval audit to be " +
-        f"at time 0, but it was at time {first_interval['simulation_time']}."
-    )
-    assert first_interval["utilisation"] == 0, (
-        "With no warm-up, expect first entry in interval audit to " +
-        "have utilisation of 0 but utilisation was " +
-        f"{first_interval['utilisation']}."
-    )
-    assert first_interval["queue_length"] == 0, (
-        "With no warm-up, expect first entry in interval audit to " +
-        "have no queue, but there was queue length of " +
-        f"{first_interval['queue_length']}."
-    )
-    assert first_interval["running_mean_wait_time"] == 0, (
-        "With no warm-up, expect first entry in interval audit to " +
-        "have running mean wait time of 0 but it was " +
-        f"{first_interval['running_mean_wait_time']}."
-    )
-    # Check that first interval audit entry with a warm-up has time 500
-    # (matching length of warm-up period) - and so ensuring the first entry
-    # in the interval audit, which occurs at the end of the warm-up period,
-    # has not been deleted.
-    first_interval_warmup = results_warmup["interval_audit"].iloc[0]
-    assert first_interval_warmup["simulation_time"] == 500, (
-        "With warm-up of 500, expect first entry in interval audit to be " +
-        f"at time 500, but it was at time {first_interval['simulation_time']}."
-    )
 
 
 def test_arrivals():
@@ -246,7 +199,7 @@ def test_arrivals():
 @pytest.mark.parametrize("param_name, initial_value, adjusted_value", [
     ("number_of_nurses", 3, 9),
     ("patient_inter", 2, 15),
-    ("mean_n_consult_time", 30, 3),
+    ("mean_n_consult_time", 10, 3),
 ])
 def test_waiting_time_utilisation(param_name, initial_value, adjusted_value):
     """
@@ -352,23 +305,6 @@ def test_seed_stability():
     pd.testing.assert_frame_equal(result1["patient"], result2["patient"])
 
 
-def test_interval_audit_time():
-    """
-    Check that length of interval audit is less than the length of simulation.
-    """
-    # Run model once with default parameters and get max time from audit
-    param = Param()
-    experiment = Runner(param)
-    results = experiment.run_single(run=0)
-    max_time = max(results["interval_audit"]["simulation_time"])
-    # Check that max time in audit is less than simulation length
-    full_simulation = param.warm_up_period + param.data_collection_period
-    assert max_time < full_simulation, (
-        f"Max time in interval audit ({max_time}) is greater than length " +
-        f"of the simulation ({full_simulation})."
-    )
-
-
 def test_parallel():
     """
     Check that sequential and parallel execution produce consistent results.
@@ -382,8 +318,6 @@ def test_parallel():
     # Verify results are identical
     pd.testing.assert_frame_equal(
         results["seq"]["patient"], results["par"]["patient"])
-    pd.testing.assert_frame_equal(
-        results["seq"]["interval_audit"], results["par"]["interval_audit"])
     assert results["seq"]["run"] == results["par"]["run"]
 
 
@@ -534,11 +468,6 @@ def test_no_missing_values():
     assert not res_run.any(), {
         "Found missing values in run results in columns that we expect " +
         f"to have none in these columns: {res_run[res_run].keys().to_list()}"
-    }
-    res_interval = experiment.interval_audit_df.isnull().any()
-    assert not res_interval.any(), {
-        "Found missing values in interval results in these columns: " +
-        f"True: {res_interval[res_interval].keys().to_list()}"
     }
     filter_overall = experiment.overall_results_df.drop(notreq_overall, axis=1)
     res_overall = filter_overall.isnull().any()
