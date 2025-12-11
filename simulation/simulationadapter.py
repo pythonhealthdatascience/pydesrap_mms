@@ -5,6 +5,7 @@ SimulationAdapter.
 from .runner import Runner
 
 
+# pylint: disable=too-few-public-methods
 class SimulationAdapter:
     """
     Adapter for running model replications compatible with

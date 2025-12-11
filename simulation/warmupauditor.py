@@ -11,6 +11,7 @@ https://github.com/health-data-science-OR/stochastic_systems.
 import numpy as np
 
 
+# pylint: disable=too-few-public-methods
 class WarmupAuditor():
     """
     Warm-up auditor for the model.

@@ -142,13 +142,13 @@ To generate the figures and tables from the paper (`mock_paper.md`), execute:
 
 Run times from our analyses (on Intel Core i7-12700H, 32GB RAM, Ubuntu 24.04.1):
 
-* `analysis.ipynb` - 23s
-* `choosing_cores.ipynb` - 19s
-* `choosing_replications.ipynb` - 33s
-* `choosing_warmup.ipynb` - 4s
-* `generate_exp_results.ipynb` - 7s
+* `analysis.ipynb` - 35s
+* `choosing_cores.ipynb` - 34s
+* `choosing_replications.ipynb` - 46s
+* `choosing_warmup.ipynb` - 38s
+* `generate_exp_results.ipynb` - 1s
 * `logs.ipynb` - 0s
-* `time_weighted_averages.ipynb` - 1s
+* `time_weighted_averages.ipynb` - 2s
 
 </details>
 
