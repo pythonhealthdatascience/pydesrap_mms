@@ -51,11 +51,17 @@ class Model:
     running_mean_nurse_wait : float
         Running mean wait time for nurse during simulation in minutes,
         calculated using Welford's Running Average.
-    audit_list : list
-        List to store metrics recorded at regular intervals.
     results_list : list
         List of dictionaries with the results for each patient (as defined
         by their patient object attributes).
+    area_n_in_system : list of float
+        Tracks the cumulative area under the 'number in system' function over
+        time; used for calculating time-weighted averages.
+    time_last_n_in_system: float
+        Last simulation time at which n_in_system was updated; used to
+        compute area increments.
+    n_in_system : int
+        Current number of patients in the system.
     patient_inter_arrival_dist : Exponential
         Distribution for sampling patient inter-arrival times.
     nurse_consult_time_dist : Exponential
@@ -96,7 +102,6 @@ class Model:
         self.nurse_time_used_correction = 0
         self.nurse_consult_count = 0
         self.running_mean_nurse_wait = 0
-        self.audit_list = []
         self.results_list = []
 
         # Initialise attributes used to calculate patients in system
@@ -132,7 +137,7 @@ class Model:
         validation_rules = {
             "positive": [
                 "patient_inter", "mean_n_consult_time", "number_of_runs",
-                "audit_interval", "number_of_nurses"
+                "number_of_nurses"
             ],
             "non_negative": ["warm_up_period", "data_collection_period"]
         }
@@ -160,9 +165,16 @@ class Model:
             sampled_inter = self.patient_inter_arrival_dist.sample()
             yield self.env.timeout(sampled_inter)
 
-            # Create new patient, with ID based on length of patient list + 1
-            p = Patient(len(self.patients) + 1)
-            p.arrival_time = self.env.now
+            # Check whether arrived during warm-up or data collection
+            if self.env.now < self.param.warm_up_period:
+                period = "\U0001F538 WU"
+            else:
+                period = "\U0001F539 DC"
+
+            # Create new patient
+            p = Patient(patient_id=len(self.patients) + 1,
+                        period=period,
+                        arrival_time=self.env.now)
 
             # Add the patient to the list.
             # The list stores a reference to the patient object, so any updates
@@ -173,13 +185,9 @@ class Model:
             self.update_n_in_system(inc=1)
 
             # Log arrival time
-            if p.arrival_time < self.param.warm_up_period:
-                arrive_pre = "\U0001F538 WU"
-            else:
-                arrive_pre = "\U0001F539 DC"
             self.param.logger.log(
                 sim_time=self.env.now,
-                msg=(f"{arrive_pre} Patient {p.patient_id} arrives at: " +
+                msg=(f"{p.period} Patient {p.patient_id} arrives at: " +
                      f"{p.arrival_time:.3f}.")
             )
 
@@ -214,15 +222,11 @@ class Model:
             patient.time_with_nurse = self.nurse_consult_time_dist.sample()
 
             # Log wait time and time spent with nurse
-            if patient.arrival_time < self.param.warm_up_period:
-                nurse_pre = "\U0001F536 WU"
-            else:
-                nurse_pre = "\U0001F537 DC"
             self.param.logger.log(
                 sim_time=self.env.now,
-                msg=(f"{nurse_pre} Patient {patient.patient_id} is seen by " +
-                     f"nurse after {patient.q_time_nurse:.3f}. Consultation " +
-                     f"length: {patient.time_with_nurse:.3f}.")
+                msg=(f"{patient.period} Patient {patient.patient_id} is seen" +
+                     f" by nurse after {patient.q_time_nurse:.3f}. " +
+                     f"Consultation length: {patient.time_with_nurse:.3f}.")
             )
 
             # Update the total nurse time used.
@@ -250,8 +254,8 @@ class Model:
                     # Logging message
                     self.param.logger.log(
                         sim_time=self.env.now,
-                        msg=(f"\U0001F6E0 Patient {patient.patient_id} " +
-                             "starts consultation with " +
+                        msg=(f"{patient.period} Patient {patient.patient_id}" +
+                             " starts consultation with " +
                              f"{remaining_warmup:.3f} left of warm-up (which" +
                              f" is {self.param.warm_up_period:.3f}). " +
                              "As their consultation is for " +
@@ -267,36 +271,11 @@ class Model:
             patient.end_time = self.env.now
             self.update_n_in_system(inc=-1)
 
-    def interval_audit(self, interval):
-        """
-        Audit waiting times and resource utilisation at regular intervals.
-        This is set-up to start when the warm-up period has ended.
-
-        The running mean wait time is calculated using Welford's Running
-        Average, which is a method that avoids the need to store previous wait
-        times to compute the average. The running mean reflects the main wait
-        time for all patients seen by nurse up to that point in the simulation.
-
-        Parameters
-        ----------
-        interval : int
-            Time between audits in minutes.
-        """
-        # Wait until warm-up period has passed
-        yield self.env.timeout(self.param.warm_up_period)
-
-        # Begin interval auditor
-        while True:
-            self.audit_list.append({
-                "resource_name": "nurse",
-                "simulation_time": self.env.now,
-                "utilisation": self.nurse.count / self.nurse.capacity,
-                "queue_length": len(self.nurse.queue),
-                "running_mean_wait_time": self.running_mean_nurse_wait
-            })
-
-            # Trigger next audit after desired interval has passed
-            yield self.env.timeout(interval)
+            # Log departure time
+            self.param.logger.log(
+                sim_time=self.env.now,
+                msg=f"{patient.period} Patient {patient.patient_id} leaves."
+            )
 
     def update_n_in_system(self, inc):
         """
@@ -320,7 +299,6 @@ class Model:
         """
         self.patients = []
         self.nurse_time_used = 0
-        self.audit_list = []
         self.nurse.init_results()
         # For number in system, we reset area and time but not the count, as it
         # should include any remaining warm-up patients in the count
@@ -367,10 +345,6 @@ class Model:
 
         # Schedule patient generator to run during simulation
         self.env.process(self.generate_patient_arrivals())
-
-        # Schedule interval auditor to run during simulation
-        self.env.process(
-            self.interval_audit(interval=self.param.audit_interval))
 
         # Run the simulation
         self.env.run(until=run_length)

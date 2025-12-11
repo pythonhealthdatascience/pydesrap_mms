@@ -8,8 +8,7 @@ run_notebook() {
     echo "🏃 Running notebook: $nb"
     if "${CONDA_JUPYTER}" nbconvert --to notebook --inplace --execute \
         --ClearMetadataPreprocessor.enabled=True \
-        --ClearMetadataPreprocessor.clear_notebook_metadata=False \
-        --ClearMetadataPreprocessor.preserve_cell_metadata_mask="kernelspec" \
+        --ClearMetadataPreprocessor.clear_notebook_metadata=True \
         "$nb"
     then
         echo "✅ Successfully processed: $nb"

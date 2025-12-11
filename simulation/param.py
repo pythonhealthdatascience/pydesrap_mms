@@ -27,8 +27,6 @@ class Param:
         Duration of data collection period in minutes.
     number_of_runs : int
         The number of runs (i.e. replications).
-    audit_interval : int
-        How frequently to audit resource utilisation, in minutes.
     scenario_name : int|float|str
         Label for the scenario.
     cores : int
@@ -36,7 +34,7 @@ class Param:
         available cores, set to -1. For sequential execution, set to 1.
     seed_offset : int
         Optional value to add to each run number when generating seeds for
-        simulation replciations (used for sensitivity analyses).
+        simulation replications (used for sensitivity analyses).
     logger : logging.Logger
         The logging instance used for logging messages.
     """
@@ -46,10 +44,9 @@ class Param:
         patient_inter=4,
         mean_n_consult_time=10,
         number_of_nurses=5,
-        warm_up_period=1440*27,  # 27 days
-        data_collection_period=1440*30,  # 30 days
-        number_of_runs=15,
-        audit_interval=120,  # Every 2 hours
+        warm_up_period=1440*7,  # 7 days
+        data_collection_period=1440*14,  # 14 days
+        number_of_runs=25,
         scenario_name=0,
         cores=-1,
         seed_offset=0,
@@ -72,8 +69,6 @@ class Param:
             Duration of data collection period in minutes.
         number_of_runs : int, optional
             The number of runs (i.e. replications).
-        audit_interval : int, optional
-            How frequently to audit resource utilisation, in minutes.
         scenario_name : int|float|str, optional
             Label for the scenario.
         cores : int, optional
@@ -91,7 +86,6 @@ class Param:
         self.warm_up_period = warm_up_period
         self.data_collection_period = data_collection_period
         self.number_of_runs = number_of_runs
-        self.audit_interval = audit_interval
         self.scenario_name = scenario_name
         self.cores = cores
         self.seed_offset = seed_offset
