@@ -1,8 +1,8 @@
 # Changes from the HSMA model
 
-This template model is based on a few sources - including: Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (https://github.com/hsma-programme/hsma6_des_book) (MIT Licence).
+This model is based on a few sources - including: Sammi Rosser and Dan Chalk (2024) HSMA - the little book of DES (https://github.com/hsma-programme/hsma6_des_book) (MIT Licence).
 
-This page explains some of the differences between the models in the HSMA book, and this template.
+This page explains some of the differences between the models in the HSMA book, and this model.
 
 ## Use of parameter class
 
