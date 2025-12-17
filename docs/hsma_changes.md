@@ -117,6 +117,8 @@ This enables metrics like `count_nurse_unseen` and `mean_q_time_nurse_unseen`, w
 
 ## Seeds
 
+> **Update (17 Dec 2025)**: The method in the Little Book of DES has now been modified to be consistent with our approach here.
+
 The HSMA models use a multiplied version of the `run_number` as a seed when sampling ([example](https://des.hsma.co.uk/reproducibility.html#sec-robust:~:text=%23%23NEW%20%2D%20initialise%20distributions,*5))):
 
 ```
