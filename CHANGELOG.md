@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Dates formatted as YYYY-MM-DD as per [ISO standard](https://www.iso.org/iso-8601-date-and-time-format.html).
 
+## v2.0.0 - 2026-03-06
+
+This release introduces several changes and fixes - including a new approach to choosing length of warm-up, fix to `run_scenarios()`, and inclusion of all metrics when choosing replications, among other things.
+
+### Added
+
+* Add coverage badge
+* New approach to choosing length of warm-up: changed from time series inspection and interval audit, to `WarmupAuditor`. Changed parameters for this analysis.
+* Add retrospective QA summary.
+
+### Changed
+
+* Set bin widths for more consistency with R.
+* Import replications functions from sim-tools.
+* Improve `CONTRIBUTING.md` and `README.md`, and completed STRESS.
+* Print parameters when run scenarios.
+* Update author list.
+* Minor corrections to docstrings and documentation.
+* Moved `period` to `Patient` and log end time.
+* Include all metrics in choosing replications notebook.
+
+### Fixed
+
+* Fixed display of input modelling figures on GitHub by making them static.
+* Fix set-up of separate `param` in `run_scenarios` so it uses a fresh instance.
+* Upgraded packages to address dependabot security risks.
+
 ## v1.3.0 - 2025-08-05
 
 This release introduces several new features including input modelling, code-based model validation, new key performance indicators, and more - as well as improvements to documentation and code.
